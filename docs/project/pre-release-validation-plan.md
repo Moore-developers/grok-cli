@@ -1,12 +1,12 @@
 # Pre-release Validation Plan
 
-这份文档用于最终确认 `grok-cli` 在公开推广前还需要完成的验收、SKILL 补全和性能分析。当前不直接执行真实测试；先确认方案，再按顺序逐项推进。
+这份文档用于最终确认 `grok-cli` 在公开推广前还需要完成的验收、SKILL 补全和极简性能分析。当前不直接执行真实测试；先确认方案，再按顺序逐项推进。
 
 ## 目标
 
 - 确认新增媒体能力在真实 xAI / SuperGrok OAuth 环境下可用。
 - 把仓库内置 `grok-cli` skill 做成用户主入口：基础能力在主 `SKILL.md` 里直接可用，高级参数和完整命令面通过关联文件按需加载。
-- 建立一套轻量性能分析，知道安装、启动、请求、轮询和 usage 写入大概耗时。
+- 建立一套极简性能分析策略，只记录安装后的大概 CPU、内存和体积大小。
 - 保持首版发布策略为 SKILL-first / source-first，不发布预构建二进制。
 
 ## 不做的事
@@ -96,7 +96,6 @@
 - 请求参数。
 - 成功 / 失败。
 - 返回主字段，例如 `image`、`images`、`video`、`file_path`、`transcript`。
-- 耗时。
 - 是否发生 token refresh。
 - 是否写入 usage。
 - 如果失败，记录错误码和是否可重试。
@@ -180,47 +179,59 @@ skills/grok-cli/
 
 - `docs: expand grok-cli skill references`
 
-## 阶段 4：性能分析
+## 阶段 4：极简性能分析
 
-目的：建立可重复的轻量性能基线，不追求复杂 profiling，先找到用户能感知的慢点。
+目的：拿到一个大概资源指标，确认安装后的 `grok-cli` 没有明显异常。这里不做深入诊断，不追求精确性能调优，也不把上游网络等待当作本地性能问题。
 
 ### 指标
 
-- 安装耗时：`cargo install --git --tag v0.1.0 --locked`。
-- CLI 启动耗时：`grok-cli --version`、`grok-cli status --json`。
-- OAuth 状态读取耗时：`status --json`、`state --json`。
-- 文本请求耗时：`chat --json`、`search --json`。
-- 媒体同步请求耗时：`image`、`tts`、`stt`。
-- 视频异步请求耗时：create 耗时、poll 总耗时、poll 次数。
-- usage 写入与查询耗时：真实请求后 `usage --json`。
+- CPU：记录 user / system CPU time 或 CPU percent 的大概值。
+- 内存：记录 peak RSS / maximum resident set size。
+- 体积大小：记录安装后二进制大小、关键媒体输出文件大小；如果 usage/session db 明显增长，再记录最终大小。
 
-### 推荐方式
+### 命令分组
 
-- 使用 shell `time` 记录端到端耗时。
-- 对 CLI 启动类命令跑 5 次，取最小值 / 中位数 / 最大值。
-- 对真实上游请求只跑 1-2 次，避免成本和速率限制。
-- 输出到 `.tmp/perf/`，最终只把摘要写入文档。
+- 本地命令：`grok-cli --version`、`grok-cli status --json`。
+- 文本命令：从真实测试里选 1 条 `chat --json` 或 `search --json`。
+- 媒体命令：复用真实媒体测试中的 `image`、`tts`、`stt`、`video` 各 1 条即可。
+- 安装产物：记录 `grok-cli` 二进制体积。
 
-### 性能报告格式
+### 推荐工具
+
+- macOS：`/usr/bin/time -l`。
+- Linux：`/usr/bin/time -v`。
+- 体积：`ls -lh` 或 `du -h`。
+- 输出目录：`.tmp/perf/`，最终文档只写摘要。
+
+### 采样策略
+
+- 本地轻量命令最多跑 3 次，看数值是否稳定。
+- 真实上游请求只顺手记录 1 次，不额外制造请求成本。
+- 媒体命令只记录最终输出文件大小，不分析生成过程。
+- 如果指标没有明显异常，不进入代码优化。
+
+### 报告格式
 
 ```text
 Command:
+Platform:
 Runs:
-Median:
-Min / Max:
+CPU:
+Peak memory:
+Binary size:
+Output size:
 Notes:
-Potential action:
 ```
 
 ### 验收标准
 
-- 有一份可读的性能摘要。
-- 明确哪些慢是网络 / 上游排队，哪些慢是 CLI 本地启动或 I/O。
-- 如果发现明显本地慢点，再决定是否进入代码优化。
+- 有一张简短表格，列出代表命令的 CPU、内存和体积大小。
+- 能判断是否存在明显异常，例如内存峰值过高、CPU 占用异常、二进制或媒体输出体积异常。
+- 没有明显异常就不继续展开性能优化。
 
 建议提交：
 
-- `docs: add grok-cli performance baseline`
+- `docs: add grok-cli perf smoke baseline`
 
 ## 阶段 5：安全与隐私护栏
 
@@ -232,7 +243,7 @@ Potential action:
 - [ ] 确认真实 `auth.json` 不在仓库内。
 - [ ] 确认 session db 不在仓库内。
 - [ ] 确认真实媒体输出和转写文本只放 `.tmp/`。
-- [ ] 真实结果写文档时只保留脱敏字段、成功状态、错误码和耗时。
+- [ ] 真实结果写文档时只保留脱敏字段、成功状态、错误码、CPU / 内存 / 体积摘要。
 
 验收标准：
 
@@ -245,14 +256,14 @@ Potential action:
 2. 阶段 1：真实 OAuth 回归。
 3. 阶段 3：SKILL 补全设计与文件拆分。
 4. 阶段 2：新增媒体能力真实测试。
-5. 阶段 4：性能分析。
+5. 阶段 4：极简性能分析。
 6. 阶段 5：安全与隐私护栏，贯穿每个阶段，最后再集中检查一次。
 
 这个顺序的理由：
 
 - 先确保用户能安装和登录，再测试能力。
 - 先补 SKILL 路由和 reference 文件，再用真实测试结果反哺 SKILL。
-- 性能分析放在真实测试后，能复用同一批命令和输入资产。
+- 极简性能分析放在真实测试后，能顺手复用同一批命令和输入资产。
 
 ## 最终确认点
 
@@ -261,4 +272,4 @@ Potential action:
 - 是否接受首版继续 SKILL-first / source-first，不发布预构建二进制。
 - 是否按上述顺序先做安装/OAuth，再补 SKILL references，再做真实媒体测试。
 - `stt-stream` 是否继续保持实验入口，只做基础文档和现有测试，不进入深层 mock。
-- 性能分析是否只做轻量端到端指标，不做复杂 profiler。
+- 极简性能分析是否只记录 CPU、内存和体积大小，不做深入诊断。

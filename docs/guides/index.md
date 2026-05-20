@@ -6,7 +6,7 @@
 
 1. [快速开始](./quickstart.md)：从安装、登录到第一次真实调用。
 2. [故障排查](./troubleshooting.md)：认证、权限、媒体、stream 等常见问题。
-3. [发布与安装指南](./release.md)：GitHub 发布、Cargo 安装、Release binary、Homebrew 等发布路径。
+3. [发布与安装指南](./release.md)：SKILL-first / source-first 发布、Cargo 安装、版本 tag 和后续分发路径。
 
 ## 文档职责
 
@@ -36,9 +36,9 @@
 适合准备把项目发布给其他用户时使用。当前覆盖：
 
 - 从 GitHub source 安装
-- GitHub Release binaries
-- Homebrew tap
-- crates.io 的后续选择
+- 通过仓库内置 `grok-cli` skill 自动安装和调用 CLI
+- 为什么首版暂不发布预构建二进制
+- Homebrew / crates.io / winget / Scoop 的后续选择
 - 发布前检查清单
 
 ## 相关入口
@@ -47,4 +47,3 @@
 - [Reference Index](../reference/index.md)
 - [Project Index](../project/index.md)
 - [总索引](../index.md)
-

@@ -14,6 +14,8 @@
 - 文本转语音、批量语音转文字和实验性实时语音转文字
 - 基于 SQLite 的本地会话 usage 统计
 
+推荐的公开分发方式是 SKILL-first 和 source-first。仓库内置 [`skills/grok-cli/SKILL.md`](skills/grok-cli/SKILL.md)，可以先检查本机是否已安装 `grok-cli`，缺失时通过 Cargo 从 GitHub 安装，然后处理 OAuth 登录并继续执行用户的 Grok 任务。Skill 安装说明见 [`skills/README.md`](skills/README.md)。
+
 文本命令同时照顾“给人直接用”和“给脚本稳定接入”两种场景：
 
 - `chat` 和 `search` 默认以流式方式打印可读正文，适合人直接盯着看
@@ -29,10 +31,10 @@ grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-
 
 ## 快速开始
 
-从源码安装：
+直接从 GitHub 安装：
 
 ```bash
-cargo install --path .
+cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
 ```
 
 浏览器登录：
@@ -187,7 +189,7 @@ cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
 cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.0 --locked
 ```
 
-GitHub Release 二进制包和 Homebrew 发布方式见 [docs/guides/release.md](docs/guides/release.md)。
+预构建二进制包不是默认分发路径。推荐使用 `cargo install --git`，或者通过内置 [`grok-cli` skill](skills/grok-cli/SKILL.md) 自动完成安装和命令调用。
 
 ## 开发
 

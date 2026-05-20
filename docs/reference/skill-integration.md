@@ -4,6 +4,8 @@
 
 让上层 SKILL 能稳定依赖 `grok-cli` 的 JSON 输出、错误码和恢复流程，而不是把认证、状态和能力细节散落在多个脚本中。
 
+仓库内置 [`skills/grok-cli/SKILL.md`](../../skills/grok-cli/SKILL.md)，作为推荐的用户入口。这个 skill 负责检查本机是否已有 `grok-cli`、缺失时通过 Cargo 从 GitHub 安装、处理 OAuth 登录，并在设置完成后恢复用户的原始 Grok 任务。
+
 ## 1. 命令调用原则
 
 - 优先使用 `--json`
@@ -11,6 +13,7 @@
 - 默认把标准输出当作机器可消费输出
 - 标准错误只用于日志和调试
 - 调用前不要假定状态文件存在，先检查 `status` 或 `state --json`
+- 调用前不要假定 CLI 已安装；如果是通过 skill 使用，应先执行安装检查
 
 说明：
 - `chat` 和 `search` 面向人类交互时默认会流式打印正文

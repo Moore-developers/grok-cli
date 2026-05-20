@@ -6,7 +6,10 @@ The project follows semantic versioning once public releases begin.
 
 ## Unreleased
 
-No unreleased changes yet.
+### Changed
+
+- Switched the first public release strategy to SKILL-first / source-first distribution.
+- Added a bundled `grok-cli` skill that can check installation, install the CLI with Cargo, handle OAuth, and route Grok tasks through JSON-mode commands.
 
 ## 0.1.0 - 2026-05-21
 

@@ -2,7 +2,7 @@ use serde::Serialize;
 use serde_json::{Value, json};
 
 use crate::app::AppContext;
-use crate::args::{TaskCommonOptions, VideoEditOptions, VideoGenOptions};
+use crate::args::{TaskCommonOptions, VideoEditOptions, VideoExtendOptions, VideoGenOptions};
 use crate::cli::CommandResult;
 use crate::error::{AppError, CommandError, ErrorCode};
 use crate::model;
@@ -14,9 +14,11 @@ use crate::usage::tracker;
 const DEFAULT_VIDEO_MODEL: &str = "grok-imagine-video";
 const VIDEO_GENERATIONS_PATH: &str = "/videos/generations";
 const VIDEO_EDITS_PATH: &str = "/videos/edits";
+const VIDEO_EXTENSIONS_PATH: &str = "/videos/extensions";
 const DEFAULT_POLL_INTERVAL_MILLIS: u64 = 5_000;
 const DEFAULT_VIDEO_POLL_TIMEOUT_SECONDS: u64 = 600;
 const DEFAULT_VIDEO_DURATION: u64 = 8;
+const DEFAULT_VIDEO_EXTENSION_DURATION: u64 = 6;
 const DEFAULT_VIDEO_ASPECT_RATIO: &str = "16:9";
 const DEFAULT_VIDEO_RESOLUTION: &str = "720p";
 
@@ -39,7 +41,7 @@ struct VideoTaskRequest {
     common: TaskCommonOptions,
     model: Option<String>,
     create_path: &'static str,
-    request: Value,
+    build_request: Box<dyn Fn(&str) -> Value>,
     timeout: Option<u64>,
     modality: String,
     aspect_ratio: Option<String>,
@@ -50,7 +52,7 @@ struct VideoTaskRequest {
 pub fn execute(ctx: &AppContext, opts: VideoGenOptions) -> CommandResult {
     let command = "video";
     validate_options(&opts).map_err(|error| CommandError::new(command, opts.common.json, error))?;
-    let task = video_generation_task(&opts, command);
+    let task = video_generation_task(opts, command);
     execute_video_task(ctx, task)
 }
 
@@ -58,7 +60,15 @@ pub fn execute_edit(ctx: &AppContext, opts: VideoEditOptions) -> CommandResult {
     let command = "video-edit";
     validate_edit_options(&opts)
         .map_err(|error| CommandError::new(command, opts.common.json, error))?;
-    let task = video_edit_task(&opts, command);
+    let task = video_edit_task(opts, command);
+    execute_video_task(ctx, task)
+}
+
+pub fn execute_extend(ctx: &AppContext, opts: VideoExtendOptions) -> CommandResult {
+    let command = "video-extend";
+    validate_extend_options(&opts)
+        .map_err(|error| CommandError::new(command, opts.common.json, error))?;
+    let task = video_extend_task(opts, command);
     execute_video_task(ctx, task)
 }
 
@@ -73,11 +83,12 @@ fn execute_video_task(ctx: &AppContext, task: VideoTaskRequest) -> CommandResult
     let model = task.model.clone().unwrap_or_else(|| {
         model::default_model_for_task(state.as_ref(), "video", DEFAULT_VIDEO_MODEL)
     });
+    let request = (task.build_request)(&model);
     let created = upstream::post_json_api_with_options(
         ctx,
         task.common.auth_file.as_deref(),
         task.create_path,
-        &task.request,
+        &request,
         Some(upstream::DEFAULT_MEDIA_TIMEOUT_SECONDS),
         upstream::UpstreamAuthOptions {
             refresh_if_expiring: true,
@@ -169,35 +180,85 @@ fn validate_edit_options(opts: &VideoEditOptions) -> Result<(), AppError> {
     Ok(())
 }
 
-fn video_generation_task(opts: &VideoGenOptions, command: &'static str) -> VideoTaskRequest {
+fn validate_extend_options(opts: &VideoExtendOptions) -> Result<(), AppError> {
+    if extend_prompt_text(opts).trim().is_empty() {
+        return Err(AppError::new(
+            ErrorCode::InvalidArgs,
+            "prompt must not be empty",
+        ));
+    }
+
+    if non_empty_string(opts.video_url.as_deref()).is_none() {
+        return Err(AppError::new(
+            ErrorCode::InvalidArgs,
+            "--video-url is required",
+        ));
+    }
+
+    Ok(())
+}
+
+fn video_generation_task(opts: VideoGenOptions, command: &'static str) -> VideoTaskRequest {
+    let common = opts.common.clone();
+    let model = opts.model.clone();
+    let timeout = opts.timeout;
+    let modality = video_generation_modality(&opts);
+    let aspect_ratio = Some(normalize_aspect_ratio(opts.aspect_ratio.as_deref()).to_string());
+    let duration = Some(clamp_duration(
+        opts.duration,
+        !opts.reference_image_urls.is_empty(),
+    ));
+    let resolution = Some(normalize_resolution(opts.resolution.as_deref()).to_string());
+
     VideoTaskRequest {
         command,
-        common: opts.common.clone(),
-        model: opts.model.clone(),
+        common,
+        model,
         create_path: VIDEO_GENERATIONS_PATH,
-        request: build_request(opts, DEFAULT_VIDEO_MODEL),
-        timeout: opts.timeout,
-        modality: video_generation_modality(opts),
-        aspect_ratio: Some(normalize_aspect_ratio(opts.aspect_ratio.as_deref()).to_string()),
-        duration: Some(clamp_duration(
-            opts.duration,
-            !opts.reference_image_urls.is_empty(),
-        )),
-        resolution: Some(normalize_resolution(opts.resolution.as_deref()).to_string()),
+        build_request: Box::new(move |model| build_request(&opts, model)),
+        timeout,
+        modality,
+        aspect_ratio,
+        duration,
+        resolution,
     }
 }
 
-fn video_edit_task(opts: &VideoEditOptions, command: &'static str) -> VideoTaskRequest {
+fn video_edit_task(opts: VideoEditOptions, command: &'static str) -> VideoTaskRequest {
+    let common = opts.common.clone();
+    let model = opts.model.clone();
+    let timeout = opts.timeout;
+
     VideoTaskRequest {
         command,
-        common: opts.common.clone(),
-        model: opts.model.clone(),
+        common,
+        model,
         create_path: VIDEO_EDITS_PATH,
-        request: build_edit_request(opts, DEFAULT_VIDEO_MODEL),
-        timeout: opts.timeout,
+        build_request: Box::new(move |model| build_edit_request(&opts, model)),
+        timeout,
         modality: "edit".to_string(),
         aspect_ratio: None,
         duration: None,
+        resolution: None,
+    }
+}
+
+fn video_extend_task(opts: VideoExtendOptions, command: &'static str) -> VideoTaskRequest {
+    let common = opts.common.clone();
+    let model = opts.model.clone();
+    let timeout = opts.timeout;
+    let duration = Some(clamp_extension_duration(opts.duration));
+
+    VideoTaskRequest {
+        command,
+        common,
+        model,
+        create_path: VIDEO_EXTENSIONS_PATH,
+        build_request: Box::new(move |model| build_extend_request(&opts, model)),
+        timeout,
+        modality: "extension".to_string(),
+        aspect_ratio: None,
+        duration,
         resolution: None,
     }
 }
@@ -247,6 +308,20 @@ fn build_edit_request(opts: &VideoEditOptions, model: &str) -> Value {
     Value::Object(body)
 }
 
+fn build_extend_request(opts: &VideoExtendOptions, model: &str) -> Value {
+    let mut body = serde_json::Map::new();
+    body.insert("model".to_string(), json!(model));
+    body.insert("prompt".to_string(), json!(extend_prompt_text(opts)));
+    body.insert(
+        "duration".to_string(),
+        json!(clamp_extension_duration(opts.duration)),
+    );
+    if let Some(video_url) = non_empty_string(opts.video_url.as_deref()) {
+        body.insert("video".to_string(), json!({ "url": video_url }));
+    }
+    Value::Object(body)
+}
+
 fn prompt_text(opts: &VideoGenOptions) -> &str {
     opts.prompt
         .as_deref()
@@ -255,6 +330,13 @@ fn prompt_text(opts: &VideoGenOptions) -> &str {
 }
 
 fn edit_prompt_text(opts: &VideoEditOptions) -> &str {
+    opts.prompt
+        .as_deref()
+        .or(opts.prompt_flag.as_deref())
+        .unwrap_or("")
+}
+
+fn extend_prompt_text(opts: &VideoExtendOptions) -> &str {
     opts.prompt
         .as_deref()
         .or(opts.prompt_flag.as_deref())
@@ -420,7 +502,7 @@ fn parse_video_response(
     request_id: &str,
     upstream: &upstream::UpstreamJsonEnvelope,
 ) -> Result<VideoGenData, AppError> {
-    let task = video_generation_task(opts, "video");
+    let task = video_generation_task(opts.clone(), "video");
     parse_video_task_response(&task, model, request_id, upstream)
 }
 
@@ -444,6 +526,12 @@ fn clamp_duration(duration: Option<u64>, has_reference_images: bool) -> u64 {
         value = 10;
     }
     value
+}
+
+fn clamp_extension_duration(duration: Option<u64>) -> u64 {
+    duration
+        .unwrap_or(DEFAULT_VIDEO_EXTENSION_DURATION)
+        .clamp(2, 10)
 }
 
 fn normalize_aspect_ratio(value: Option<&str>) -> &'static str {
@@ -494,11 +582,12 @@ fn extract_video_url(response: &Value) -> Result<String, AppError> {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_edit_request, build_request, extract_request_id, extract_video_url,
-        parse_video_response, validate_edit_options, validate_options,
-        video_poll_request_timeout_seconds, video_poll_timeout_seconds,
+        build_edit_request, build_extend_request, build_request, clamp_extension_duration,
+        extract_request_id, extract_video_url, parse_video_response, validate_edit_options,
+        validate_extend_options, validate_options, video_poll_request_timeout_seconds,
+        video_poll_timeout_seconds,
     };
-    use crate::args::{TaskCommonOptions, VideoEditOptions, VideoGenOptions};
+    use crate::args::{TaskCommonOptions, VideoEditOptions, VideoExtendOptions, VideoGenOptions};
     use crate::upstream::UpstreamJsonEnvelope;
     use serde_json::json;
 
@@ -529,6 +618,21 @@ mod tests {
             prompt: Some("Give the woman a silver necklace".to_string()),
             prompt_flag: None,
             video_url: Some("https://cdn.x.ai/source.mp4".to_string()),
+            model: Some("grok-imagine-video".to_string()),
+            timeout: Some(60),
+        }
+    }
+
+    fn sample_extend_opts() -> VideoExtendOptions {
+        VideoExtendOptions {
+            common: TaskCommonOptions {
+                json: true,
+                auth_file: None,
+            },
+            prompt: Some("The camera pans left".to_string()),
+            prompt_flag: None,
+            video_url: Some("https://cdn.x.ai/source.mp4".to_string()),
+            duration: Some(6),
             model: Some("grok-imagine-video".to_string()),
             timeout: Some(60),
         }
@@ -570,6 +674,24 @@ mod tests {
     }
 
     #[test]
+    fn validate_extend_options_rejects_empty_prompt() {
+        let mut opts = sample_extend_opts();
+        opts.prompt = Some("   ".to_string());
+        let error = validate_extend_options(&opts).unwrap_err();
+        assert_eq!(error.code.as_str(), "invalid_args");
+        assert!(error.message.contains("prompt must not be empty"));
+    }
+
+    #[test]
+    fn validate_extend_options_rejects_missing_video_url() {
+        let mut opts = sample_extend_opts();
+        opts.video_url = None;
+        let error = validate_extend_options(&opts).unwrap_err();
+        assert_eq!(error.code.as_str(), "invalid_args");
+        assert!(error.message.contains("--video-url is required"));
+    }
+
+    #[test]
     fn build_request_includes_video_fields() {
         let mut opts = sample_opts();
         opts.image_url = Some("https://cdn.x.ai/source.png".to_string());
@@ -606,6 +728,42 @@ mod tests {
         assert!(request["duration"].is_null());
         assert!(request["aspect_ratio"].is_null());
         assert!(request["resolution"].is_null());
+    }
+
+    #[test]
+    fn build_extend_request_wraps_video_url_and_duration_without_generation_fields() {
+        let opts = sample_extend_opts();
+        let request = build_extend_request(&opts, "grok-imagine-video");
+        assert_eq!(request["model"], "grok-imagine-video");
+        assert_eq!(request["prompt"], "The camera pans left");
+        assert_eq!(request["video"]["url"], "https://cdn.x.ai/source.mp4");
+        assert_eq!(request["duration"], 6);
+        assert!(request["video_url"].is_null());
+        assert!(request["aspect_ratio"].is_null());
+        assert!(request["resolution"].is_null());
+    }
+
+    #[test]
+    fn build_extend_request_defaults_and_clamps_duration() {
+        let mut opts = sample_extend_opts();
+        opts.duration = None;
+        assert_eq!(
+            build_extend_request(&opts, "grok-imagine-video")["duration"],
+            6
+        );
+
+        opts.duration = Some(1);
+        assert_eq!(
+            build_extend_request(&opts, "grok-imagine-video")["duration"],
+            2
+        );
+
+        opts.duration = Some(11);
+        assert_eq!(
+            build_extend_request(&opts, "grok-imagine-video")["duration"],
+            10
+        );
+        assert_eq!(clamp_extension_duration(None), 6);
     }
 
     #[test]

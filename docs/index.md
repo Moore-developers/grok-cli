@@ -36,6 +36,7 @@
 - [`image-edit`](./commands/image-edit.md)：使用 Grok Imagine 编辑一张或多张参考图片。
 - [`video`](./commands/video.md)：使用 Grok Imagine 生成视频。
 - [`video-edit`](./commands/video-edit.md)：使用 Grok Imagine 编辑已有视频。
+- [`video-extend`](./commands/video-extend.md)：使用 Grok Imagine 扩展已有视频。
 - [`tts`](./commands/tts.md)：文本转语音。
 - [`stt`](./commands/stt.md)：语音转文字。
 - [`stt-stream`](./commands/stt-stream.md)：通过 WebSocket 实验性实时语音转文字。
@@ -64,6 +65,7 @@ docs/
 │  ├─ image-edit.md
 │  ├─ video.md
 │  ├─ video-edit.md
+│  ├─ video-extend.md
 │  ├─ tts.md
 │  ├─ stt.md
 │  └─ stt-stream.md
@@ -108,7 +110,7 @@ docs/
 ## 当前公开命令
 
 ```text
-grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-edit|video|video-edit|tts|stt|stt-stream> ...
+grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-edit|video|video-edit|video-extend|tts|stt|stt-stream> ...
 ```
 
 ## 输出约定

@@ -55,7 +55,7 @@ grok-cli model --json --model grok-4.3
 - 未传 `--model` 时，交互终端进入方向键选择；非交互环境输出当前选择和模型目录。
 - 传入 `--model` 时，将共享文本模型写入 `auth.json` 的 metadata。
 - `--command` / `--task` 仅作为隐藏兼容参数保留；公开行为永远是 chat/search 共用同一个模型。
-- 媒体命令如果要指定模型，请直接在 `image`、`image-edit`、`video`、`video-edit`、`tts`、`stt`、`stt-stream` 上传 `--model`。
+- 媒体命令如果要指定模型，请直接在 `image`、`image-edit`、`video`、`video-edit`、`video-extend`、`tts`、`stt`、`stt-stream` 上传 `--model`。
 
 ## JSON 输出重点
 

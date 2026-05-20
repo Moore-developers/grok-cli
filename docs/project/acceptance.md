@@ -87,6 +87,7 @@ cargo run -- image-edit --image ./source.png --prompt "Make it cinematic"
 cargo run -- image-edit --image ./a.png --image ./b.png --image ./c.png --prompt "Blend references" --json
 cargo run -- video "Animate a cinematic skyline" --duration 8
 cargo run -- video-edit --video-url https://example.com/source.mp4 --prompt "Make it cinematic"
+cargo run -- video-extend --video-url https://example.com/source.mp4 --prompt "Continue the camera move" --duration 6
 cargo run -- tts "Hello from Grok"
 cargo run -- tts "Hello from Grok" --output-format mp3 --sample-rate 24000 --bit-rate 128000
 cargo run -- tts --list-voices --json
@@ -102,6 +103,7 @@ cargo run -- stt-stream ./sample.wav --interim-results
 - 图片编辑请求返回 `image` 和 `images`
 - 视频返回 `video`
 - 视频编辑请求返回 `video`，`modality` 为 `edit`
+- 视频扩展请求返回 `video`，`modality` 为 `extension`
 - TTS 返回 `file_path`
 - TTS 显式输出格式请求成功时返回 `output_format`
 - `tts --list-voices --json` 返回 `voices`

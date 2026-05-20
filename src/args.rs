@@ -48,6 +48,9 @@ pub enum TopLevelCommand {
     /// Edit videos with Grok Imagine.
     #[command(name = "video-edit")]
     VideoEdit(VideoEditOptions),
+    /// Extend videos with Grok Imagine.
+    #[command(name = "video-extend")]
+    VideoExtend(VideoExtendOptions),
     /// Convert text to speech.
     Tts(TtsOptions),
     /// Transcribe speech to text.
@@ -348,6 +351,31 @@ pub struct VideoEditOptions {
     #[arg(long = "video-url")]
     pub video_url: Option<String>,
     /// Override the video edit model for this request.
+    #[arg(long)]
+    pub model: Option<String>,
+    /// Total video polling timeout in seconds. Single HTTP requests stay capped at 120 seconds.
+    #[arg(long)]
+    pub timeout: Option<u64>,
+}
+
+#[derive(Debug, Clone, Args)]
+#[command(about = "Extend videos with Grok Imagine")]
+pub struct VideoExtendOptions {
+    #[command(flatten)]
+    pub common: TaskCommonOptions,
+    /// Video extension prompt. You can pass it positionally or with --prompt.
+    #[arg(value_name = "PROMPT", conflicts_with = "prompt_flag")]
+    pub prompt: Option<String>,
+    /// Video extension prompt for scripts that prefer named flags.
+    #[arg(long = "prompt", value_name = "PROMPT", id = "prompt_flag")]
+    pub prompt_flag: Option<String>,
+    /// Source video URL to extend.
+    #[arg(long = "video-url")]
+    pub video_url: Option<String>,
+    /// Requested extension duration in seconds. Defaults to 6 and is clamped to 2..=10.
+    #[arg(long)]
+    pub duration: Option<u64>,
+    /// Override the video extension model for this request.
     #[arg(long)]
     pub model: Option<String>,
     /// Total video polling timeout in seconds. Single HTTP requests stay capped at 120 seconds.

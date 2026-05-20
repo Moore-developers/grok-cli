@@ -10,7 +10,7 @@ OAuth-first command-line access to Grok / xAI capabilities.
 - Chat through Grok Responses
 - X search through Grok `x_search`
 - Image generation and image editing
-- Video generation and video editing
+- Video generation, editing, and extension
 - Text-to-speech, batch speech-to-text, and experimental streaming speech-to-text
 - Local session usage accounting in SQLite
 
@@ -24,7 +24,7 @@ Text commands are optimized for both humans and automation:
 The public command surface is intentionally flat:
 
 ```text
-grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-edit|video|video-edit|tts|stt|stt-stream> ...
+grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-edit|video|video-edit|video-extend|tts|stt|stt-stream> ...
 ```
 
 ## Quick Start
@@ -66,6 +66,7 @@ grok-cli image "A cinematic skyline at sunrise"
 grok-cli image-edit --image ./source.png --prompt "Make it cinematic"
 grok-cli video "Animate a futuristic skyline" --duration 8
 grok-cli video-edit --video-url https://example.com/source.mp4 --prompt "Make it cinematic"
+grok-cli video-extend --video-url https://example.com/source.mp4 --prompt "Continue the camera move" --duration 6
 grok-cli tts "Hello from Grok"
 grok-cli stt ./sample.wav
 grok-cli stt-stream ./sample.wav --interim-results
@@ -136,6 +137,7 @@ Failed JSON output uses the same shape:
 - `image-edit`: edit one or more reference images with Grok Imagine.
 - `video`: generate a video with Grok Imagine.
 - `video-edit`: edit an existing video with Grok Imagine.
+- `video-extend`: extend an existing video with Grok Imagine.
 - `tts`: convert text to speech.
 - `stt`: transcribe speech to text.
 - `stt-stream`: stream speech to text over WebSocket. This is an experimental entry point.

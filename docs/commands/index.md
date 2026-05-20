@@ -5,7 +5,7 @@
 ## 顶层命令
 
 ```text
-grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-edit|video|video-edit|tts|stt|stt-stream> ...
+grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-edit|video|video-edit|video-extend|tts|stt|stt-stream> ...
 ```
 
 ## 认证命令
@@ -39,6 +39,7 @@ grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-
 | `image-edit` | [`image-edit.md`](./image-edit.md) | 使用 Grok Imagine 编辑一张或多张参考图片。 |
 | `video` | [`video.md`](./video.md) | 使用 Grok Imagine 生成视频。 |
 | `video-edit` | [`video-edit.md`](./video-edit.md) | 使用 Grok Imagine 编辑已有视频。 |
+| `video-extend` | [`video-extend.md`](./video-extend.md) | 使用 Grok Imagine 扩展已有视频。 |
 | `tts` | [`tts.md`](./tts.md) | 文本转语音，并保存本地音频文件。 |
 | `stt` | [`stt.md`](./stt.md) | 将本地音频文件转写为文本。 |
 | `stt-stream` | [`stt-stream.md`](./stt-stream.md) | 通过 WebSocket 实验性实时转写本地音频。 |
@@ -70,6 +71,7 @@ grok-cli image "A cinematic skyline at sunrise"
 grok-cli image-edit --image ./source.png --prompt "Make it cinematic"
 grok-cli video "Animate a futuristic skyline" --duration 8
 grok-cli video-edit --video-url https://example.com/source.mp4 --prompt "Make it cinematic"
+grok-cli video-extend --video-url https://example.com/source.mp4 --prompt "Continue the camera move" --duration 6
 grok-cli tts "Hello from Grok"
 grok-cli stt ./sample.wav
 grok-cli stt-stream ./sample.wav --interim-results

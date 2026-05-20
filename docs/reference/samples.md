@@ -171,8 +171,6 @@
 - 本地输入图会编码成 data URI 后发送到 xAI。
 - `image` 是第一张编辑结果，`images` 是完整编辑结果列表。
 
-## 7. `tts --json`
-
 ## 7. `video-edit --json`
 
 ```json
@@ -199,7 +197,34 @@
 - 请求体使用 `video: {"url": ...}`，不发送 `duration`、`aspect_ratio`、`resolution`。
 - 创建请求后会轮询 `GET /videos/{request_id}` 到终态。
 
-## 8. `tts --json`
+## 8. `video-extend --json`
+
+```json
+{
+  "ok": true,
+  "command": "video-extend",
+  "data": {
+    "provider": "xai",
+    "credential_source": "xai-oauth",
+    "model": "grok-imagine-video",
+    "video": "https://cdn.x.ai/extended-video.mp4",
+    "modality": "extension",
+    "duration": 15,
+    "extra": {
+      "request_id": "ext_123",
+      "resolution": null
+    }
+  }
+}
+```
+
+默认行为说明：
+- `video-extend` 请求 `POST /videos/extensions`。
+- 请求体使用 `video: {"url": ...}` 和 `duration`，不发送 `aspect_ratio`、`resolution`。
+- `duration` 默认 `6`，请求前会限制到 `2..=10`。
+- 创建请求后会轮询 `GET /videos/{request_id}` 到终态。
+
+## 9. `tts --json`
 
 ```json
 {
@@ -221,7 +246,7 @@
 }
 ```
 
-## 8.1 `tts --list-voices --json`
+## 9.1 `tts --list-voices --json`
 
 ```json
 {
@@ -242,7 +267,7 @@
 }
 ```
 
-## 9. `stt --json`
+## 10. `stt --json`
 
 ```json
 {
@@ -276,7 +301,7 @@
 - `transcript` 始终保留，旧脚本可以继续读取它。
 - `language`、`duration`、`words`、`channels` 只有上游返回时才出现。
 
-## 9.1 媒体能力真实验证补充
+## 10.1 媒体能力真实验证补充
 
 `2026-05-20` 真实验证结果：
 
@@ -301,7 +326,7 @@
 - 手动执行一次 `refresh` 后，`video` 的三条真实分支全部恢复成功
 - 现已把这一步前置为媒体命令内建编排，不再要求用户自己先发现再刷新
 
-## 10. 典型错误信封
+## 11. 典型错误信封
 
 ```json
 {
@@ -316,7 +341,7 @@
 }
 ```
 
-## 11. `usage`
+## 12. `usage`
 
 人类可读输出示例：
 

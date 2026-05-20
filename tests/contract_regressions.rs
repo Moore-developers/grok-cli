@@ -19,6 +19,7 @@ fn top_level_help_lists_all_primary_command_groups() {
         .stdout(predicate::str::contains("image-edit"))
         .stdout(predicate::str::contains("video"))
         .stdout(predicate::str::contains("video-edit"))
+        .stdout(predicate::str::contains("video-extend"))
         .stdout(predicate::str::contains("tts"))
         .stdout(predicate::str::contains("stt"))
         .stdout(predicate::str::contains("stt-stream"))
@@ -39,6 +40,7 @@ fn media_help_lists_direct_media_commands() {
         .stdout(predicate::str::contains("image-edit"))
         .stdout(predicate::str::contains("video"))
         .stdout(predicate::str::contains("video-edit"))
+        .stdout(predicate::str::contains("video-extend"))
         .stdout(predicate::str::contains("tts"))
         .stdout(predicate::str::contains("stt"))
         .stdout(predicate::str::contains("stt-stream"));

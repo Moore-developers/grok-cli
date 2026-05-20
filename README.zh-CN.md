@@ -10,7 +10,7 @@
 - Grok 聊天
 - 通过 Grok `x_search` 搜索 X
 - 图片生成和图片编辑
-- 视频生成和视频编辑
+- 视频生成、视频编辑和视频扩展
 - 文本转语音、批量语音转文字和实验性实时语音转文字
 - 基于 SQLite 的本地会话 usage 统计
 
@@ -24,7 +24,7 @@
 公开命令面是扁平的：
 
 ```text
-grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-edit|video|video-edit|tts|stt|stt-stream> ...
+grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-edit|video|video-edit|video-extend|tts|stt|stt-stream> ...
 ```
 
 ## 快速开始
@@ -66,6 +66,7 @@ grok-cli image "日出时分的电影感城市天际线"
 grok-cli image-edit --image ./source.png --prompt "变得更有电影感"
 grok-cli video "让未来城市天际线动起来" --duration 8
 grok-cli video-edit --video-url https://example.com/source.mp4 --prompt "变得更有电影感"
+grok-cli video-extend --video-url https://example.com/source.mp4 --prompt "延续镜头运动" --duration 6
 grok-cli tts "你好，我是 Grok"
 grok-cli stt ./sample.wav
 grok-cli stt-stream ./sample.wav --interim-results
@@ -136,6 +137,7 @@ grok-cli search "今天大家怎么评价 Grok?" --no-stream
 - `image-edit`：基于一张或多张参考图编辑图片。
 - `video`：生成视频。
 - `video-edit`：编辑已有视频。
+- `video-extend`：扩展已有视频。
 - `tts`：文本转语音。
 - `stt`：语音转文字。
 - `stt-stream`：通过 WebSocket 实时语音转文字，当前是实验入口。

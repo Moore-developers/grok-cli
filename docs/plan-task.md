@@ -28,8 +28,8 @@
 ## 当前阶段
 
 - 阶段：Phase 16
-- 状态：已完成 Phase 16.1-16.5，Phase 16.6 已拆出 `video-edit` / `video-extend` 后续实现计划
-- 本轮重点：按 [`docs/project/supergrok-media-capability-plan.md`](./project/supergrok-media-capability-plan.md) 继续推进 `video-edit` / `video-extend`，并坚持每补一个能力都同步补测试
+- 状态：已完成 Phase 16.1-16.6，SuperGrok 媒体主能力补齐进入收尾验收
+- 本轮重点：继续补 streaming STT 深水区回归、真实视频编辑/扩展验收和开源发布配套
 
 ## 总体任务地图
 
@@ -598,11 +598,11 @@ Phase 15 完成标准：
 - [x] Phase 16.5: Image editing
   - [x] 新增 image edit / multi-image edit 独立命令设计
   - [x] 补请求构造、输入数量校验和命令级 stub 测试
-- [ ] Phase 16.6: Imagine video follow-up
+- [x] Phase 16.6: Imagine video follow-up
   - [x] 核对 video editing / extension 官方接口
   - [x] 拆分后续任务或新增独立计划
   - [x] 实现 `video-edit`
-  - [ ] 实现 `video-extend`
+  - [x] 实现 `video-extend`
 
 Phase 16 完成标准：
 
@@ -620,6 +620,8 @@ Phase 16 完成标准：
 - `2026-05-21` 已新增实验性 `stt-stream`，提交 `8954596 feat: add experimental streaming STT`。
 - `2026-05-21` 已新增 `image-edit`，提交 `10d0268 feat: add xAI image editing command`。
 - `2026-05-21` 已拆出 `video-edit` / `video-extend` 后续计划，提交 `380781b docs: plan xAI video editing follow-up`。
+- `2026-05-21` 已新增 `video-edit`，提交 `c4d06c8 feat: add xAI video editing command`。
+- `2026-05-21` 已新增 `video-extend`，补齐请求构造、duration clamp、命令级 stub 测试和文档。
 
 ## 推荐执行顺序
 

@@ -222,6 +222,79 @@ fn task_video_edit_polls_until_completed_and_returns_video_url() {
     server.join().unwrap();
 }
 
+#[test]
+fn task_video_extend_rejects_missing_video_url() {
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args(["video-extend", "--json", "--prompt", "The camera pans left"])
+        .assert()
+        .code(2)
+        .stdout(predicate::str::contains("\"code\":\"invalid_args\""))
+        .stdout(predicate::str::contains("--video-url is required"));
+}
+
+#[test]
+fn task_video_extend_polls_until_completed_and_returns_video_url() {
+    let temp = tempdir().unwrap();
+    let auth_file = temp.path().join("auth.json");
+    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    write_auth_state(&auth_file, &format!("http://127.0.0.1:{port}/v1"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let create_request = read_request(&mut stream);
+        assert!(create_request.contains("POST /v1/videos/extensions"));
+        assert!(create_request.contains("\"model\":\"grok-imagine-video-custom\""));
+        assert!(create_request.contains("\"prompt\":\"The camera pans left\""));
+        assert!(create_request.contains("\"video\":{\"url\":\"https://cdn.x.ai/source.mp4\"}"));
+        assert!(create_request.contains("\"duration\":10"));
+        assert!(!create_request.contains("\"video_url\""));
+        assert!(!create_request.contains("\"aspect_ratio\""));
+        assert!(!create_request.contains("\"resolution\""));
+        write_response(&mut stream, "200 OK", r#"{"request_id":"ext_123"}"#);
+
+        let (mut stream, _) = listener.accept().unwrap();
+        let poll_request = read_request(&mut stream);
+        assert!(poll_request.contains("GET /v1/videos/ext_123"));
+        write_response(
+            &mut stream,
+            "200 OK",
+            r#"{"status":"done","video":{"url":"https://cdn.x.ai/extended-video.mp4","duration":15}}"#,
+        );
+    });
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "video-extend",
+            "--json",
+            "--auth-file",
+            auth_file.to_str().unwrap(),
+            "--prompt",
+            "The camera pans left",
+            "--video-url",
+            "https://cdn.x.ai/source.mp4",
+            "--duration",
+            "99",
+            "--model",
+            "grok-imagine-video-custom",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "\"model\":\"grok-imagine-video-custom\"",
+        ))
+        .stdout(predicate::str::contains(
+            "\"video\":\"https://cdn.x.ai/extended-video.mp4\"",
+        ))
+        .stdout(predicate::str::contains("\"modality\":\"extension\""))
+        .stdout(predicate::str::contains("\"duration\":15"))
+        .stdout(predicate::str::contains("\"request_id\":\"ext_123\""));
+
+    server.join().unwrap();
+}
+
 fn write_auth_state(path: &std::path::Path, base_url: &str) {
     fs::write(
         path,

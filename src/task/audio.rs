@@ -20,11 +20,13 @@ use crate::usage::tracker;
 const DEFAULT_TTS_MODEL: &str = "grok-tts";
 const DEFAULT_STT_MODEL: &str = "grok-transcribe";
 const TTS_PATH: &str = "/tts";
+const TTS_VOICES_PATH: &str = "/tts/voices";
 const STT_PATH: &str = "/stt";
 const DEFAULT_AUDIO_EXTENSION: &str = "mp3";
 const DEFAULT_TTS_VOICE_ID: &str = "eve";
 const DEFAULT_TTS_LANGUAGE: &str = "en";
 const DEFAULT_STT_LANGUAGE: &str = "en";
+const DEFAULT_TTS_SAMPLE_RATE: u32 = 24_000;
 
 #[derive(Debug, Clone, Serialize)]
 struct TtsData {
@@ -34,6 +36,23 @@ struct TtsData {
     file_path: String,
     media_tag: String,
     voice_compatible: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    output_format: Option<Value>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct TtsVoicesData {
+    success: bool,
+    provider: String,
+    credential_source: String,
+    voices: Value,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct TtsOutputFormat {
+    codec: String,
+    sample_rate: Option<u32>,
+    bit_rate: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -77,6 +96,10 @@ pub fn execute_tts(ctx: &AppContext, opts: TtsOptions) -> CommandResult {
     validate_tts_options(&opts)
         .map_err(|error| CommandError::new(command, opts.common.json, error))?;
 
+    if opts.list_voices {
+        return execute_tts_voices(ctx, &opts);
+    }
+
     let auth_file = opts.common.auth_file.as_deref();
     let state = auth_file
         .map(|path| ctx.state_store.resolve_path(Some(path)))
@@ -111,6 +134,7 @@ pub fn execute_tts(ctx: &AppContext, opts: TtsOptions) -> CommandResult {
         file_path: output_path.display().to_string(),
         media_tag: format!("MEDIA:{}", output_path.display()),
         voice_compatible: false,
+        output_format: tts_output_format(&opts).map(tts_output_format_json),
     };
     tracker::record_usage(
         ctx,
@@ -135,6 +159,41 @@ pub fn execute_tts(ctx: &AppContext, opts: TtsOptions) -> CommandResult {
         println!("file_path: {}", data.file_path);
         println!("media_tag: {}", data.media_tag);
         println!("voice_compatible: {}", data.voice_compatible);
+        if let Some(output_format) = &data.output_format {
+            println!("output_format: {output_format}");
+        }
+    }
+
+    Ok(())
+}
+
+fn execute_tts_voices(ctx: &AppContext, opts: &TtsOptions) -> CommandResult {
+    let command = "tts";
+    let upstream = upstream::get_json_api_with_options(
+        ctx,
+        opts.common.auth_file.as_deref(),
+        TTS_VOICES_PATH,
+        opts.timeout,
+        upstream::UpstreamAuthOptions {
+            refresh_if_expiring: true,
+        },
+    )
+    .map_err(|error| CommandError::new(command, opts.common.json, error))?;
+
+    let data = TtsVoicesData {
+        success: true,
+        provider: "xai".to_string(),
+        credential_source: upstream.credential_source,
+        voices: extract_tts_voices(&upstream.response),
+    };
+
+    if opts.common.json {
+        output::print_json_success(command, &data);
+    } else {
+        println!("success: {}", data.success);
+        println!("provider: {}", data.provider);
+        println!("credential_source: {}", data.credential_source);
+        print_tts_voices(&data.voices);
     }
 
     Ok(())
@@ -210,13 +269,79 @@ pub fn execute_stt(ctx: &AppContext, opts: SttOptions) -> CommandResult {
 }
 
 fn validate_tts_options(opts: &TtsOptions) -> Result<(), AppError> {
+    if opts.list_voices {
+        return Ok(());
+    }
+
     if tts_text(opts).trim().is_empty() {
         return Err(AppError::new(
             ErrorCode::InvalidArgs,
             "text must not be empty",
         ));
     }
+
+    let output_format = tts_output_format(opts);
+    if let (Some(explicit), Some(path_format)) = (
+        output_format.as_ref(),
+        opts.output
+            .as_deref()
+            .and_then(|path| path.extension())
+            .and_then(|value| value.to_str())
+            .map(|value| value.to_ascii_lowercase()),
+    ) {
+        if explicit.codec != path_format {
+            return Err(AppError::new(
+                ErrorCode::InvalidArgs,
+                format!(
+                    "--output extension .{path_format} does not match --output-format {}",
+                    explicit.codec
+                ),
+            ));
+        }
+    }
+
     Ok(())
+}
+
+fn tts_output_format(opts: &TtsOptions) -> Option<TtsOutputFormat> {
+    let codec = opts
+        .output_format
+        .as_deref()
+        .and_then(|value| non_empty_string(Some(value)))
+        .or_else(|| {
+            opts.output
+                .as_deref()
+                .and_then(|path| path.extension())
+                .and_then(|value| value.to_str())
+                .map(|value| value.to_ascii_lowercase())
+                .filter(|value| value == "wav")
+        });
+
+    let codec = codec?;
+    Some(TtsOutputFormat {
+        codec,
+        sample_rate: opts.sample_rate.or_else(|| {
+            opts.output
+                .as_deref()
+                .and_then(|path| path.extension())
+                .and_then(|value| value.to_str())
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("wav"))
+                .then_some(DEFAULT_TTS_SAMPLE_RATE)
+        }),
+        bit_rate: opts.bit_rate,
+    })
+}
+
+fn tts_output_format_json(format: TtsOutputFormat) -> Value {
+    let mut object = serde_json::Map::new();
+    object.insert("codec".to_string(), json!(format.codec));
+    if let Some(sample_rate) = format.sample_rate {
+        object.insert("sample_rate".to_string(), json!(sample_rate));
+    }
+    if let Some(bit_rate) = format.bit_rate {
+        object.insert("bit_rate".to_string(), json!(bit_rate));
+    }
+    Value::Object(object)
 }
 
 fn validate_stt_options(opts: &SttOptions) -> Result<(), AppError> {
@@ -309,23 +434,55 @@ fn build_tts_request(opts: &TtsOptions, _model: &str) -> serde_json::Value {
         json!(opts.language.as_deref().unwrap_or(DEFAULT_TTS_LANGUAGE)),
     );
 
-    if opts
-        .output
-        .as_deref()
-        .and_then(|path| path.extension())
-        .and_then(|value| value.to_str())
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("wav"))
-    {
+    if let Some(output_format) = tts_output_format(opts) {
         body.insert(
             "output_format".to_string(),
-            json!({
-                "codec": "wav",
-                "sample_rate": 24000
-            }),
+            tts_output_format_json(output_format),
         );
+    }
+    if let Some(value) = non_empty_string(opts.optimize_streaming_latency.as_deref()) {
+        body.insert("optimize_streaming_latency".to_string(), json!(value));
+    }
+    if let Some(value) = non_empty_string(opts.text_normalization.as_deref()) {
+        body.insert("text_normalization".to_string(), json!(value));
     }
 
     serde_json::Value::Object(body)
+}
+
+fn extract_tts_voices(response: &Value) -> Value {
+    response
+        .get("voices")
+        .or_else(|| response.get("data"))
+        .cloned()
+        .unwrap_or_else(|| response.clone())
+}
+
+fn print_tts_voices(voices: &Value) {
+    match voices.as_array() {
+        Some(items) if items.is_empty() => println!("voices: []"),
+        Some(items) => {
+            println!("voices:");
+            for item in items {
+                let id = item
+                    .get("voice_id")
+                    .or_else(|| item.get("id"))
+                    .and_then(|value| value.as_str())
+                    .unwrap_or("unknown");
+                let name = item
+                    .get("name")
+                    .and_then(|value| value.as_str())
+                    .unwrap_or(id);
+                let kind = item
+                    .get("type")
+                    .or_else(|| item.get("source"))
+                    .and_then(|value| value.as_str())
+                    .unwrap_or("voice");
+                println!("- {id}\t{name}\t{kind}");
+            }
+        }
+        _ => println!("voices: {voices}"),
+    }
 }
 
 fn resolve_tts_output_path(opts: &TtsOptions) -> Result<PathBuf, AppError> {
@@ -480,9 +637,15 @@ mod tests {
             },
             text: Some("Hello world".to_string()),
             text_flag: None,
+            list_voices: false,
             voice_id: Some("alloy".to_string()),
             language: Some("en".to_string()),
             output: None,
+            output_format: None,
+            sample_rate: None,
+            bit_rate: None,
+            optimize_streaming_latency: None,
+            text_normalization: None,
             model: Some("grok-tts".to_string()),
             timeout: Some(60),
         }
@@ -520,12 +683,66 @@ mod tests {
     }
 
     #[test]
+    fn validate_tts_options_allows_list_voices_without_text() {
+        let mut opts = sample_tts_opts();
+        opts.text = None;
+        opts.list_voices = true;
+        validate_tts_options(&opts).unwrap();
+    }
+
+    #[test]
+    fn validate_tts_options_rejects_mismatched_output_extension() {
+        let mut opts = sample_tts_opts();
+        opts.output = Some(PathBuf::from("/tmp/custom.wav"));
+        opts.output_format = Some("mp3".to_string());
+        let error = validate_tts_options(&opts).unwrap_err();
+        assert_eq!(error.code.as_str(), "invalid_args");
+        assert!(error.message.contains("does not match --output-format"));
+    }
+
+    #[test]
     fn build_tts_request_includes_fields() {
         let opts = sample_tts_opts();
         let request = build_tts_request(&opts, "grok-tts");
         assert_eq!(request["text"], "Hello world");
         assert_eq!(request["voice_id"], "alloy");
         assert_eq!(request["language"], "en");
+    }
+
+    #[test]
+    fn build_tts_request_includes_explicit_output_format() {
+        let mut opts = sample_tts_opts();
+        opts.output_format = Some("mp3".to_string());
+        opts.sample_rate = Some(24_000);
+        opts.bit_rate = Some(128_000);
+
+        let request = build_tts_request(&opts, "grok-tts");
+        assert_eq!(request["output_format"]["codec"], "mp3");
+        assert_eq!(request["output_format"]["sample_rate"], 24_000);
+        assert_eq!(request["output_format"]["bit_rate"], 128_000);
+    }
+
+    #[test]
+    fn build_tts_request_infers_wav_output_format_from_extension() {
+        let mut opts = sample_tts_opts();
+        opts.output = Some(PathBuf::from("/tmp/custom.wav"));
+
+        let request = build_tts_request(&opts, "grok-tts");
+        assert_eq!(request["output_format"]["codec"], "wav");
+        assert_eq!(request["output_format"]["sample_rate"], 24_000);
+    }
+
+    #[test]
+    fn build_tts_request_includes_advanced_parameters() {
+        let mut opts = sample_tts_opts();
+        opts.language = Some("auto".to_string());
+        opts.optimize_streaming_latency = Some("auto".to_string());
+        opts.text_normalization = Some("off".to_string());
+
+        let request = build_tts_request(&opts, "grok-tts");
+        assert_eq!(request["language"], "auto");
+        assert_eq!(request["optimize_streaming_latency"], "auto");
+        assert_eq!(request["text_normalization"], "off");
     }
 
     #[test]

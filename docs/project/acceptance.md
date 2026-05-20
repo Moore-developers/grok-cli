@@ -83,6 +83,8 @@ cargo run -- search "What are people saying about xAI on X today?"
 cargo run -- image "A cinematic skyline"
 cargo run -- video "Animate a cinematic skyline" --duration 8
 cargo run -- tts "Hello from Grok"
+cargo run -- tts "Hello from Grok" --output-format mp3 --sample-rate 24000 --bit-rate 128000
+cargo run -- tts --list-voices --json
 cargo run -- stt ./sample.wav
 cargo run -- stt ./sample.wav --diarize --keyterm Grok --filler-words --json
 ```
@@ -91,6 +93,8 @@ cargo run -- stt ./sample.wav --diarize --keyterm Grok --filler-words --json
 - 图片返回 `image`
 - 视频返回 `video`
 - TTS 返回 `file_path`
+- TTS 显式输出格式请求成功时返回 `output_format`
+- `tts --list-voices --json` 返回 `voices`
 - STT 返回 `transcript`
 - STT 高级参数请求成功时仍保留 `transcript`，并在上游返回时保留 `language` / `duration` / `words` / `channels`
 - 当 access token 接近过期时，媒体命令会先自动 refresh，再发起真实请求

@@ -60,6 +60,61 @@ fn task_tts_writes_audio_file_from_stubbed_upstream() {
 }
 
 #[test]
+fn task_tts_sends_output_format_and_advanced_options() {
+    let temp = tempdir().unwrap();
+    let auth_file = temp.path().join("auth.json");
+    let output_file = temp.path().join("voice.mp3");
+    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    write_auth_state(&auth_file, &format!("http://127.0.0.1:{port}/v1"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let request = read_request(&mut stream);
+        assert!(request.contains("POST /v1/tts"));
+        assert!(request.contains("\"language\":\"auto\""));
+        assert!(request.contains(
+            "\"output_format\":{\"bit_rate\":128000,\"codec\":\"mp3\",\"sample_rate\":24000}"
+        ));
+        assert!(request.contains("\"optimize_streaming_latency\":\"auto\""));
+        assert!(request.contains("\"text_normalization\":\"off\""));
+        write_binary_response(&mut stream, "200 OK", b"FAKEAUDIO");
+    });
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "tts",
+            "--json",
+            "--auth-file",
+            auth_file.to_str().unwrap(),
+            "--text",
+            "Hello from Grok",
+            "--language",
+            "auto",
+            "--output",
+            output_file.to_str().unwrap(),
+            "--output-format",
+            "mp3",
+            "--sample-rate",
+            "24000",
+            "--bit-rate",
+            "128000",
+            "--optimize-streaming-latency",
+            "auto",
+            "--text-normalization",
+            "off",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"success\":true"))
+        .stdout(predicate::str::contains("\"output_format\""));
+
+    assert_eq!(fs::read(&output_file).unwrap(), b"FAKEAUDIO");
+    server.join().unwrap();
+}
+
+#[test]
 fn task_tts_accepts_text_as_positional_argument() {
     let temp = tempdir().unwrap();
     let auth_file = temp.path().join("auth.json");
@@ -89,6 +144,43 @@ fn task_tts_accepts_text_as_positional_argument() {
         .assert()
         .success()
         .stdout(predicate::str::contains("\"success\":true"));
+
+    server.join().unwrap();
+}
+
+#[test]
+fn task_tts_lists_voices_from_stubbed_upstream() {
+    let temp = tempdir().unwrap();
+    let auth_file = temp.path().join("auth.json");
+    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    write_auth_state(&auth_file, &format!("http://127.0.0.1:{port}/v1"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let request = read_request(&mut stream);
+        assert!(request.contains("GET /v1/tts/voices"));
+        write_json_response(
+            &mut stream,
+            "200 OK",
+            r#"{"voices":[{"voice_id":"eve","name":"Eve","type":"official"},{"voice_id":"custom-1","name":"Custom","type":"custom"}]}"#,
+        );
+    });
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "tts",
+            "--json",
+            "--auth-file",
+            auth_file.to_str().unwrap(),
+            "--list-voices",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"success\":true"))
+        .stdout(predicate::str::contains("\"voice_id\":\"eve\""))
+        .stdout(predicate::str::contains("\"voice_id\":\"custom-1\""));
 
     server.join().unwrap();
 }

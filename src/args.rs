@@ -292,6 +292,9 @@ pub struct TtsOptions {
     /// Text to synthesize for scripts that prefer named flags.
     #[arg(long = "text", value_name = "TEXT", id = "text_flag")]
     pub text_flag: Option<String>,
+    /// List available TTS voices instead of synthesizing audio.
+    #[arg(long = "list-voices")]
+    pub list_voices: bool,
     /// Voice id to use.
     #[arg(long = "voice-id")]
     pub voice_id: Option<String>,
@@ -301,6 +304,21 @@ pub struct TtsOptions {
     /// Output audio file path.
     #[arg(long, value_name = "PATH")]
     pub output: Option<PathBuf>,
+    /// Output audio format, for example mp3 or wav.
+    #[arg(long = "output-format")]
+    pub output_format: Option<String>,
+    /// Output sample rate in Hz.
+    #[arg(long = "sample-rate")]
+    pub sample_rate: Option<u32>,
+    /// Output bit rate in bits per second.
+    #[arg(long = "bit-rate")]
+    pub bit_rate: Option<u32>,
+    /// Streaming latency optimization mode.
+    #[arg(long = "optimize-streaming-latency")]
+    pub optimize_streaming_latency: Option<String>,
+    /// Text normalization mode.
+    #[arg(long = "text-normalization")]
+    pub text_normalization: Option<String>,
     /// Override the TTS model for this request.
     #[arg(long)]
     pub model: Option<String>,

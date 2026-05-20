@@ -118,59 +118,59 @@
 
 ### TTS-1. 显式 output format
 
-- [ ] 在 `TtsOptions` 增加 `--output-format <FORMAT>`，建议枚举先支持 `mp3`、`wav`，后续按官方能力扩展。
-- [ ] 增加 `--sample-rate <HZ>`。
-- [ ] 增加 `--bit-rate <BPS>`。
-- [ ] 明确 `--output` 扩展名与 `--output-format` 不一致时的行为，建议先返回 `invalid_args`。
-- [ ] 默认行为保持 `mp3`。
+- [x] 在 `TtsOptions` 增加 `--output-format <FORMAT>`，建议枚举先支持 `mp3`、`wav`，后续按官方能力扩展。
+- [x] 增加 `--sample-rate <HZ>`。
+- [x] 增加 `--bit-rate <BPS>`。
+- [x] 明确 `--output` 扩展名与 `--output-format` 不一致时的行为，建议先返回 `invalid_args`。
+- [x] 默认行为保持 `mp3`。
 
 测试要求：
 
-- [ ] 模块级测试覆盖默认不发送冗余 `output_format` 或保持现有最小 payload。
-- [ ] 模块级测试覆盖显式 `mp3` / `wav` output format。
-- [ ] 模块级测试覆盖 sample rate 和 bit rate 进入 payload。
-- [ ] 模块级测试覆盖输出扩展名与显式格式冲突。
-- [ ] 命令级 stub 测试验证请求 JSON 包含 `output_format`。
+- [x] 模块级测试覆盖默认不发送冗余 `output_format` 或保持现有最小 payload。
+- [x] 模块级测试覆盖显式 `mp3` / `wav` output format。
+- [x] 模块级测试覆盖 sample rate 和 bit rate 进入 payload。
+- [x] 模块级测试覆盖输出扩展名与显式格式冲突。
+- [x] 命令级 stub 测试验证请求 JSON 包含 `output_format`。
 
 ### TTS-2. 官方高级参数
 
-- [ ] 增加 `--optimize-streaming-latency <MODE>` 并按官方字段透传。
-- [ ] 增加 `--text-normalization <MODE>` 并按官方字段透传。
-- [ ] 允许 `--language auto`。
-- [ ] 继续允许自定义 `--voice-id`。
+- [x] 增加 `--optimize-streaming-latency <MODE>` 并按官方字段透传。
+- [x] 增加 `--text-normalization <MODE>` 并按官方字段透传。
+- [x] 允许 `--language auto`。
+- [x] 继续允许自定义 `--voice-id`。
 
 测试要求：
 
-- [ ] 模块级测试覆盖两个高级参数进入 payload。
-- [ ] 模块级测试覆盖 `language=auto`。
-- [ ] 命令级 stub 测试覆盖完整高级参数组合。
+- [x] 模块级测试覆盖两个高级参数进入 payload。
+- [x] 模块级测试覆盖 `language=auto`。
+- [x] 命令级 stub 测试覆盖完整高级参数组合。
 
 ### TTS-3. Voice discovery
 
 由于现有 `grok-cli tts "..."` 使用位置文本，`grok-cli tts voices` 会和普通文本合成有歧义。第一版采用模式参数：
 
-- [ ] 增加 `grok-cli tts --list-voices`。
-- [ ] 调用 `GET /v1/tts/voices`。
-- [ ] `--json` 输出 voice 列表原始结构或稳定包装结构。
-- [ ] 人类输出显示 voice id、名称、类型等关键字段。
+- [x] 增加 `grok-cli tts --list-voices`。
+- [x] 调用 `GET /v1/tts/voices`。
+- [x] `--json` 输出 voice 列表原始结构或稳定包装结构。
+- [x] 人类输出显示 voice id、名称、类型等关键字段。
 
 测试要求：
 
-- [ ] 命令级 stub 测试覆盖 `tts --list-voices --json`。
-- [ ] 响应解析测试覆盖空列表和多个 voice。
-- [ ] help / contract 测试确认新参数可见。
+- [x] 命令级 stub 测试覆盖 `tts --list-voices --json`。
+- [x] 响应解析测试覆盖空列表和多个 voice。
+- [x] help / contract 测试确认新参数可见。
 
 ### TTS-4. 文档同步
 
-- [ ] 更新 [`docs/commands/tts.md`](../commands/tts.md)。
-- [ ] 更新 [`docs/project/acceptance.md`](./acceptance.md)。
+- [x] 更新 [`docs/commands/tts.md`](../commands/tts.md)。
+- [x] 更新 [`docs/project/acceptance.md`](./acceptance.md)。
 - [ ] 需要时更新 [`docs/reference/samples.md`](../reference/samples.md)。
 
 完成标准：
 
-- [ ] `cargo test --quiet task_audio_commands` 通过。
-- [ ] `cargo test --quiet` 通过。
-- [ ] 默认 `grok-cli tts "hello"` 行为不变。
+- [x] `cargo test --quiet task_audio_commands` 通过。
+- [x] `cargo test --quiet` 通过。
+- [x] 默认 `grok-cli tts "hello"` 行为不变。
 
 ## Phase 16.3: Image Generation Completion
 

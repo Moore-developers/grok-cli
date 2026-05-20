@@ -104,7 +104,7 @@
 
 - [x] 更新 [`docs/commands/stt.md`](../commands/stt.md)。
 - [x] 更新 [`docs/project/acceptance.md`](./acceptance.md) 的媒体验收样例。
-- [ ] 需要时更新 [`docs/reference/samples.md`](../reference/samples.md) 的 JSON 样例。
+- [x] 需要时更新 [`docs/reference/samples.md`](../reference/samples.md) 的 JSON 样例。
 
 完成标准：
 
@@ -164,7 +164,7 @@
 
 - [x] 更新 [`docs/commands/tts.md`](../commands/tts.md)。
 - [x] 更新 [`docs/project/acceptance.md`](./acceptance.md)。
-- [ ] 需要时更新 [`docs/reference/samples.md`](../reference/samples.md)。
+- [x] 需要时更新 [`docs/reference/samples.md`](../reference/samples.md)。
 
 完成标准：
 
@@ -241,6 +241,10 @@ grok-cli stt-stream --file ./sample.wav --language en --interim-results
 - [x] 单元测试覆盖 WebSocket URL / query / init payload 构造。
 - [x] 单元测试覆盖 event parser。
 - [x] 命令级测试覆盖参数校验。
+- [ ] 补握手流程测试：连接后先等待 `transcript.created`，再开始发送音频。
+- [ ] 补实时发送策略测试：按 chunk 发送 raw binary frames，避免一次性把大文件塞入 WebSocket。
+- [ ] 补 WAV / raw 输入边界任务：明确是否跳过 WAV header，或在文档中标记 raw PCM 为推荐输入。
+- [ ] 补事件处理任务：覆盖 `transcript.partial`、多个 `transcript.done`、`error` 和服务端 close。
 - [ ] 如果引入 mock WebSocket server，补成功事件流测试。
 
 完成标准：
@@ -296,7 +300,7 @@ grok-cli image-edit --image ./a.png --image ./b.png --image ./c.png --prompt "Bl
 
 官方核对结论：
 
-- Video editing 使用 `POST /v1/videos/edits`，请求体包含 `model`、`prompt`、`video_url`。不支持 `duration`、`aspect_ratio`、`resolution`；输出继承输入视频，最高 720p。输入视频要求 `.mp4`，最大约 8.7 秒。
+- Video editing 使用 `POST /v1/videos/edits`，REST 请求体包含 `model`、`prompt`、`video: { url }`。SDK 可能暴露 `video_url` 参数，但 CLI 的 REST 请求应发送官方 JSON 字段 `video`。不支持 `duration`、`aspect_ratio`、`resolution`；输出继承输入视频，最高 720p。输入视频要求 `.mp4`，最大约 8.7 秒。
 - Video extension 使用 `POST /v1/videos/extensions`，请求体包含 `model`、`prompt`、`duration`、`video: { url }`。不支持 `aspect_ratio`、`resolution`；输出继承输入视频，最高 720p。输入视频要求 `.mp4` 且 2 到 15 秒；扩展片段 `duration` 为 2 到 10 秒，默认 6。
 - 两者都沿用异步视频流程：创建请求后读取 `request_id`，再轮询 `GET /v1/videos/{request_id}` 到终态。
 
@@ -312,7 +316,7 @@ grok-cli video-extend --video-url https://example.com/source.mp4 --prompt "The c
 - [ ] 在 `src/args.rs` 新增 `VideoEditOptions`，顶层命令 `video-edit`，参数：`PROMPT` / `--prompt`、`--video-url`、`--model`、`--timeout`、通用 `--json` / `--auth-file`。
 - [ ] 在 `src/args.rs` 新增 `VideoExtendOptions`，顶层命令 `video-extend`，参数：`PROMPT` / `--prompt`、`--video-url`、`--duration`、`--model`、`--timeout`、通用 `--json` / `--auth-file`。
 - [ ] 在 `src/task/video.rs` 抽取共享异步视频执行路径，支持不同 create endpoint、request builder、modality。
-- [ ] `video-edit` 请求 `POST /videos/edits`，发送 `video_url`。
+- [ ] `video-edit` 请求 `POST /videos/edits`，发送 `video: {"url": ...}`。
 - [ ] `video-extend` 请求 `POST /videos/extensions`，发送 `video: {"url": ...}` 和 clamp 后的 `duration`。
 - [ ] 输出沿用 `VideoGenData` 的稳定字段：`video`、`modality`、`duration`、`extra.request_id`。
 - [ ] 文档新增 `docs/commands/video-edit.md` 和 `docs/commands/video-extend.md`，并更新命令索引、验收文档、samples。
@@ -320,7 +324,7 @@ grok-cli video-extend --video-url https://example.com/source.mp4 --prompt "The c
 测试要求：
 
 - [ ] 模块级测试覆盖 `video-edit` 缺 prompt / 缺 video URL 校验。
-- [ ] 模块级测试覆盖 `video-edit` 请求体不包含 `duration` / `aspect_ratio` / `resolution`。
+- [ ] 模块级测试覆盖 `video-edit` 请求体使用 `video: {"url": ...}`，且不包含 `duration` / `aspect_ratio` / `resolution`。
 - [ ] 模块级测试覆盖 `video-extend` duration clamp 到 `2..=10`，默认 6。
 - [ ] 模块级测试覆盖 `video-extend` 请求体为 `video: {"url": ...}`。
 - [ ] 命令级 stub 测试覆盖 `video-edit` create + poll 成功流。

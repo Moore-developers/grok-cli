@@ -28,8 +28,8 @@
 ## 当前阶段
 
 - 阶段：Phase 16
-- 状态：已完成 SuperGrok 媒体能力补齐计划文档化，等待按子阶段实现
-- 本轮重点：按 [`docs/project/supergrok-media-capability-plan.md`](./project/supergrok-media-capability-plan.md) 逐项补齐 `image` / `tts` / `stt` 能力，并坚持每补一个能力都同步补测试
+- 状态：已完成 Phase 16.1-16.5，Phase 16.6 已拆出 `video-edit` / `video-extend` 后续实现计划
+- 本轮重点：按 [`docs/project/supergrok-media-capability-plan.md`](./project/supergrok-media-capability-plan.md) 继续推进 `video-edit` / `video-extend`，并坚持每补一个能力都同步补测试
 
 ## 总体任务地图
 
@@ -578,28 +578,31 @@ Phase 15 完成标准：
 
 详细任务拆解见 [`docs/project/supergrok-media-capability-plan.md`](./project/supergrok-media-capability-plan.md)。本阶段采用“每补一个能力都必须补测试”的硬门槛。
 
-- [ ] Phase 16.1: STT batch completion
-  - [ ] 补齐 `url`、`format`、`audio_format`、`sample_rate`、`multichannel`、`channels`、`diarize`、`keyterm`、`filler_words`
-  - [ ] 补齐 `language`、`duration`、`words`、`channels` 等结构化输出
-  - [ ] 同步补模块级测试、命令级 stub 测试和 `stt` 文档
-- [ ] Phase 16.2: TTS parameter completion
-  - [ ] 补齐显式 `output_format`、`sample_rate`、`bit_rate`
-  - [ ] 补齐 `optimize_streaming_latency`、`text_normalization`、`language=auto`
-  - [ ] 增加 voice discovery 入口
-  - [ ] 同步补模块级测试、命令级 stub 测试和 `tts` 文档
-- [ ] Phase 16.3: Image generation completion
-  - [ ] 补齐 `count` 和显式 `response_format`
-  - [ ] 支持多图响应解析和 `images` 输出，同时保留 `image`
-  - [ ] 同步补模块级测试、命令级 stub 测试和 `image` 文档
-- [ ] Phase 16.4: Streaming STT
-  - [ ] 新增实时 STT 协议设计与实验入口
-  - [ ] 补 WebSocket 参数构造和事件解析测试
-- [ ] Phase 16.5: Image editing
-  - [ ] 新增 image edit / multi-image edit 独立命令设计
-  - [ ] 补请求构造、输入数量校验和命令级 stub 测试
+- [x] Phase 16.1: STT batch completion
+  - [x] 补齐 `url`、`format`、`audio_format`、`sample_rate`、`multichannel`、`channels`、`diarize`、`keyterm`、`filler_words`
+  - [x] 补齐 `language`、`duration`、`words`、`channels` 等结构化输出
+  - [x] 同步补模块级测试、命令级 stub 测试和 `stt` 文档
+- [x] Phase 16.2: TTS parameter completion
+  - [x] 补齐显式 `output_format`、`sample_rate`、`bit_rate`
+  - [x] 补齐 `optimize_streaming_latency`、`text_normalization`、`language=auto`
+  - [x] 增加 voice discovery 入口
+  - [x] 同步补模块级测试、命令级 stub 测试和 `tts` 文档
+- [x] Phase 16.3: Image generation completion
+  - [x] 补齐 `count` 和显式 `response_format`
+  - [x] 支持多图响应解析和 `images` 输出，同时保留 `image`
+  - [x] 同步补模块级测试、命令级 stub 测试和 `image` 文档
+- [x] Phase 16.4: Streaming STT
+  - [x] 新增实时 STT 协议设计与实验入口
+  - [x] 补 WebSocket 参数构造和事件解析测试
+  - [ ] 补真实协议成功流 mock WebSocket 测试和实时发送细节
+- [x] Phase 16.5: Image editing
+  - [x] 新增 image edit / multi-image edit 独立命令设计
+  - [x] 补请求构造、输入数量校验和命令级 stub 测试
 - [ ] Phase 16.6: Imagine video follow-up
-  - [ ] 核对 video editing / extension 官方接口
-  - [ ] 拆分后续任务或新增独立计划
+  - [x] 核对 video editing / extension 官方接口
+  - [x] 拆分后续任务或新增独立计划
+  - [ ] 实现 `video-edit`
+  - [ ] 实现 `video-extend`
 
 Phase 16 完成标准：
 
@@ -608,6 +611,15 @@ Phase 16 完成标准：
 - 每个完成的用户可见行为都有 docs 更新
 - 保持 `image.image`、`tts.file_path`、`stt.transcript` 等既有 JSON 主字段兼容
 - 每个子阶段完成前对应 targeted tests 通过，整个阶段完成前 `cargo test --quiet` 全绿
+
+本轮补充：
+
+- `2026-05-21` 已完成 STT batch 参数补齐，提交 `9183da8 feat: complete xAI STT batch parameters`。
+- `2026-05-21` 已完成 TTS 参数补齐和 voice discovery，提交 `150d853 feat: complete xAI TTS parameters`。
+- `2026-05-21` 已完成 image generation 多图与 response format，提交 `ba16f4a feat: complete xAI image generation parameters`。
+- `2026-05-21` 已新增实验性 `stt-stream`，提交 `8954596 feat: add experimental streaming STT`。
+- `2026-05-21` 已新增 `image-edit`，提交 `10d0268 feat: add xAI image editing command`。
+- `2026-05-21` 已拆出 `video-edit` / `video-extend` 后续计划，提交 `380781b docs: plan xAI video editing follow-up`。
 
 ## 推荐执行顺序
 
@@ -659,6 +671,9 @@ Phase 16 完成标准：
 - [x] 替换 README / docs 里的 GitHub `<owner>` 占位符
 - [ ] 增加 GitHub Release workflow 或明确手动 release 流程
 - [x] 确认是否保留 `publish = false`，或准备 crates.io 发布元数据
+- [ ] 确认 GitHub owner 是否从 `Moore-developers` 迁移为 `Moore`，并同步 remote、Cargo metadata、README、release docs
+- [ ] 补开源协作文件：`CHANGELOG.md`、`CONTRIBUTING.md`、`SECURITY.md`
+- [ ] 补 GitHub issue / PR templates
 
 ## 验收标准
 

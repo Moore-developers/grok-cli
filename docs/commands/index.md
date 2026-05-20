@@ -5,7 +5,7 @@
 ## 顶层命令
 
 ```text
-grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|video|tts|stt|stt-stream> ...
+grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-edit|video|tts|stt|stt-stream> ...
 ```
 
 ## 认证命令

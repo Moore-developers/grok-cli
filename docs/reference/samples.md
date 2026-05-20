@@ -183,12 +183,72 @@
     "credential_source": "xai-oauth",
     "file_path": "/abs/path/audio.mp3",
     "media_tag": "MEDIA:/abs/path/audio.mp3",
-    "voice_compatible": false
+    "voice_compatible": false,
+    "output_format": {
+      "codec": "mp3",
+      "sample_rate": 24000,
+      "bit_rate": 128000
+    }
   }
 }
 ```
 
-## 7.1 媒体能力真实验证补充
+## 7.1 `tts --list-voices --json`
+
+```json
+{
+  "ok": true,
+  "command": "tts",
+  "data": {
+    "success": true,
+    "provider": "xai",
+    "credential_source": "xai-oauth",
+    "voices": [
+      {
+        "voice_id": "eve",
+        "name": "Eve",
+        "type": "official"
+      }
+    ]
+  }
+}
+```
+
+## 8. `stt --json`
+
+```json
+{
+  "ok": true,
+  "command": "stt",
+  "data": {
+    "success": true,
+    "provider": "xai",
+    "credential_source": "xai-oauth",
+    "transcript": "hello transcript",
+    "language": "en",
+    "duration": 1.5,
+    "words": [
+      {
+        "word": "hello",
+        "start": 0.0,
+        "end": 0.5
+      }
+    ],
+    "channels": [
+      {
+        "channel": 0,
+        "text": "hello transcript"
+      }
+    ]
+  }
+}
+```
+
+兼容性说明：
+- `transcript` 始终保留，旧脚本可以继续读取它。
+- `language`、`duration`、`words`、`channels` 只有上游返回时才出现。
+
+## 8.1 媒体能力真实验证补充
 
 `2026-05-20` 真实验证结果：
 
@@ -213,7 +273,7 @@
 - 手动执行一次 `refresh` 后，`video` 的三条真实分支全部恢复成功
 - 现已把这一步前置为媒体命令内建编排，不再要求用户自己先发现再刷新
 
-## 8. 典型错误信封
+## 9. 典型错误信封
 
 ```json
 {
@@ -228,7 +288,7 @@
 }
 ```
 
-## 9. `usage`
+## 10. `usage`
 
 人类可读输出示例：
 

@@ -33,9 +33,11 @@
 ### 媒体能力
 
 - [`image`](./commands/image.md)：使用 Grok Imagine 生成图片。
+- [`image-edit`](./commands/image-edit.md)：使用 Grok Imagine 编辑一张或多张参考图片。
 - [`video`](./commands/video.md)：使用 Grok Imagine 生成视频。
 - [`tts`](./commands/tts.md)：文本转语音。
 - [`stt`](./commands/stt.md)：语音转文字。
+- [`stt-stream`](./commands/stt-stream.md)：通过 WebSocket 实验性实时语音转文字。
 
 ### 使用统计
 
@@ -58,9 +60,11 @@ docs/
 │  ├─ chat.md
 │  ├─ search.md
 │  ├─ image.md
+│  ├─ image-edit.md
 │  ├─ video.md
 │  ├─ tts.md
-│  └─ stt.md
+│  ├─ stt.md
+│  └─ stt-stream.md
 ├─ guides/
 │  ├─ index.md
 │  ├─ quickstart.md
@@ -102,7 +106,7 @@ docs/
 ## 当前公开命令
 
 ```text
-grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|video|tts|stt> ...
+grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-edit|video|tts|stt|stt-stream> ...
 ```
 
 ## 输出约定

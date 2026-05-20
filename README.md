@@ -9,8 +9,9 @@ OAuth-first command-line access to Grok / xAI capabilities.
 - Browser OAuth login with token refresh
 - Chat through Grok Responses
 - X search through Grok `x_search`
-- Image and video generation
-- Text-to-speech and speech-to-text
+- Image generation and image editing
+- Video generation
+- Text-to-speech, batch speech-to-text, and experimental streaming speech-to-text
 - Local session usage accounting in SQLite
 
 Text commands are optimized for both humans and automation:
@@ -23,7 +24,7 @@ Text commands are optimized for both humans and automation:
 The public command surface is intentionally flat:
 
 ```text
-grok-cli <login|status|chat|search|image|video|tts|stt|usage|model|state> ...
+grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-edit|video|tts|stt|stt-stream> ...
 ```
 
 ## Quick Start
@@ -62,9 +63,11 @@ Generate media:
 
 ```bash
 grok-cli image "A cinematic skyline at sunrise"
+grok-cli image-edit --image ./source.png --prompt "Make it cinematic"
 grok-cli video "Animate a futuristic skyline" --duration 8
 grok-cli tts "Hello from Grok"
 grok-cli stt ./sample.wav
+grok-cli stt-stream ./sample.wav --interim-results
 ```
 
 Show local usage:
@@ -81,8 +84,10 @@ Human-friendly commands use positional arguments by default. Scripts can keep us
 grok-cli chat --json --prompt "Summarize today's AI news"
 grok-cli search --json --query "Grok Hermes latest updates"
 grok-cli image --json --prompt "A cinematic skyline"
+grok-cli image-edit --json --image ./source.png --prompt "Make it cinematic"
 grok-cli tts --json --text "Hello from Grok"
 grok-cli stt --json --file ./sample.wav
+grok-cli stt-stream --json --file ./sample.wav
 grok-cli usage --json
 ```
 
@@ -127,9 +132,11 @@ Failed JSON output uses the same shape:
 - `chat`: run text chat through Grok Responses. By default this includes web search.
 - `search`: run X search through Grok `x_search`.
 - `image`: generate an image with Grok Imagine.
+- `image-edit`: edit one or more reference images with Grok Imagine.
 - `video`: generate a video with Grok Imagine.
 - `tts`: convert text to speech.
 - `stt`: transcribe speech to text.
+- `stt-stream`: stream speech to text over WebSocket. This is an experimental entry point.
 - `usage`: show local session usage and rate-limit snapshots.
 - `model`: configure the shared default text model for `chat` and `search`.
 - `state`: inspect the redacted local auth state.

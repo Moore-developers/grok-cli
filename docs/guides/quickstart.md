@@ -91,6 +91,12 @@ cargo run -- search "What are people saying about xAI on X today?"
 cargo run -- image "A cinematic skyline at sunrise"
 ```
 
+### 图片编辑
+
+```bash
+cargo run -- image-edit --image ./source.png --prompt "Make it cinematic"
+```
+
 ### 视频生成
 
 ```bash
@@ -109,9 +115,16 @@ cargo run -- tts "Hello from Grok"
 cargo run -- stt ./sample.wav
 ```
 
+### 实时语音转文字
+
+```bash
+cargo run -- stt-stream ./sample.wav --interim-results
+```
+
 说明：
-- 图片、视频、TTS、STT 现在都会在发请求前检查 access token 是否即将过期
+- 图片、图片编辑、视频、TTS、STT 现在都会在发请求前检查 access token 是否即将过期
 - 如果已接近过期，命令会先自动 refresh，再继续真实请求
+- `stt-stream` 是实验入口，适合继续验证 WebSocket 实时转写协议
 
 ## 5. 查看会话使用量
 

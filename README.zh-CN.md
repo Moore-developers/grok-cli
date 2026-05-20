@@ -9,8 +9,9 @@
 - 浏览器 OAuth 登录和 token refresh
 - Grok 聊天
 - 通过 Grok `x_search` 搜索 X
-- 图片生成和视频生成
-- 文本转语音和语音转文字
+- 图片生成和图片编辑
+- 视频生成
+- 文本转语音、批量语音转文字和实验性实时语音转文字
 - 基于 SQLite 的本地会话 usage 统计
 
 文本命令同时照顾“给人直接用”和“给脚本稳定接入”两种场景：
@@ -23,7 +24,7 @@
 公开命令面是扁平的：
 
 ```text
-grok-cli <login|status|chat|search|image|video|tts|stt|usage|model|state> ...
+grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-edit|video|tts|stt|stt-stream> ...
 ```
 
 ## 快速开始
@@ -62,9 +63,11 @@ grok-cli search "今天大家怎么评价 Grok?"
 
 ```bash
 grok-cli image "日出时分的电影感城市天际线"
+grok-cli image-edit --image ./source.png --prompt "变得更有电影感"
 grok-cli video "让未来城市天际线动起来" --duration 8
 grok-cli tts "你好，我是 Grok"
 grok-cli stt ./sample.wav
+grok-cli stt-stream ./sample.wav --interim-results
 ```
 
 查看本地用量：
@@ -81,8 +84,10 @@ grok-cli usage
 grok-cli chat --json --prompt "总结最近 AI 新闻"
 grok-cli search --json --query "Grok Hermes 最新动态"
 grok-cli image --json --prompt "一座赛博朋克城市"
+grok-cli image-edit --json --image ./source.png --prompt "变得更有电影感"
 grok-cli tts --json --text "你好，我是 Grok"
 grok-cli stt --json --file ./sample.wav
+grok-cli stt-stream --json --file ./sample.wav
 grok-cli usage --json
 ```
 
@@ -127,9 +132,11 @@ grok-cli search "今天大家怎么评价 Grok?" --no-stream
 - `chat`：执行 Grok 文本聊天，默认带通用网页搜索。
 - `search`：通过 Grok `x_search` 搜索 X。
 - `image`：生成图片。
+- `image-edit`：基于一张或多张参考图编辑图片。
 - `video`：生成视频。
 - `tts`：文本转语音。
 - `stt`：语音转文字。
+- `stt-stream`：通过 WebSocket 实时语音转文字，当前是实验入口。
 - `usage`：查看本地 session usage 和最近 rate-limit 快照。
 - `model`：配置 `chat` 和 `search` 共享默认文本模型。
 - `state`：查看本地认证状态的脱敏摘要。

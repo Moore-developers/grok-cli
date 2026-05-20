@@ -5,8 +5,8 @@ edition = "2024"
 rust-version = "1.88"
 description = "OAuth-first CLI for Grok and xAI capabilities"
 license = "MIT"
-repository = "https://github.com/moore/grok-cli"
-homepage = "https://github.com/moore/grok-cli"
+repository = "https://github.com/Moore-developers/grok-cli"
+homepage = "https://github.com/Moore-developers/grok-cli"
 readme = "README.md"
 publish = false
 

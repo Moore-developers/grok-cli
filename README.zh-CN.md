@@ -159,7 +159,7 @@ Usage 历史存在 SQLite，包含 session 总量、每次命令事件、文本/
 从源码安装：
 
 ```bash
-git clone https://github.com/moore/grok-cli.git
+git clone https://github.com/Moore-developers/grok-cli.git
 cd grok-cli
 cargo install --path .
 ```
@@ -167,13 +167,13 @@ cargo install --path .
 GitHub 仓库公开后，可以直接安装：
 
 ```bash
-cargo install --git https://github.com/moore/grok-cli.git --locked
+cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
 ```
 
 安装指定 tag：
 
 ```bash
-cargo install --git https://github.com/moore/grok-cli.git --tag v0.1.0 --locked
+cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.0 --locked
 ```
 
 GitHub Release 二进制包和 Homebrew 发布方式见 [docs/guides/release.md](docs/guides/release.md)。

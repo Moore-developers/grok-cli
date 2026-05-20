@@ -11,13 +11,13 @@ Best for early releases.
 Users install through Cargo:
 
 ```bash
-cargo install --git https://github.com/moore/grok-cli.git --locked
+cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
 ```
 
 Tagged install:
 
 ```bash
-cargo install --git https://github.com/moore/grok-cli.git --tag v0.1.0 --locked
+cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.0 --locked
 ```
 
 Pros:
@@ -48,7 +48,7 @@ checksums.txt
 Users install with:
 
 ```bash
-curl -L https://github.com/moore/grok-cli/releases/download/v0.1.0/grok-cli-aarch64-apple-darwin.tar.gz -o grok-cli.tar.gz
+curl -L https://github.com/Moore-developers/grok-cli/releases/download/v0.1.0/grok-cli-aarch64-apple-darwin.tar.gz -o grok-cli.tar.gz
 tar -xzf grok-cli.tar.gz
 chmod +x grok-cli
 sudo mv grok-cli /usr/local/bin/grok-cli
@@ -72,7 +72,7 @@ Best for macOS users after the project stabilizes.
 User-facing install:
 
 ```bash
-brew tap moore/grok-cli
+brew tap Moore-developers/grok-cli
 brew install grok-cli
 ```
 
@@ -81,8 +81,8 @@ Typical formula shape:
 ```ruby
 class GrokCli < Formula
   desc "OAuth-first CLI for Grok and xAI capabilities"
-  homepage "https://github.com/moore/grok-cli"
-  url "https://github.com/moore/grok-cli/archive/refs/tags/v0.1.0.tar.gz"
+  homepage "https://github.com/Moore-developers/grok-cli"
+  url "https://github.com/Moore-developers/grok-cli/archive/refs/tags/v0.1.0.tar.gz"
   sha256 "<sha256>"
   license "MIT"
 
@@ -165,7 +165,7 @@ Requirements:
 Build:
 
 ```bash
-git clone https://github.com/moore/grok-cli.git
+git clone https://github.com/Moore-developers/grok-cli.git
 cd grok-cli
 cargo build --release
 ```

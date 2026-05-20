@@ -157,7 +157,7 @@ Media file bodies are not stored in SQLite.
 From source:
 
 ```bash
-git clone https://github.com/moore/grok-cli.git
+git clone https://github.com/Moore-developers/grok-cli.git
 cd grok-cli
 cargo install --path .
 ```
@@ -165,13 +165,13 @@ cargo install --path .
 From GitHub after the repository is public:
 
 ```bash
-cargo install --git https://github.com/moore/grok-cli.git --locked
+cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
 ```
 
 From a tag:
 
 ```bash
-cargo install --git https://github.com/moore/grok-cli.git --tag v0.1.0 --locked
+cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.0 --locked
 ```
 
 Prebuilt GitHub Release binaries and Homebrew instructions are described in [docs/guides/release.md](docs/guides/release.md).

@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use reqwest::blocking::multipart::{Form, Part};
 use serde::Serialize;
-use serde_json::json;
+use serde_json::{Value, json};
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
@@ -42,6 +42,34 @@ struct SttData {
     provider: String,
     credential_source: String,
     transcript: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    language: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    duration: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    words: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    channels: Option<Value>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum SttInput {
+    File(PathBuf),
+    Url(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct SttFormFields {
+    input: SttInput,
+    format: bool,
+    language: String,
+    audio_format: Option<String>,
+    sample_rate: Option<u32>,
+    multichannel: bool,
+    channels: Option<String>,
+    diarize: bool,
+    keyterms: Vec<String>,
+    filler_words: bool,
 }
 
 pub fn execute_tts(ctx: &AppContext, opts: TtsOptions) -> CommandResult {
@@ -140,15 +168,9 @@ pub fn execute_stt(ctx: &AppContext, opts: SttOptions) -> CommandResult {
     )
     .map_err(|error| CommandError::new(command, opts.common.json, error))?;
 
-    let transcript = extract_transcript(&upstream.response)
+    let data = parse_stt_response(&upstream.credential_source, &upstream.response)
         .map_err(|error| CommandError::new(command, opts.common.json, error))?;
 
-    let data = SttData {
-        success: true,
-        provider: "xai".to_string(),
-        credential_source: upstream.credential_source,
-        transcript,
-    };
     tracker::record_usage(
         ctx,
         opts.common.auth_file.as_deref(),
@@ -176,6 +198,12 @@ pub fn execute_stt(ctx: &AppContext, opts: SttOptions) -> CommandResult {
         println!("provider: {}", data.provider);
         println!("credential_source: {}", data.credential_source);
         println!("transcript: {}", data.transcript);
+        if let Some(language) = &data.language {
+            println!("language: {language}");
+        }
+        if let Some(duration) = data.duration {
+            println!("duration: {duration}");
+        }
     }
 
     Ok(())
@@ -192,14 +220,81 @@ fn validate_tts_options(opts: &TtsOptions) -> Result<(), AppError> {
 }
 
 fn validate_stt_options(opts: &SttOptions) -> Result<(), AppError> {
-    let file = stt_file(opts);
-    if !file.exists() {
+    build_stt_form_fields(opts).map(|_| ())
+}
+
+fn build_stt_form_fields(opts: &SttOptions) -> Result<SttFormFields, AppError> {
+    let has_file = opts.file.is_some() || opts.file_flag.is_some();
+    let url = opts
+        .url
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+
+    if has_file && url.is_some() {
         return Err(AppError::new(
             ErrorCode::InvalidArgs,
-            format!("file does not exist: {}", file.display()),
+            "--url cannot be combined with PATH or --file",
         ));
     }
-    Ok(())
+
+    let input = if let Some(url) = url {
+        SttInput::Url(url.to_string())
+    } else {
+        let file = stt_file(opts);
+        if file.as_os_str().is_empty() {
+            return Err(AppError::new(
+                ErrorCode::InvalidArgs,
+                "provide an audio input with PATH, --file, or --url",
+            ));
+        }
+        if !file.exists() {
+            return Err(AppError::new(
+                ErrorCode::InvalidArgs,
+                format!("file does not exist: {}", file.display()),
+            ));
+        }
+        SttInput::File(file.to_path_buf())
+    };
+
+    Ok(SttFormFields {
+        input,
+        format: opts.format.unwrap_or(true),
+        language: opts
+            .language
+            .as_deref()
+            .unwrap_or(DEFAULT_STT_LANGUAGE)
+            .to_string(),
+        audio_format: non_empty_string(opts.audio_format.as_deref()),
+        sample_rate: opts.sample_rate,
+        multichannel: opts.multichannel,
+        channels: non_empty_string(opts.channels.as_deref()),
+        diarize: opts.diarize,
+        keyterms: opts
+            .keyterms
+            .iter()
+            .filter_map(|value| non_empty_string(Some(value)))
+            .collect(),
+        filler_words: opts.filler_words,
+    })
+}
+
+fn non_empty_string(value: Option<&str>) -> Option<String> {
+    value
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+}
+
+fn bool_field(value: bool) -> String {
+    if value { "true" } else { "false" }.to_string()
+}
+
+fn add_text_if_present(form: Form, key: &'static str, value: Option<String>) -> Form {
+    match value {
+        Some(value) => form.text(key, value),
+        None => form,
+    }
 }
 
 fn build_tts_request(opts: &TtsOptions, _model: &str) -> serde_json::Value {
@@ -272,30 +367,50 @@ fn write_audio_file(path: &Path, bytes: &[u8]) -> Result<(), AppError> {
 }
 
 fn build_stt_form(opts: &SttOptions, _model: &str) -> Result<Form, AppError> {
-    let file = stt_file(opts);
-    let bytes = fs::read(file).map_err(|error| {
-        AppError::io(format!(
-            "failed to read transcription file {}: {error}",
-            file.display()
-        ))
-    })?;
+    build_stt_form_from_fields(&build_stt_form_fields(opts)?)
+}
 
-    let file_name = file
-        .file_name()
-        .and_then(|value| value.to_str())
-        .unwrap_or("audio.bin")
-        .to_string();
+fn build_stt_form_from_fields(fields: &SttFormFields) -> Result<Form, AppError> {
+    let form = match &fields.input {
+        SttInput::File(file) => {
+            let bytes = fs::read(file).map_err(|error| {
+                AppError::io(format!(
+                    "failed to read transcription file {}: {error}",
+                    file.display()
+                ))
+            })?;
 
-    let file_part = Part::bytes(bytes).file_name(file_name);
-    let mut form = Form::new().part("file", file_part).text("format", "true");
+            let file_name = file
+                .file_name()
+                .and_then(|value| value.to_str())
+                .unwrap_or("audio.bin")
+                .to_string();
+            let file_part = Part::bytes(bytes).file_name(file_name);
+            Form::new().part("file", file_part)
+        }
+        SttInput::Url(url) => Form::new().text("url", url.clone()),
+    };
 
-    form = form.text(
-        "language",
-        opts.language
-            .as_deref()
-            .unwrap_or(DEFAULT_STT_LANGUAGE)
-            .to_string(),
-    );
+    let mut form = form
+        .text("format", bool_field(fields.format))
+        .text("language", fields.language.clone());
+    form = add_text_if_present(form, "audio_format", fields.audio_format.clone());
+    if let Some(sample_rate) = fields.sample_rate {
+        form = form.text("sample_rate", sample_rate.to_string());
+    }
+    if fields.multichannel {
+        form = form.text("multichannel", "true");
+    }
+    form = add_text_if_present(form, "channels", fields.channels.clone());
+    if fields.diarize {
+        form = form.text("diarize", "true");
+    }
+    for keyterm in &fields.keyterms {
+        form = form.text("keyterm", keyterm.clone());
+    }
+    if fields.filler_words {
+        form = form.text("filler_words", "true");
+    }
 
     Ok(form)
 }
@@ -328,13 +443,30 @@ fn extract_transcript(response: &serde_json::Value) -> Result<String, AppError> 
         })
 }
 
+fn parse_stt_response(credential_source: &str, response: &Value) -> Result<SttData, AppError> {
+    Ok(SttData {
+        success: true,
+        provider: "xai".to_string(),
+        credential_source: credential_source.to_string(),
+        transcript: extract_transcript(response)?,
+        language: response
+            .get("language")
+            .and_then(|value| value.as_str())
+            .map(ToOwned::to_owned),
+        duration: response.get("duration").and_then(|value| value.as_f64()),
+        words: response.get("words").cloned(),
+        channels: response.get("channels").cloned(),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
 
     use super::{
-        build_stt_form, build_tts_request, extract_transcript, resolve_tts_output_path,
-        validate_stt_options, validate_tts_options, write_audio_file,
+        SttInput, build_stt_form, build_stt_form_fields, build_tts_request, extract_transcript,
+        parse_stt_response, resolve_tts_output_path, validate_stt_options, validate_tts_options,
+        write_audio_file,
     };
     use crate::args::{SttOptions, TaskCommonOptions, TtsOptions};
     use serde_json::json;
@@ -364,8 +496,17 @@ mod tests {
             },
             file: Some(path),
             file_flag: None,
+            url: None,
             model: Some("grok-transcribe".to_string()),
             language: Some("en".to_string()),
+            format: None,
+            audio_format: None,
+            sample_rate: None,
+            multichannel: false,
+            channels: None,
+            diarize: false,
+            keyterms: vec![],
+            filler_words: false,
             timeout: Some(60),
         }
     }
@@ -411,6 +552,69 @@ mod tests {
     }
 
     #[test]
+    fn validate_stt_options_rejects_missing_input() {
+        let mut opts = sample_stt_opts(PathBuf::from(""));
+        opts.file = None;
+        let error = validate_stt_options(&opts).unwrap_err();
+        assert_eq!(error.code.as_str(), "invalid_args");
+        assert!(error.message.contains("PATH, --file, or --url"));
+    }
+
+    #[test]
+    fn validate_stt_options_rejects_file_and_url_together() {
+        let temp = tempdir().unwrap();
+        let path = temp.path().join("sample.wav");
+        std::fs::write(&path, b"wave").unwrap();
+        let mut opts = sample_stt_opts(path);
+        opts.url = Some("https://example.com/audio.wav".to_string());
+        let error = validate_stt_options(&opts).unwrap_err();
+        assert_eq!(error.code.as_str(), "invalid_args");
+        assert!(error.message.contains("--url cannot be combined"));
+    }
+
+    #[test]
+    fn build_stt_form_fields_accepts_url_without_file() {
+        let mut opts = sample_stt_opts(PathBuf::from(""));
+        opts.file = None;
+        opts.url = Some("https://example.com/audio.wav".to_string());
+
+        let fields = build_stt_form_fields(&opts).unwrap();
+        assert_eq!(
+            fields.input,
+            SttInput::Url("https://example.com/audio.wav".to_string())
+        );
+    }
+
+    #[test]
+    fn build_stt_form_fields_captures_advanced_parameters() {
+        let temp = tempdir().unwrap();
+        let path = temp.path().join("sample.wav");
+        std::fs::write(&path, b"wave").unwrap();
+        let mut opts = sample_stt_opts(path.clone());
+        opts.format = Some(false);
+        opts.language = Some("auto".to_string());
+        opts.audio_format = Some("pcm_s16le".to_string());
+        opts.sample_rate = Some(16_000);
+        opts.multichannel = true;
+        opts.channels = Some("0,1".to_string());
+        opts.diarize = true;
+        opts.keyterms = vec!["Grok".to_string(), "xAI".to_string(), "  ".to_string()];
+        opts.filler_words = true;
+
+        let fields = build_stt_form_fields(&opts).unwrap();
+        assert_eq!(fields.input, SttInput::File(path));
+        assert!(!fields.format);
+        assert_eq!(fields.language, "auto");
+        assert_eq!(fields.audio_format.as_deref(), Some("pcm_s16le"));
+        assert_eq!(fields.sample_rate, Some(16_000));
+        assert!(fields.multichannel);
+        assert_eq!(fields.channels.as_deref(), Some("0,1"));
+        assert!(fields.diarize);
+        assert_eq!(fields.keyterms, vec!["Grok", "xAI"]);
+        assert!(fields.filler_words);
+    }
+
+    #[test]
     fn build_stt_form_accepts_existing_file() {
         let temp = tempdir().unwrap();
         let path = temp.path().join("sample.wav");
@@ -424,5 +628,33 @@ mod tests {
     fn extract_transcript_accepts_text_field() {
         let transcript = extract_transcript(&json!({"text":"hello"})).unwrap();
         assert_eq!(transcript, "hello");
+    }
+
+    #[test]
+    fn parse_stt_response_keeps_legacy_text_only_payload() {
+        let parsed = parse_stt_response("oauth", &json!({"text":"hello"})).unwrap();
+        assert_eq!(parsed.transcript, "hello");
+        assert_eq!(parsed.language, None);
+        assert_eq!(parsed.duration, None);
+        assert!(parsed.words.is_none());
+        assert!(parsed.channels.is_none());
+    }
+
+    #[test]
+    fn parse_stt_response_preserves_structured_fields() {
+        let response = json!({
+            "text": "hello",
+            "language": "en",
+            "duration": 1.25,
+            "words": [{"word": "hello", "start": 0.0, "end": 0.4}],
+            "channels": [{"channel": 0, "text": "hello"}]
+        });
+
+        let parsed = parse_stt_response("oauth", &response).unwrap();
+        assert_eq!(parsed.transcript, "hello");
+        assert_eq!(parsed.language.as_deref(), Some("en"));
+        assert_eq!(parsed.duration, Some(1.25));
+        assert_eq!(parsed.words.unwrap(), response["words"]);
+        assert_eq!(parsed.channels.unwrap(), response["channels"]);
     }
 }

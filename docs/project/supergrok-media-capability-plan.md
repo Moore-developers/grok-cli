@@ -54,63 +54,63 @@
 
 ### STT-1. 参数与校验
 
-- [ ] 在 `SttOptions` 增加 `--url <URL>`，与位置 `PATH` / `--file` 互斥。
-- [ ] 在 `SttOptions` 增加 `--format <true|false>`，默认保持 `true`，避免破坏现有行为。
-- [ ] 增加 `--audio-format <FORMAT>`。
-- [ ] 增加 `--sample-rate <HZ>`。
-- [ ] 增加 `--multichannel`。
-- [ ] 增加 `--channels <CHANNELS>`，先按逗号分隔字符串透传，例如 `0,1`。
-- [ ] 增加 `--diarize`。
-- [ ] 增加可重复 `--keyterm <TERM>`。
-- [ ] 增加 `--filler-words`。
+- [x] 在 `SttOptions` 增加 `--url <URL>`，与位置 `PATH` / `--file` 互斥。
+- [x] 在 `SttOptions` 增加 `--format <true|false>`，默认保持 `true`，避免破坏现有行为。
+- [x] 增加 `--audio-format <FORMAT>`。
+- [x] 增加 `--sample-rate <HZ>`。
+- [x] 增加 `--multichannel`。
+- [x] 增加 `--channels <CHANNELS>`，先按逗号分隔字符串透传，例如 `0,1`。
+- [x] 增加 `--diarize`。
+- [x] 增加可重复 `--keyterm <TERM>`。
+- [x] 增加 `--filler-words`。
 
 测试要求：
 
-- [ ] 模块级测试覆盖 `file`、`url` 二选一校验。
-- [ ] 模块级测试覆盖 `file + url` 冲突。
-- [ ] 模块级测试覆盖缺少输入时返回 `invalid_args`。
-- [ ] 模块级测试覆盖所有新增字段进入 multipart form。
-- [ ] 命令级 stub 测试验证新增参数会出现在发往 `/v1/stt` 的请求中。
+- [x] 模块级测试覆盖 `file`、`url` 二选一校验。
+- [x] 模块级测试覆盖 `file + url` 冲突。
+- [x] 模块级测试覆盖缺少输入时返回 `invalid_args`。
+- [x] 模块级测试覆盖所有新增字段进入 multipart form。
+- [x] 命令级 stub 测试验证新增参数会出现在发往 `/v1/stt` 的请求中。
 
 ### STT-2. URL 转写
 
-- [ ] `build_stt_form` 支持只发送 `url` 而不读取本地文件。
-- [ ] 保持本地文件路径的现有行为不变。
-- [ ] 错误信息区分“缺少输入”和“文件不存在”。
+- [x] `build_stt_form` 支持只发送 `url` 而不读取本地文件。
+- [x] 保持本地文件路径的现有行为不变。
+- [x] 错误信息区分“缺少输入”和“文件不存在”。
 
 测试要求：
 
-- [ ] 模块级测试覆盖 URL 模式不访问本地文件。
-- [ ] 命令级 stub 测试覆盖 `grok-cli stt --json --url https://...`。
-- [ ] 命令级失败测试覆盖 `--url` 和 `--file` 同时传入。
+- [x] 模块级测试覆盖 URL 模式不访问本地文件。
+- [x] 命令级 stub 测试覆盖 `grok-cli stt --json --url https://...`。
+- [x] 命令级失败测试覆盖 `--url` 和 `--file` 同时传入。
 
 ### STT-3. 结构化响应输出
 
-- [ ] `SttData` 保留 `transcript`，继续兼容现有 SKILL 消费。
-- [ ] 增加可选 `language`。
-- [ ] 增加可选 `duration`。
-- [ ] 增加可选 `words`。
-- [ ] 增加可选 `channels`。
-- [ ] 非 JSON 输出仍优先显示 `transcript`，只附加简短元信息。
+- [x] `SttData` 保留 `transcript`，继续兼容现有 SKILL 消费。
+- [x] 增加可选 `language`。
+- [x] 增加可选 `duration`。
+- [x] 增加可选 `words`。
+- [x] 增加可选 `channels`。
+- [x] 非 JSON 输出仍优先显示 `transcript`，只附加简短元信息。
 
 测试要求：
 
-- [ ] 模块级测试覆盖只返回 `text` 的旧响应。
-- [ ] 模块级测试覆盖含 `language` / `duration` / `words` / `channels` 的新响应。
-- [ ] 命令级 stub 测试确认 `--json` 输出包含新增字段。
-- [ ] contract 回归确认 `data.transcript` 仍存在。
+- [x] 模块级测试覆盖只返回 `text` 的旧响应。
+- [x] 模块级测试覆盖含 `language` / `duration` / `words` / `channels` 的新响应。
+- [x] 命令级 stub 测试确认 `--json` 输出包含新增字段。
+- [x] contract 回归确认 `data.transcript` 仍存在。
 
 ### STT-4. 文档同步
 
-- [ ] 更新 [`docs/commands/stt.md`](../commands/stt.md)。
-- [ ] 更新 [`docs/project/acceptance.md`](./acceptance.md) 的媒体验收样例。
+- [x] 更新 [`docs/commands/stt.md`](../commands/stt.md)。
+- [x] 更新 [`docs/project/acceptance.md`](./acceptance.md) 的媒体验收样例。
 - [ ] 需要时更新 [`docs/reference/samples.md`](../reference/samples.md) 的 JSON 样例。
 
 完成标准：
 
-- [ ] `cargo test --quiet task_audio_commands` 通过。
-- [ ] `cargo test --quiet` 通过。
-- [ ] STT 新增参数和结构化输出都有文档说明。
+- [x] `cargo test --quiet task_audio_commands` 通过。
+- [x] `cargo test --quiet` 通过。
+- [x] STT 新增参数和结构化输出都有文档说明。
 
 ## Phase 16.2: TTS Parameter Completion
 

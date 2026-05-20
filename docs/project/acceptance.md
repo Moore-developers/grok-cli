@@ -84,6 +84,7 @@ cargo run -- image "A cinematic skyline"
 cargo run -- video "Animate a cinematic skyline" --duration 8
 cargo run -- tts "Hello from Grok"
 cargo run -- stt ./sample.wav
+cargo run -- stt ./sample.wav --diarize --keyterm Grok --filler-words --json
 ```
 
 期望：
@@ -91,6 +92,7 @@ cargo run -- stt ./sample.wav
 - 视频返回 `video`
 - TTS 返回 `file_path`
 - STT 返回 `transcript`
+- STT 高级参数请求成功时仍保留 `transcript`，并在上游返回时保留 `language` / `duration` / `words` / `channels`
 - 当 access token 接近过期时，媒体命令会先自动 refresh，再发起真实请求
 
 真实验收补充：

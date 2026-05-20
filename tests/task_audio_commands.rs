@@ -105,6 +105,28 @@ fn task_stt_rejects_missing_file() {
 }
 
 #[test]
+fn task_stt_rejects_file_and_url_together() {
+    let temp = tempdir().unwrap();
+    let input_file = temp.path().join("sample.wav");
+    fs::write(&input_file, b"WAVE").unwrap();
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "stt",
+            "--json",
+            "--file",
+            input_file.to_str().unwrap(),
+            "--url",
+            "https://example.com/audio.wav",
+        ])
+        .assert()
+        .code(2)
+        .stdout(predicate::str::contains("\"code\":\"invalid_args\""))
+        .stdout(predicate::str::contains("--url cannot be combined"));
+}
+
+#[test]
 fn task_stt_returns_transcript_from_stubbed_upstream() {
     let temp = tempdir().unwrap();
     let auth_file = temp.path().join("auth.json");
@@ -121,7 +143,11 @@ fn task_stt_returns_transcript_from_stubbed_upstream() {
         assert!(request.contains("multipart/form-data"));
         assert!(request.contains("name=\"format\""));
         assert!(!request.contains("name=\"model\""));
-        write_json_response(&mut stream, "200 OK", r#"{"text":"hello transcript"}"#);
+        write_json_response(
+            &mut stream,
+            "200 OK",
+            r#"{"text":"hello transcript","language":"en","duration":1.5,"words":[{"word":"hello","start":0.0,"end":0.5}],"channels":[{"channel":0,"text":"hello transcript"}]}"#,
+        );
     });
 
     Command::cargo_bin("grok-cli")
@@ -139,6 +165,85 @@ fn task_stt_returns_transcript_from_stubbed_upstream() {
         .stdout(predicate::str::contains("\"success\":true"))
         .stdout(predicate::str::contains(
             "\"transcript\":\"hello transcript\"",
+        ))
+        .stdout(predicate::str::contains("\"language\":\"en\""))
+        .stdout(predicate::str::contains("\"duration\":1.5"))
+        .stdout(predicate::str::contains(
+            "\"words\":[{\"end\":0.5,\"start\":0.0,\"word\":\"hello\"}]",
+        ))
+        .stdout(predicate::str::contains(
+            "\"channels\":[{\"channel\":0,\"text\":\"hello transcript\"}]",
+        ));
+
+    server.join().unwrap();
+}
+
+#[test]
+fn task_stt_sends_url_and_advanced_options_to_stubbed_upstream() {
+    let temp = tempdir().unwrap();
+    let auth_file = temp.path().join("auth.json");
+    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    write_auth_state(&auth_file, &format!("http://127.0.0.1:{port}/v1"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let request = read_request(&mut stream);
+        assert!(request.contains("POST /v1/stt"));
+        assert!(request.contains("multipart/form-data"));
+        assert!(request.contains("name=\"url\""));
+        assert!(request.contains("https://example.com/audio.wav"));
+        assert!(request.contains("name=\"format\""));
+        assert!(request.contains("\r\nfalse\r\n"));
+        assert!(request.contains("name=\"language\""));
+        assert!(request.contains("\r\nauto\r\n"));
+        assert!(request.contains("name=\"audio_format\""));
+        assert!(request.contains("pcm_s16le"));
+        assert!(request.contains("name=\"sample_rate\""));
+        assert!(request.contains("\r\n16000\r\n"));
+        assert!(request.contains("name=\"multichannel\""));
+        assert!(request.contains("name=\"channels\""));
+        assert!(request.contains("\r\n0,1\r\n"));
+        assert!(request.contains("name=\"diarize\""));
+        assert!(request.contains("name=\"keyterm\""));
+        assert!(request.contains("\r\nGrok\r\n"));
+        assert!(request.contains("\r\nxAI\r\n"));
+        assert!(request.contains("name=\"filler_words\""));
+        assert!(!request.contains("name=\"file\""));
+        write_json_response(&mut stream, "200 OK", r#"{"text":"url transcript"}"#);
+    });
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "stt",
+            "--json",
+            "--auth-file",
+            auth_file.to_str().unwrap(),
+            "--url",
+            "https://example.com/audio.wav",
+            "--format",
+            "false",
+            "--language",
+            "auto",
+            "--audio-format",
+            "pcm_s16le",
+            "--sample-rate",
+            "16000",
+            "--multichannel",
+            "--channels",
+            "0,1",
+            "--diarize",
+            "--keyterm",
+            "Grok",
+            "--keyterm",
+            "xAI",
+            "--filler-words",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "\"transcript\":\"url transcript\"",
         ));
 
     server.join().unwrap();

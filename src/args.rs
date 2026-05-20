@@ -320,12 +320,39 @@ pub struct SttOptions {
     /// Audio file to transcribe for scripts that prefer named flags.
     #[arg(long = "file", value_name = "PATH", id = "file_flag")]
     pub file_flag: Option<PathBuf>,
+    /// Remote audio URL to transcribe instead of a local file.
+    #[arg(long, value_name = "URL")]
+    pub url: Option<String>,
     /// Override the STT model for this request.
     #[arg(long)]
     pub model: Option<String>,
     /// Language code, defaults to en.
     #[arg(long)]
     pub language: Option<String>,
+    /// Ask xAI to return formatted text. Defaults to true.
+    #[arg(long = "format")]
+    pub format: Option<bool>,
+    /// Raw audio format when the input has no detectable container metadata.
+    #[arg(long = "audio-format")]
+    pub audio_format: Option<String>,
+    /// Raw audio sample rate in Hz.
+    #[arg(long = "sample-rate")]
+    pub sample_rate: Option<u32>,
+    /// Treat input as multichannel audio.
+    #[arg(long)]
+    pub multichannel: bool,
+    /// Comma-separated channel list to transcribe, for example 0,1.
+    #[arg(long)]
+    pub channels: Option<String>,
+    /// Enable speaker diarization.
+    #[arg(long)]
+    pub diarize: bool,
+    /// Key term to bias transcription toward. Repeatable.
+    #[arg(long = "keyterm")]
+    pub keyterms: Vec<String>,
+    /// Include filler words in the transcript.
+    #[arg(long = "filler-words")]
+    pub filler_words: bool,
     /// Request timeout in seconds. Defaults to 120 for STT.
     #[arg(long)]
     pub timeout: Option<u64>,

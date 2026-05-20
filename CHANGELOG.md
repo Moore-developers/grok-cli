@@ -6,6 +6,10 @@ The project follows semantic versioning once public releases begin.
 
 ## Unreleased
 
+No unreleased changes yet.
+
+## 0.1.0 - 2026-05-21
+
 ### Added
 
 - MIT open source project metadata and release workflow.
@@ -15,7 +19,3 @@ The project follows semantic versioning once public releases begin.
 ### Notes
 
 - `stt-stream` remains experimental. Deep WebSocket mock coverage and chunk-send refinements are intentionally deferred until the protocol path proves useful in real workflows.
-
-## 0.1.0
-
-Initial public release target.

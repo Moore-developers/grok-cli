@@ -1,0 +1,210 @@
+use assert_cmd::Command;
+use predicates::prelude::*;
+use tempfile::tempdir;
+
+use std::fs;
+use std::io::{Read, Write};
+use std::net::TcpListener;
+use std::thread;
+
+#[test]
+fn task_video_gen_rejects_empty_prompt() {
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args(["video", "--json", "--prompt", "   "])
+        .assert()
+        .code(2)
+        .stdout(predicate::str::contains("\"code\":\"invalid_args\""))
+        .stdout(predicate::str::contains("prompt must not be empty"));
+}
+
+#[test]
+fn task_video_gen_rejects_too_many_reference_images() {
+    let mut cmd = Command::cargo_bin("grok-cli").unwrap();
+    cmd.args(["video", "--json", "--prompt", "Animate skyline"]);
+    for index in 0..8 {
+        cmd.args([
+            "--reference-image-url",
+            &format!("https://cdn.x.ai/ref-{index}.png"),
+        ]);
+    }
+    cmd.assert()
+        .code(2)
+        .stdout(predicate::str::contains("\"code\":\"invalid_args\""))
+        .stdout(predicate::str::contains(
+            "--reference-image-url supports at most 7 values",
+        ));
+}
+
+#[test]
+fn task_video_gen_polls_until_completed_and_returns_video_url() {
+    let temp = tempdir().unwrap();
+    let auth_file = temp.path().join("auth.json");
+    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    write_auth_state(&auth_file, &format!("http://127.0.0.1:{port}/v1"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let create_request = read_request(&mut stream);
+        assert!(create_request.contains("POST /v1/videos/generations"));
+        assert!(create_request.contains("\"duration\":8"));
+        assert!(create_request.contains("\"aspect_ratio\":\"16:9\""));
+        assert!(create_request.contains("\"resolution\":\"720p\""));
+        write_response(&mut stream, "200 OK", r#"{"request_id":"vid_123"}"#);
+
+        let (mut stream, _) = listener.accept().unwrap();
+        let poll_request = read_request(&mut stream);
+        assert!(poll_request.contains("GET /v1/videos/vid_123"));
+        write_response(
+            &mut stream,
+            "200 OK",
+            r#"{"status":"done","video":{"url":"https://cdn.x.ai/generated-video.mp4","duration":8}}"#,
+        );
+    });
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "video",
+            "--json",
+            "--auth-file",
+            auth_file.to_str().unwrap(),
+            "--prompt",
+            "Animate a futuristic skyline",
+            "--duration",
+            "8",
+            "--aspect-ratio",
+            "16:9",
+            "--resolution",
+            "720p",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"model\":\"grok-imagine-video\""))
+        .stdout(predicate::str::contains(
+            "\"video\":\"https://cdn.x.ai/generated-video.mp4\"",
+        ))
+        .stdout(predicate::str::contains("\"request_id\":\"vid_123\""));
+
+    server.join().unwrap();
+}
+
+#[test]
+fn task_video_gen_reports_failed_poll_status() {
+    let temp = tempdir().unwrap();
+    let auth_file = temp.path().join("auth.json");
+    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    write_auth_state(&auth_file, &format!("http://127.0.0.1:{port}/v1"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let _ = read_request(&mut stream);
+        write_response(&mut stream, "200 OK", r#"{"request_id":"vid_456"}"#);
+
+        let (mut stream, _) = listener.accept().unwrap();
+        let _ = read_request(&mut stream);
+        write_response(
+            &mut stream,
+            "200 OK",
+            r#"{"status":"failed","error":"quota exceeded"}"#,
+        );
+    });
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "video",
+            "--json",
+            "--auth-file",
+            auth_file.to_str().unwrap(),
+            "--prompt",
+            "Animate a futuristic skyline",
+        ])
+        .assert()
+        .code(1)
+        .stdout(predicate::str::contains("\"code\":\"request_failed\""))
+        .stdout(predicate::str::contains("quota exceeded"));
+
+    server.join().unwrap();
+}
+
+#[test]
+fn task_video_gen_rejects_combined_image_and_reference_inputs() {
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "video",
+            "--json",
+            "--prompt",
+            "Animate skyline",
+            "--image-url",
+            "https://cdn.x.ai/source.png",
+            "--reference-image-url",
+            "https://cdn.x.ai/ref.png",
+        ])
+        .assert()
+        .code(2)
+        .stdout(predicate::str::contains("\"code\":\"invalid_args\""))
+        .stdout(predicate::str::contains(
+            "--image-url cannot be combined with --reference-image-url",
+        ));
+}
+
+fn write_auth_state(path: &std::path::Path, base_url: &str) {
+    fs::write(
+        path,
+        format!(
+            r#"{{
+  "version": 1,
+  "provider": "xai-oauth",
+  "auth_mode": "oauth_pkce",
+  "base_url": "{base_url}",
+  "tokens": {{
+    "access_token": "sample-access-token",
+    "refresh_token": "sample-refresh-token",
+    "id_token": null,
+    "expires_in": 3600,
+    "expires_at": "2099-01-01T00:00:00Z",
+    "token_type": "Bearer"
+  }},
+  "discovery": {{
+    "authorization_endpoint": "https://auth.x.ai/oauth2/authorize",
+    "token_endpoint": "https://auth.x.ai/oauth2/token"
+  }},
+  "redirect_uri": "http://127.0.0.1:56121/callback",
+  "last_refresh": "2026-05-19T17:00:00Z",
+  "last_auth_error": null,
+  "metadata": {{}}
+}}"#
+        ),
+    )
+    .unwrap();
+}
+
+fn read_request(stream: &mut std::net::TcpStream) -> String {
+    let mut request = Vec::new();
+    let mut buffer = [0_u8; 4096];
+    loop {
+        let size = stream.read(&mut buffer).unwrap();
+        if size == 0 {
+            break;
+        }
+        request.extend_from_slice(&buffer[..size]);
+        if request.windows(4).any(|window| window == b"\r\n\r\n") {
+            break;
+        }
+    }
+    String::from_utf8_lossy(&request).to_string()
+}
+
+fn write_response(stream: &mut std::net::TcpStream, status: &str, body: &str) {
+    let response = format!(
+        "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        body.len(),
+        body
+    );
+    stream.write_all(response.as_bytes()).unwrap();
+    stream.flush().unwrap();
+}

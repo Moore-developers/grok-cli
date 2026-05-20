@@ -7,6 +7,7 @@
 1. [验收样例](./acceptance.md)
 2. [计划任务清单](../plan-task.md)
 3. [SuperGrok 媒体能力补齐计划](./supergrok-media-capability-plan.md)
+4. [发布前最终验证计划](./pre-release-validation-plan.md)
 
 ## 文档职责
 
@@ -32,12 +33,16 @@
 
 记录 `image` / `tts` / `stt` 与 Hermes Agent、xAI 官方文档之间的能力差异，并拆成可执行任务。每个能力补齐项都必须同步补模块级测试、命令级 stub 测试和用户文档。
 
+### [发布前最终验证计划](./pre-release-validation-plan.md)
+
+记录公开推广前的最终确认项：真实媒体测试、SKILL 补全、性能分析、安装/OAuth 闭环和安全隐私护栏。
+
 ## 使用建议
 
 - 开发新能力前，先看 [计划任务清单](../plan-task.md) 确认当前阶段。
 - 扩展 `image` / `tts` / `stt` 前，先看 [SuperGrok 媒体能力补齐计划](./supergrok-media-capability-plan.md) 确认参数范围和测试门槛。
 - 改动用户可见行为后，同步检查 [验收样例](./acceptance.md) 是否需要更新。
-- 发布前按 [发布与安装指南](../guides/release.md) 和 [验收样例](./acceptance.md) 交叉检查。
+- 发布前按 [发布与安装指南](../guides/release.md)、[验收样例](./acceptance.md) 和 [发布前最终验证计划](./pre-release-validation-plan.md) 交叉检查。
 
 ## 相关入口
 

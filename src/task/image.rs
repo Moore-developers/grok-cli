@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
@@ -18,6 +18,10 @@ use crate::usage::tracker;
 
 const DEFAULT_IMAGE_MODEL: &str = "grok-imagine-image";
 const IMAGES_GENERATIONS_PATH: &str = "/images/generations";
+const DEFAULT_IMAGE_COUNT: u32 = 1;
+const MAX_IMAGE_COUNT: u32 = 10;
+const RESPONSE_FORMAT_URL: &str = "url";
+const RESPONSE_FORMAT_B64_JSON: &str = "b64_json";
 
 #[derive(Debug, Clone, Serialize)]
 struct ImageGenData {
@@ -25,6 +29,7 @@ struct ImageGenData {
     credential_source: String,
     model: String,
     image: String,
+    images: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     aspect_ratio: Option<String>,
     extra: Value,
@@ -78,6 +83,13 @@ pub fn execute(ctx: &AppContext, opts: ImageGenOptions) -> CommandResult {
         println!("credential_source: {}", data.credential_source);
         println!("model: {}", data.model);
         println!("image: {}", data.image);
+        println!("image_count: {}", data.images.len());
+        if data.images.len() > 1 {
+            println!("images:");
+            for image in &data.images {
+                println!("- {image}");
+            }
+        }
         if let Some(aspect_ratio) = &data.aspect_ratio {
             println!("aspect_ratio: {aspect_ratio}");
         }
@@ -95,6 +107,49 @@ fn validate_options(opts: &ImageGenOptions) -> Result<(), AppError> {
         ));
     }
 
+    let count = image_count(opts);
+    if !(1..=MAX_IMAGE_COUNT).contains(&count) {
+        return Err(AppError::new(
+            ErrorCode::InvalidArgs,
+            format!("--count must be between 1 and {MAX_IMAGE_COUNT}"),
+        ));
+    }
+
+    if opts.output_file.is_some() && count > 1 {
+        return Err(AppError::new(
+            ErrorCode::InvalidArgs,
+            "--output-file can only be used with --count 1; use --output-dir for multiple images",
+        ));
+    }
+
+    if opts.output_file.is_some() && opts.output_dir.is_some() {
+        return Err(AppError::new(
+            ErrorCode::InvalidArgs,
+            "--output-file cannot be combined with --output-dir",
+        ));
+    }
+
+    if let Some(response_format) = opts.response_format.as_deref() {
+        let response_format = response_format.trim();
+        if !matches!(
+            response_format,
+            RESPONSE_FORMAT_URL | RESPONSE_FORMAT_B64_JSON
+        ) {
+            return Err(AppError::new(
+                ErrorCode::InvalidArgs,
+                "--response-format must be url or b64_json",
+            ));
+        }
+        if response_format == RESPONSE_FORMAT_URL
+            && (opts.output_file.is_some() || opts.output_dir.is_some())
+        {
+            return Err(AppError::new(
+                ErrorCode::InvalidArgs,
+                "--output-file and --output-dir require --response-format b64_json",
+            ));
+        }
+    }
+
     Ok(())
 }
 
@@ -102,6 +157,7 @@ fn build_request(opts: &ImageGenOptions, model: &str) -> Value {
     let mut body = serde_json::Map::new();
     body.insert("model".to_string(), json!(model));
     body.insert("prompt".to_string(), json!(prompt_text(opts)));
+    body.insert("n".to_string(), json!(image_count(opts)));
 
     if let Some(aspect_ratio) = opts.aspect_ratio.as_deref() {
         body.insert("aspect_ratio".to_string(), json!(aspect_ratio));
@@ -109,8 +165,8 @@ fn build_request(opts: &ImageGenOptions, model: &str) -> Value {
     if let Some(resolution) = opts.resolution.as_deref() {
         body.insert("resolution".to_string(), json!(resolution));
     }
-    if opts.output_file.is_some() {
-        body.insert("response_format".to_string(), json!("b64_json"));
+    if let Some(response_format) = image_response_format(opts) {
+        body.insert("response_format".to_string(), json!(response_format));
     }
 
     Value::Object(body)
@@ -123,47 +179,100 @@ fn prompt_text(opts: &ImageGenOptions) -> &str {
         .unwrap_or("")
 }
 
+fn image_count(opts: &ImageGenOptions) -> u32 {
+    opts.count.unwrap_or(DEFAULT_IMAGE_COUNT)
+}
+
+fn image_response_format(opts: &ImageGenOptions) -> Option<String> {
+    opts.response_format
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+        .or_else(|| {
+            (opts.output_file.is_some() || opts.output_dir.is_some())
+                .then_some(RESPONSE_FORMAT_B64_JSON.to_string())
+        })
+}
+
 fn parse_image_response(
     opts: &ImageGenOptions,
     model: &str,
     upstream: &upstream::UpstreamJsonEnvelope,
 ) -> Result<ImageGenData, AppError> {
-    let image_value = if let Some(output_file) = opts.output_file.as_deref() {
+    let images = if let Some(output_file) = opts.output_file.as_deref() {
         let image_b64 = extract_image_b64(&upstream.response)?;
         save_base64_image(output_file, &image_b64)?;
-        output_file.display().to_string()
+        vec![output_file.display().to_string()]
+    } else if let Some(output_dir) = opts.output_dir.as_deref() {
+        save_base64_images(output_dir, &extract_image_b64_values(&upstream.response)?)?
     } else {
-        extract_image_reference(&upstream.response)?
+        extract_image_references(&upstream.response)?
     };
+    let image = images.first().cloned().ok_or_else(|| {
+        AppError::new(
+            ErrorCode::RequestFailed,
+            "images API payload did not include an image URL or data",
+        )
+    })?;
 
     Ok(ImageGenData {
         provider: "xai".to_string(),
         credential_source: upstream.credential_source.clone(),
         model: model.to_string(),
-        image: image_value,
+        image,
+        images,
         aspect_ratio: opts.aspect_ratio.clone(),
         extra: json!({
-            "resolution": opts.resolution.clone()
+            "resolution": opts.resolution.clone(),
+            "count": image_count(opts),
+            "response_format": image_response_format(opts)
         }),
     })
 }
 
+#[cfg(test)]
 fn extract_image_reference(response: &Value) -> Result<String, AppError> {
+    extract_image_references(response)?
+        .into_iter()
+        .next()
+        .ok_or_else(|| {
+            AppError::new(
+                ErrorCode::RequestFailed,
+                "images API payload did not include an image URL or data",
+            )
+        })
+}
+
+fn extract_image_references(response: &Value) -> Result<Vec<String>, AppError> {
     if let Some(url) = response.get("url").and_then(|value| value.as_str()) {
-        return Ok(url.to_string());
+        return Ok(vec![url.to_string()]);
     }
 
-    if let Some(value) = response
+    if let Some(b64) = response.get("b64_json").and_then(|value| value.as_str()) {
+        return Ok(vec![format!("data:image/png;base64,{b64}")]);
+    }
+
+    let images: Vec<String> = response
         .get("data")
         .and_then(|value| value.as_array())
-        .and_then(|items| items.first())
-    {
-        if let Some(url) = value.get("url").and_then(|value| value.as_str()) {
-            return Ok(url.to_string());
-        }
-        if let Some(b64) = value.get("b64_json").and_then(|value| value.as_str()) {
-            return Ok(format!("data:image/png;base64,{b64}"));
-        }
+        .into_iter()
+        .flatten()
+        .filter_map(|value| {
+            value
+                .get("url")
+                .and_then(|value| value.as_str())
+                .map(ToOwned::to_owned)
+                .or_else(|| {
+                    value
+                        .get("b64_json")
+                        .and_then(|value| value.as_str())
+                        .map(|b64| format!("data:image/png;base64,{b64}"))
+                })
+        })
+        .collect();
+    if !images.is_empty() {
+        return Ok(images);
     }
 
     Err(AppError::new(
@@ -173,24 +282,64 @@ fn extract_image_reference(response: &Value) -> Result<String, AppError> {
 }
 
 fn extract_image_b64(response: &Value) -> Result<String, AppError> {
+    extract_image_b64_values(response)?
+        .into_iter()
+        .next()
+        .ok_or_else(|| {
+            AppError::new(
+                ErrorCode::RequestFailed,
+                "images API payload did not include `b64_json` for file output",
+            )
+        })
+}
+
+fn extract_image_b64_values(response: &Value) -> Result<Vec<String>, AppError> {
     if let Some(b64) = response.get("b64_json").and_then(|value| value.as_str()) {
-        return Ok(b64.to_string());
+        return Ok(vec![b64.to_string()]);
     }
 
-    if let Some(b64) = response
+    let images: Vec<String> = response
         .get("data")
         .and_then(|value| value.as_array())
-        .and_then(|items| items.first())
-        .and_then(|item| item.get("b64_json"))
-        .and_then(|value| value.as_str())
-    {
-        return Ok(b64.to_string());
+        .into_iter()
+        .flatten()
+        .filter_map(|item| {
+            item.get("b64_json")
+                .and_then(|value| value.as_str())
+                .map(ToOwned::to_owned)
+        })
+        .collect();
+    if !images.is_empty() {
+        return Ok(images);
     }
 
     Err(AppError::new(
         ErrorCode::RequestFailed,
         "images API payload did not include `b64_json` for file output",
     ))
+}
+
+fn save_base64_images(dir: &Path, images_b64: &[String]) -> Result<Vec<String>, AppError> {
+    fs::create_dir_all(dir).map_err(|error| {
+        AppError::io(format!(
+            "failed to create image output directory {}: {error}",
+            dir.display()
+        ))
+    })?;
+
+    images_b64
+        .iter()
+        .enumerate()
+        .map(|(index, image_b64)| {
+            let path = numbered_image_path(dir, index);
+            save_base64_image(&path, image_b64)?;
+            Ok(path.display().to_string())
+        })
+        .collect()
+}
+
+fn numbered_image_path(dir: &Path, index: usize) -> PathBuf {
+    dir.join(format!("image-{:03}.png", index + 1))
 }
 
 fn save_base64_image(path: &Path, image_b64: &str) -> Result<(), AppError> {
@@ -221,8 +370,8 @@ fn save_base64_image(path: &Path, image_b64: &str) -> Result<(), AppError> {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_request, extract_image_b64, extract_image_reference, parse_image_response,
-        validate_options,
+        build_request, extract_image_b64, extract_image_b64_values, extract_image_reference,
+        extract_image_references, parse_image_response, validate_options,
     };
     use crate::args::{ImageGenOptions, TaskCommonOptions};
     use crate::upstream::{ResponseUsageSummary, UpstreamJsonEnvelope};
@@ -240,7 +389,10 @@ mod tests {
             model: Some("grok-imagine-image".to_string()),
             aspect_ratio: Some("16:9".to_string()),
             resolution: Some("1k".to_string()),
+            count: None,
+            response_format: None,
             output_file: None,
+            output_dir: None,
             timeout: Some(60),
         }
     }
@@ -255,6 +407,40 @@ mod tests {
     }
 
     #[test]
+    fn validate_options_rejects_count_out_of_range() {
+        let mut opts = sample_opts();
+        opts.count = Some(0);
+        let error = validate_options(&opts).unwrap_err();
+        assert_eq!(error.code.as_str(), "invalid_args");
+        assert!(error.message.contains("--count must be between"));
+
+        opts.count = Some(11);
+        let error = validate_options(&opts).unwrap_err();
+        assert_eq!(error.code.as_str(), "invalid_args");
+        assert!(error.message.contains("--count must be between"));
+    }
+
+    #[test]
+    fn validate_options_rejects_output_file_with_multiple_images() {
+        let mut opts = sample_opts();
+        opts.count = Some(2);
+        opts.output_file = Some(std::path::PathBuf::from("/tmp/image.png"));
+        let error = validate_options(&opts).unwrap_err();
+        assert_eq!(error.code.as_str(), "invalid_args");
+        assert!(error.message.contains("--output-file can only be used"));
+    }
+
+    #[test]
+    fn validate_options_rejects_url_response_for_file_output() {
+        let mut opts = sample_opts();
+        opts.response_format = Some("url".to_string());
+        opts.output_dir = Some(std::path::PathBuf::from("/tmp/images"));
+        let error = validate_options(&opts).unwrap_err();
+        assert_eq!(error.code.as_str(), "invalid_args");
+        assert!(error.message.contains("require --response-format b64_json"));
+    }
+
+    #[test]
     fn build_request_uses_remote_url_by_default() {
         let opts = sample_opts();
         let request = build_request(&opts, "grok-imagine-image");
@@ -262,7 +448,18 @@ mod tests {
         assert_eq!(request["prompt"], "Draw a skyline");
         assert_eq!(request["aspect_ratio"], "16:9");
         assert_eq!(request["resolution"], "1k");
+        assert_eq!(request["n"], 1);
         assert!(request["response_format"].is_null());
+    }
+
+    #[test]
+    fn build_request_includes_count_and_response_format() {
+        let mut opts = sample_opts();
+        opts.count = Some(3);
+        opts.response_format = Some("b64_json".to_string());
+        let request = build_request(&opts, "grok-imagine-image");
+        assert_eq!(request["n"], 3);
+        assert_eq!(request["response_format"], "b64_json");
     }
 
     #[test]
@@ -270,6 +467,16 @@ mod tests {
         let mut opts = sample_opts();
         opts.output_file = Some(std::path::PathBuf::from("/tmp/image.png"));
         let request = build_request(&opts, "grok-imagine-image");
+        assert_eq!(request["response_format"], "b64_json");
+    }
+
+    #[test]
+    fn build_request_switches_to_b64_when_output_dir_is_requested() {
+        let mut opts = sample_opts();
+        opts.count = Some(2);
+        opts.output_dir = Some(std::path::PathBuf::from("/tmp/images"));
+        let request = build_request(&opts, "grok-imagine-image");
+        assert_eq!(request["n"], 2);
         assert_eq!(request["response_format"], "b64_json");
     }
 
@@ -289,7 +496,63 @@ mod tests {
 
         let parsed = parse_image_response(&opts, "grok-imagine-image", &upstream).unwrap();
         assert_eq!(parsed.image, "https://cdn.x.ai/image.png");
+        assert_eq!(parsed.images, vec!["https://cdn.x.ai/image.png"]);
         assert_eq!(parsed.credential_source, "xai-oauth");
+    }
+
+    #[test]
+    fn parse_image_response_returns_multiple_urls() {
+        let mut opts = sample_opts();
+        opts.count = Some(2);
+        let upstream = UpstreamJsonEnvelope {
+            credential_source: "xai-oauth".to_string(),
+            response: json!({
+                "data": [
+                    {"url": "https://cdn.x.ai/image-1.png"},
+                    {"url": "https://cdn.x.ai/image-2.png"}
+                ]
+            }),
+            usage: ResponseUsageSummary::default(),
+            rate_limits: None,
+        };
+
+        let parsed = parse_image_response(&opts, "grok-imagine-image", &upstream).unwrap();
+        assert_eq!(parsed.image, "https://cdn.x.ai/image-1.png");
+        assert_eq!(
+            parsed.images,
+            vec![
+                "https://cdn.x.ai/image-1.png".to_string(),
+                "https://cdn.x.ai/image-2.png".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn parse_image_response_returns_multiple_b64_data_urls() {
+        let mut opts = sample_opts();
+        opts.count = Some(2);
+        opts.response_format = Some("b64_json".to_string());
+        let upstream = UpstreamJsonEnvelope {
+            credential_source: "xai-oauth".to_string(),
+            response: json!({
+                "data": [
+                    {"b64_json": "aGVsbG8="},
+                    {"b64_json": "d29ybGQ="}
+                ]
+            }),
+            usage: ResponseUsageSummary::default(),
+            rate_limits: None,
+        };
+
+        let parsed = parse_image_response(&opts, "grok-imagine-image", &upstream).unwrap();
+        assert_eq!(parsed.image, "data:image/png;base64,aGVsbG8=");
+        assert_eq!(
+            parsed.images,
+            vec![
+                "data:image/png;base64,aGVsbG8=".to_string(),
+                "data:image/png;base64,d29ybGQ=".to_string()
+            ]
+        );
     }
 
     #[test]
@@ -311,7 +574,39 @@ mod tests {
 
         let parsed = parse_image_response(&opts, "grok-imagine-image", &upstream).unwrap();
         assert_eq!(parsed.image, image_path.display().to_string());
+        assert_eq!(parsed.images, vec![image_path.display().to_string()]);
         assert_eq!(std::fs::read(&image_path).unwrap(), b"hello");
+    }
+
+    #[test]
+    fn parse_image_response_writes_multiple_output_files_when_output_dir_requested() {
+        let temp = tempdir().unwrap();
+        let image_dir = temp.path().join("images");
+        let mut opts = sample_opts();
+        opts.count = Some(2);
+        opts.output_dir = Some(image_dir.clone());
+        let upstream = UpstreamJsonEnvelope {
+            credential_source: "xai-oauth".to_string(),
+            response: json!({
+                "data": [
+                    {"b64_json": "aGVsbG8="},
+                    {"b64_json": "d29ybGQ="}
+                ]
+            }),
+            usage: ResponseUsageSummary::default(),
+            rate_limits: None,
+        };
+
+        let parsed = parse_image_response(&opts, "grok-imagine-image", &upstream).unwrap();
+        let first = image_dir.join("image-001.png");
+        let second = image_dir.join("image-002.png");
+        assert_eq!(parsed.image, first.display().to_string());
+        assert_eq!(
+            parsed.images,
+            vec![first.display().to_string(), second.display().to_string()]
+        );
+        assert_eq!(std::fs::read(first).unwrap(), b"hello");
+        assert_eq!(std::fs::read(second).unwrap(), b"world");
     }
 
     #[test]
@@ -324,5 +619,35 @@ mod tests {
     fn extract_image_b64_rejects_missing_payload() {
         let error = extract_image_b64(&json!({"data": []})).unwrap_err();
         assert_eq!(error.code.as_str(), "request_failed");
+    }
+
+    #[test]
+    fn extract_image_references_collects_all_urls() {
+        let images = extract_image_references(&json!({
+            "data": [
+                {"url": "https://cdn.x.ai/1.png"},
+                {"url": "https://cdn.x.ai/2.png"}
+            ]
+        }))
+        .unwrap();
+        assert_eq!(
+            images,
+            vec![
+                "https://cdn.x.ai/1.png".to_string(),
+                "https://cdn.x.ai/2.png".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn extract_image_b64_values_collects_all_values() {
+        let images = extract_image_b64_values(&json!({
+            "data": [
+                {"b64_json": "aGVsbG8="},
+                {"b64_json": "d29ybGQ="}
+            ]
+        }))
+        .unwrap();
+        assert_eq!(images, vec!["aGVsbG8=".to_string(), "d29ybGQ=".to_string()]);
     }
 }

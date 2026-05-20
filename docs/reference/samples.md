@@ -112,7 +112,37 @@
 - `search` 非 `--json` 时默认流式打印可读正文
 - `search --json` 默认返回单次结构化结果
 
-## 5. `tts --json`
+## 5. `image --json`
+
+```json
+{
+  "ok": true,
+  "command": "image",
+  "data": {
+    "provider": "xai",
+    "credential_source": "xai-oauth",
+    "model": "grok-imagine-image",
+    "image": "https://cdn.x.ai/image-1.png",
+    "images": [
+      "https://cdn.x.ai/image-1.png",
+      "https://cdn.x.ai/image-2.png"
+    ],
+    "aspect_ratio": "16:9",
+    "extra": {
+      "resolution": "1k",
+      "count": 2,
+      "response_format": "url"
+    }
+  }
+}
+```
+
+兼容性说明：
+- `image` 始终是第一张图片，旧脚本可以继续读取它。
+- `images` 是完整图片列表，单图时也会返回一个元素。
+- 使用 `--output-dir` 时，`image` 和 `images` 返回本地落盘路径。
+
+## 6. `tts --json`
 
 ```json
 {
@@ -129,7 +159,7 @@
 }
 ```
 
-## 5.1 媒体能力真实验证补充
+## 6.1 媒体能力真实验证补充
 
 `2026-05-20` 真实验证结果：
 
@@ -154,7 +184,7 @@
 - 手动执行一次 `refresh` 后，`video` 的三条真实分支全部恢复成功
 - 现已把这一步前置为媒体命令内建编排，不再要求用户自己先发现再刷新
 
-## 6. 典型错误信封
+## 7. 典型错误信封
 
 ```json
 {
@@ -169,7 +199,7 @@
 }
 ```
 
-## 7. `usage`
+## 8. `usage`
 
 人类可读输出示例：
 

@@ -53,7 +53,54 @@ fn task_image_gen_returns_remote_image_url_from_stubbed_upstream() {
         .stdout(predicate::str::contains(
             "\"image\":\"https://cdn.x.ai/generated-image.png\"",
         ))
+        .stdout(predicate::str::contains(
+            "\"images\":[\"https://cdn.x.ai/generated-image.png\"]",
+        ))
         .stdout(predicate::str::contains("\"aspect_ratio\":\"16:9\""));
+
+    server.join().unwrap();
+}
+
+#[test]
+fn task_image_gen_sends_count_and_response_format() {
+    let temp = tempdir().unwrap();
+    let auth_file = temp.path().join("auth.json");
+    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    write_auth_state(&auth_file, &format!("http://127.0.0.1:{port}/v1"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let request = read_request(&mut stream);
+        assert!(request.contains("POST /v1/images/generations"));
+        assert!(request.contains("\"n\":2"));
+        assert!(request.contains("\"response_format\":\"url\""));
+        let body = r#"{"data":[{"url":"https://cdn.x.ai/image-1.png"},{"url":"https://cdn.x.ai/image-2.png"}]}"#;
+        write_response(&mut stream, "200 OK", body);
+    });
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "image",
+            "--json",
+            "--auth-file",
+            auth_file.to_str().unwrap(),
+            "--prompt",
+            "Draw a futuristic skyline",
+            "--count",
+            "2",
+            "--response-format",
+            "url",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "\"image\":\"https://cdn.x.ai/image-1.png\"",
+        ))
+        .stdout(predicate::str::contains(
+            "\"images\":[\"https://cdn.x.ai/image-1.png\",\"https://cdn.x.ai/image-2.png\"]",
+        ));
 
     server.join().unwrap();
 }
@@ -126,6 +173,80 @@ fn task_image_gen_writes_output_file_when_requested() {
         .stdout(predicate::str::contains(output_file.to_str().unwrap()));
 
     assert_eq!(fs::read(&output_file).unwrap(), b"hello");
+    server.join().unwrap();
+}
+
+#[test]
+fn task_image_gen_rejects_output_file_with_multiple_images() {
+    let temp = tempdir().unwrap();
+    let output_file = temp.path().join("image.png");
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "image",
+            "--json",
+            "--prompt",
+            "Draw a futuristic skyline",
+            "--count",
+            "2",
+            "--output-file",
+            output_file.to_str().unwrap(),
+        ])
+        .assert()
+        .code(2)
+        .stdout(predicate::str::contains("\"code\":\"invalid_args\""))
+        .stdout(predicate::str::contains(
+            "--output-file can only be used with --count 1",
+        ));
+}
+
+#[test]
+fn task_image_gen_writes_output_dir_when_requested() {
+    let temp = tempdir().unwrap();
+    let auth_file = temp.path().join("auth.json");
+    let output_dir = temp.path().join("artifacts");
+    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    write_auth_state(&auth_file, &format!("http://127.0.0.1:{port}/v1"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let request = read_request(&mut stream);
+        assert!(request.contains("\"n\":2"));
+        assert!(request.contains("\"response_format\":\"b64_json\""));
+        let body = r#"{"data":[{"b64_json":"aGVsbG8="},{"b64_json":"d29ybGQ="}]}"#;
+        write_response(&mut stream, "200 OK", body);
+    });
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "image",
+            "--json",
+            "--auth-file",
+            auth_file.to_str().unwrap(),
+            "--prompt",
+            "Draw a futuristic skyline",
+            "--count",
+            "2",
+            "--output-dir",
+            output_dir.to_str().unwrap(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("image-001.png"))
+        .stdout(predicate::str::contains("image-002.png"))
+        .stdout(predicate::str::contains("\"images\""));
+
+    assert_eq!(
+        fs::read(output_dir.join("image-001.png")).unwrap(),
+        b"hello"
+    );
+    assert_eq!(
+        fs::read(output_dir.join("image-002.png")).unwrap(),
+        b"world"
+    );
     server.join().unwrap();
 }
 

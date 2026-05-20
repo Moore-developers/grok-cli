@@ -81,6 +81,8 @@ cargo run -- search "What are people saying about xAI on X today?"
 
 ```bash
 cargo run -- image "A cinematic skyline"
+cargo run -- image "A cinematic skyline" --count 2 --response-format url --json
+cargo run -- image "A logo mark" --count 2 --output-dir ./out/images --json
 cargo run -- video "Animate a cinematic skyline" --duration 8
 cargo run -- tts "Hello from Grok"
 cargo run -- tts "Hello from Grok" --output-format mp3 --sample-rate 24000 --bit-rate 128000
@@ -91,6 +93,8 @@ cargo run -- stt ./sample.wav --diarize --keyterm Grok --filler-words --json
 
 期望：
 - 图片返回 `image`
+- 图片多图请求返回 `image` 和 `images`
+- 图片多图 base64 落盘请求返回本地路径列表
 - 视频返回 `video`
 - TTS 返回 `file_path`
 - TTS 显式输出格式请求成功时返回 `output_format`

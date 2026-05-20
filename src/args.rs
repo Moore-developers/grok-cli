@@ -239,9 +239,18 @@ pub struct ImageGenOptions {
     /// Output resolution, for example 1k.
     #[arg(long)]
     pub resolution: Option<String>,
+    /// Number of images to generate, from 1 to 10.
+    #[arg(long)]
+    pub count: Option<u32>,
+    /// Image response format, either url or b64_json.
+    #[arg(long = "response-format")]
+    pub response_format: Option<String>,
     /// Save base64 image output to a local file.
     #[arg(long = "output-file", value_name = "PATH")]
     pub output_file: Option<PathBuf>,
+    /// Save base64 image outputs to a local directory.
+    #[arg(long = "output-dir", value_name = "PATH")]
+    pub output_dir: Option<PathBuf>,
     /// Request timeout in seconds. Defaults to 120 for image generation.
     #[arg(long)]
     pub timeout: Option<u64>,

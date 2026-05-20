@@ -178,45 +178,45 @@
 
 ### IMG-1. Count 与 response format
 
-- [ ] 增加 `--count <N>`，默认 `1`，校验范围 `1..=10`。
-- [ ] 增加 `--response-format <url|b64_json>`。
-- [ ] `--output-file` 继续隐式要求 `b64_json`。
-- [ ] 当 `--output-file` 与 `--count > 1` 同时出现时返回 `invalid_args`。
-- [ ] 评估并实现 `--output-dir <PATH>`，用于多图 b64 落盘。
+- [x] 增加 `--count <N>`，默认 `1`，校验范围 `1..=10`。
+- [x] 增加 `--response-format <url|b64_json>`。
+- [x] `--output-file` 继续隐式要求 `b64_json`。
+- [x] 当 `--output-file` 与 `--count > 1` 同时出现时返回 `invalid_args`。
+- [x] 评估并实现 `--output-dir <PATH>`，用于多图 b64 落盘。
 
 测试要求：
 
-- [ ] 模块级测试覆盖 `count` 和 `response_format` 进入请求体。
-- [ ] 模块级测试覆盖 `count=0` / `count=11` 校验失败。
-- [ ] 模块级测试覆盖 `--output-file + --count > 1` 失败。
-- [ ] 命令级 stub 测试验证多图请求。
+- [x] 模块级测试覆盖 `count` 和 `response_format` 进入请求体。
+- [x] 模块级测试覆盖 `count=0` / `count=11` 校验失败。
+- [x] 模块级测试覆盖 `--output-file + --count > 1` 失败。
+- [x] 命令级 stub 测试验证多图请求。
 
 ### IMG-2. 多图响应
 
-- [ ] `ImageGenData` 保留 `image`，继续表示第一张图。
-- [ ] 增加 `images: Vec<String>`，用于返回完整图片列表。
-- [ ] `--json` 输出 `image` 和 `images`。
-- [ ] 非 JSON 输出显示第一张图和总数；必要时逐行列出全部图片。
-- [ ] b64 多图落盘时返回本地路径列表。
+- [x] `ImageGenData` 保留 `image`，继续表示第一张图。
+- [x] 增加 `images: Vec<String>`，用于返回完整图片列表。
+- [x] `--json` 输出 `image` 和 `images`。
+- [x] 非 JSON 输出显示第一张图和总数；必要时逐行列出全部图片。
+- [x] b64 多图落盘时返回本地路径列表。
 
 测试要求：
 
-- [ ] 模块级测试覆盖多个 `url`。
-- [ ] 模块级测试覆盖多个 `b64_json`。
-- [ ] 命令级 stub 测试确认 JSON 输出包含 `images`。
-- [ ] contract 回归确认 `data.image` 仍存在。
+- [x] 模块级测试覆盖多个 `url`。
+- [x] 模块级测试覆盖多个 `b64_json`。
+- [x] 命令级 stub 测试确认 JSON 输出包含 `images`。
+- [x] contract 回归确认 `data.image` 仍存在。
 
 ### IMG-3. 文档同步
 
-- [ ] 更新 [`docs/commands/image.md`](../commands/image.md)。
-- [ ] 更新 [`docs/project/acceptance.md`](./acceptance.md)。
-- [ ] 需要时更新 [`docs/reference/samples.md`](../reference/samples.md)。
+- [x] 更新 [`docs/commands/image.md`](../commands/image.md)。
+- [x] 更新 [`docs/project/acceptance.md`](./acceptance.md)。
+- [x] 需要时更新 [`docs/reference/samples.md`](../reference/samples.md)。
 
 完成标准：
 
-- [ ] `cargo test --quiet task_image_gen_commands` 通过。
-- [ ] `cargo test --quiet` 通过。
-- [ ] 单图旧用法仍返回 `data.image`。
+- [x] `cargo test --quiet --test task_image_gen_commands` 通过。
+- [x] `cargo test --quiet` 通过。
+- [x] 单图旧用法仍返回 `data.image`。
 
 ## Phase 16.4: Streaming STT
 

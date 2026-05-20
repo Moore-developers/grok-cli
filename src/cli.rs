@@ -18,6 +18,7 @@ pub fn dispatch(ctx: &AppContext, cli: Cli) -> CommandResult {
         TopLevelCommand::Chat(opts) => task::chat::execute(ctx, opts),
         TopLevelCommand::Search(opts) => task::search::execute(ctx, opts),
         TopLevelCommand::Image(opts) => task::image::execute(ctx, opts),
+        TopLevelCommand::ImageEdit(opts) => task::image::execute_edit(ctx, opts),
         TopLevelCommand::Video(opts) => task::video::execute(ctx, opts),
         TopLevelCommand::Tts(opts) => task::audio::execute_tts(ctx, opts),
         TopLevelCommand::Stt(opts) => task::audio::execute_stt(ctx, opts),

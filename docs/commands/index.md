@@ -36,6 +36,7 @@ grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|video|
 | 命令 | 文档 | 用途 |
 | --- | --- | --- |
 | `image` | [`image.md`](./image.md) | 使用 Grok Imagine 生成图片。 |
+| `image-edit` | [`image-edit.md`](./image-edit.md) | 使用 Grok Imagine 编辑一张或多张参考图片。 |
 | `video` | [`video.md`](./video.md) | 使用 Grok Imagine 生成视频。 |
 | `tts` | [`tts.md`](./tts.md) | 文本转语音，并保存本地音频文件。 |
 | `stt` | [`stt.md`](./stt.md) | 将本地音频文件转写为文本。 |
@@ -65,6 +66,7 @@ grok-cli status
 grok-cli chat "总结最近 AI 新闻"
 grok-cli search "What are builders saying about Grok today?"
 grok-cli image "A cinematic skyline at sunrise"
+grok-cli image-edit --image ./source.png --prompt "Make it cinematic"
 grok-cli video "Animate a futuristic skyline" --duration 8
 grok-cli tts "Hello from Grok"
 grok-cli stt ./sample.wav

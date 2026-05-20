@@ -40,6 +40,9 @@ pub enum TopLevelCommand {
     Search(XSearchOptions),
     /// Generate an image with Grok Imagine.
     Image(ImageGenOptions),
+    /// Edit images with Grok Imagine.
+    #[command(name = "image-edit")]
+    ImageEdit(ImageEditOptions),
     /// Generate a video with Grok Imagine.
     Video(VideoGenOptions),
     /// Convert text to speech.
@@ -255,6 +258,40 @@ pub struct ImageGenOptions {
     #[arg(long = "output-dir", value_name = "PATH")]
     pub output_dir: Option<PathBuf>,
     /// Request timeout in seconds. Defaults to 120 for image generation.
+    #[arg(long)]
+    pub timeout: Option<u64>,
+}
+
+#[derive(Debug, Clone, Args)]
+#[command(about = "Edit images with Grok Imagine")]
+pub struct ImageEditOptions {
+    #[command(flatten)]
+    pub common: TaskCommonOptions,
+    /// Edit prompt. You can pass it positionally or with --prompt.
+    #[arg(value_name = "PROMPT", conflicts_with = "prompt_flag")]
+    pub prompt: Option<String>,
+    /// Edit prompt for scripts that prefer named flags.
+    #[arg(long = "prompt", value_name = "PROMPT", id = "prompt_flag")]
+    pub prompt_flag: Option<String>,
+    /// Source image path, URL, or data URI. Repeatable, up to 3 values.
+    #[arg(long = "image", value_name = "PATH_OR_URL")]
+    pub images: Vec<String>,
+    /// Override the image edit model for this request.
+    #[arg(long)]
+    pub model: Option<String>,
+    /// Output aspect ratio, for example 16:9 or 1:1.
+    #[arg(long = "aspect-ratio")]
+    pub aspect_ratio: Option<String>,
+    /// Output resolution, for example 1k.
+    #[arg(long)]
+    pub resolution: Option<String>,
+    /// Image response format, either url or b64_json.
+    #[arg(long = "response-format")]
+    pub response_format: Option<String>,
+    /// Save base64 image output to a local file.
+    #[arg(long = "output-file", value_name = "PATH")]
+    pub output_file: Option<PathBuf>,
+    /// Request timeout in seconds. Defaults to 120 for image editing.
     #[arg(long)]
     pub timeout: Option<u64>,
 }

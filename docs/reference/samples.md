@@ -142,7 +142,36 @@
 - `images` 是完整图片列表，单图时也会返回一个元素。
 - 使用 `--output-dir` 时，`image` 和 `images` 返回本地落盘路径。
 
-## 6. `tts --json`
+## 6. `image-edit --json`
+
+```json
+{
+  "ok": true,
+  "command": "image-edit",
+  "data": {
+    "provider": "xai",
+    "credential_source": "xai-oauth",
+    "model": "grok-imagine-image",
+    "image": "https://cdn.x.ai/edited-image.png",
+    "images": [
+      "https://cdn.x.ai/edited-image.png"
+    ],
+    "aspect_ratio": "16:9",
+    "extra": {
+      "resolution": "1k",
+      "input_count": 1,
+      "response_format": "url"
+    }
+  }
+}
+```
+
+默认行为说明：
+- `image-edit` 支持 1 到 3 张输入图。
+- 本地输入图会编码成 data URI 后发送到 xAI。
+- `image` 是第一张编辑结果，`images` 是完整编辑结果列表。
+
+## 7. `tts --json`
 
 ```json
 {
@@ -159,7 +188,7 @@
 }
 ```
 
-## 6.1 媒体能力真实验证补充
+## 7.1 媒体能力真实验证补充
 
 `2026-05-20` 真实验证结果：
 
@@ -184,7 +213,7 @@
 - 手动执行一次 `refresh` 后，`video` 的三条真实分支全部恢复成功
 - 现已把这一步前置为媒体命令内建编排，不再要求用户自己先发现再刷新
 
-## 7. 典型错误信封
+## 8. 典型错误信封
 
 ```json
 {
@@ -199,7 +228,7 @@
 }
 ```
 
-## 8. `usage`
+## 9. `usage`
 
 人类可读输出示例：
 

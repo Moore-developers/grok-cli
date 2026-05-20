@@ -261,23 +261,23 @@ grok-cli image-edit --image ./a.png --image ./b.png --image ./c.png --prompt "Bl
 
 任务：
 
-- [ ] 再次核对官方 image edit endpoint 和 multipart / JSON payload 形态。
-- [ ] 新增 `image-edit` 顶层命令。
-- [ ] 支持最多 3 张输入图。
-- [ ] 支持本地路径和 URL，必要时分两期实现。
-- [ ] 复用 `image` 的输出解析和落盘策略。
+- [x] 再次核对官方 image edit endpoint 和 multipart / JSON payload 形态。
+- [x] 新增 `image-edit` 顶层命令。
+- [x] 支持最多 3 张输入图。
+- [x] 支持本地路径和 URL，必要时分两期实现。
+- [x] 复用 `image` 的输出解析和落盘策略。
 
 测试要求：
 
-- [ ] 模块级测试覆盖 1 张和 3 张输入图。
-- [ ] 模块级测试覆盖超过 3 张失败。
-- [ ] 命令级 stub 测试覆盖成功请求。
-- [ ] contract 回归确认新命令出现在 help。
+- [x] 模块级测试覆盖 1 张和 3 张输入图。
+- [x] 模块级测试覆盖超过 3 张失败。
+- [x] 命令级 stub 测试覆盖成功请求。
+- [x] contract 回归确认新命令出现在 help。
 
 完成标准：
 
-- [ ] `image` 旧命令行为不变。
-- [ ] `image-edit` 有独立文档和测试。
+- [x] `image` 旧命令行为不变。
+- [x] `image-edit` 有独立文档和测试。
 
 ## Phase 16.6: Imagine Video Follow-up
 

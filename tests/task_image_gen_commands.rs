@@ -250,6 +250,125 @@ fn task_image_gen_writes_output_dir_when_requested() {
     server.join().unwrap();
 }
 
+#[test]
+fn task_image_edit_rejects_too_many_images() {
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "image-edit",
+            "--json",
+            "--prompt",
+            "Make it cinematic",
+            "--image",
+            "https://cdn.x.ai/1.png",
+            "--image",
+            "https://cdn.x.ai/2.png",
+            "--image",
+            "https://cdn.x.ai/3.png",
+            "--image",
+            "https://cdn.x.ai/4.png",
+        ])
+        .assert()
+        .code(2)
+        .stdout(predicate::str::contains("\"code\":\"invalid_args\""))
+        .stdout(predicate::str::contains(
+            "--image supports at most 3 values",
+        ));
+}
+
+#[test]
+fn task_image_edit_sends_single_image_request() {
+    let temp = tempdir().unwrap();
+    let auth_file = temp.path().join("auth.json");
+    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    write_auth_state(&auth_file, &format!("http://127.0.0.1:{port}/v1"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let request = read_request(&mut stream);
+        assert!(request.contains("POST /v1/images/edits"));
+        assert!(request.contains("\"prompt\":\"Make it cinematic\""));
+        assert!(request.contains(
+            "\"image\":{\"type\":\"image_url\",\"url\":\"https://cdn.x.ai/source.png\"}"
+        ));
+        assert!(!request.contains("\"images\""));
+        let body = r#"{"data":[{"url":"https://cdn.x.ai/edited-image.png"}]}"#;
+        write_response(&mut stream, "200 OK", body);
+    });
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "image-edit",
+            "--json",
+            "--auth-file",
+            auth_file.to_str().unwrap(),
+            "--prompt",
+            "Make it cinematic",
+            "--image",
+            "https://cdn.x.ai/source.png",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "\"image\":\"https://cdn.x.ai/edited-image.png\"",
+        ))
+        .stdout(predicate::str::contains(
+            "\"images\":[\"https://cdn.x.ai/edited-image.png\"]",
+        ));
+
+    server.join().unwrap();
+}
+
+#[test]
+fn task_image_edit_sends_multi_image_request() {
+    let temp = tempdir().unwrap();
+    let auth_file = temp.path().join("auth.json");
+    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    write_auth_state(&auth_file, &format!("http://127.0.0.1:{port}/v1"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let request = read_request(&mut stream);
+        assert!(request.contains("POST /v1/images/edits"));
+        assert!(request.contains("\"images\":["));
+        assert!(request.contains("https://cdn.x.ai/1.png"));
+        assert!(request.contains("https://cdn.x.ai/2.png"));
+        assert!(request.contains("https://cdn.x.ai/3.png"));
+        assert!(request.contains("\"response_format\":\"b64_json\""));
+        let body = r#"{"data":[{"b64_json":"aGVsbG8="}]}"#;
+        write_response(&mut stream, "200 OK", body);
+    });
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "image-edit",
+            "--json",
+            "--auth-file",
+            auth_file.to_str().unwrap(),
+            "--prompt",
+            "Blend these references",
+            "--image",
+            "https://cdn.x.ai/1.png",
+            "--image",
+            "https://cdn.x.ai/2.png",
+            "--image",
+            "https://cdn.x.ai/3.png",
+            "--response-format",
+            "b64_json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "\"image\":\"data:image/png;base64,aGVsbG8=\"",
+        ));
+
+    server.join().unwrap();
+}
+
 fn write_auth_state(path: &std::path::Path, base_url: &str) {
     fs::write(
         path,

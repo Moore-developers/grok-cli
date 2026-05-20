@@ -7,7 +7,7 @@ use serde::Serialize;
 use serde_json::{Value, json};
 
 use crate::app::AppContext;
-use crate::args::ImageGenOptions;
+use crate::args::{ImageEditOptions, ImageGenOptions};
 use crate::cli::CommandResult;
 use crate::error::{AppError, CommandError, ErrorCode};
 use crate::model;
@@ -18,8 +18,10 @@ use crate::usage::tracker;
 
 const DEFAULT_IMAGE_MODEL: &str = "grok-imagine-image";
 const IMAGES_GENERATIONS_PATH: &str = "/images/generations";
+const IMAGES_EDITS_PATH: &str = "/images/edits";
 const DEFAULT_IMAGE_COUNT: u32 = 1;
 const MAX_IMAGE_COUNT: u32 = 10;
+const MAX_EDIT_IMAGE_COUNT: usize = 3;
 const RESPONSE_FORMAT_URL: &str = "url";
 const RESPONSE_FORMAT_B64_JSON: &str = "b64_json";
 
@@ -61,6 +63,72 @@ pub fn execute(ctx: &AppContext, opts: ImageGenOptions) -> CommandResult {
     .map_err(|error| CommandError::new(command, opts.common.json, error))?;
 
     let data = parse_image_response(&opts, &model, &upstream)
+        .map_err(|error| CommandError::new(command, opts.common.json, error))?;
+    tracker::record_usage(
+        ctx,
+        opts.common.auth_file.as_deref(),
+        &upstream.credential_source,
+        UsageDelta {
+            provider: upstream.credential_source.clone(),
+            command: command.to_string(),
+            model: Some(model.clone()),
+            rate_limits: upstream.rate_limits.clone(),
+            ..UsageDelta::default()
+        },
+    )
+    .map_err(|error| CommandError::new(command, opts.common.json, error))?;
+
+    if opts.common.json {
+        output::print_json_success(command, &data);
+    } else {
+        println!("provider: {}", data.provider);
+        println!("credential_source: {}", data.credential_source);
+        println!("model: {}", data.model);
+        println!("image: {}", data.image);
+        println!("image_count: {}", data.images.len());
+        if data.images.len() > 1 {
+            println!("images:");
+            for image in &data.images {
+                println!("- {image}");
+            }
+        }
+        if let Some(aspect_ratio) = &data.aspect_ratio {
+            println!("aspect_ratio: {aspect_ratio}");
+        }
+        println!("extra: {}", data.extra);
+    }
+
+    Ok(())
+}
+
+pub fn execute_edit(ctx: &AppContext, opts: ImageEditOptions) -> CommandResult {
+    let command = "image-edit";
+    validate_edit_options(&opts)
+        .map_err(|error| CommandError::new(command, opts.common.json, error))?;
+
+    let auth_file = opts.common.auth_file.as_deref();
+    let state = auth_file
+        .map(|path| ctx.state_store.resolve_path(Some(path)))
+        .or_else(|| Some(ctx.state_store.resolve_path(None)))
+        .and_then(|path| ctx.state_store.load_valid_state(&path).ok());
+    let model = opts.model.clone().unwrap_or_else(|| {
+        model::default_model_for_task(state.as_ref(), "image", DEFAULT_IMAGE_MODEL)
+    });
+    let request = build_edit_request(&opts, &model)
+        .map_err(|error| CommandError::new(command, opts.common.json, error))?;
+    let upstream = upstream::post_json_api_with_options(
+        ctx,
+        opts.common.auth_file.as_deref(),
+        IMAGES_EDITS_PATH,
+        &request,
+        opts.timeout,
+        upstream::UpstreamAuthOptions {
+            refresh_if_expiring: true,
+        },
+    )
+    .map_err(|error| CommandError::new(command, opts.common.json, error))?;
+
+    let data = parse_image_edit_response(&opts, &model, &upstream)
         .map_err(|error| CommandError::new(command, opts.common.json, error))?;
     tracker::record_usage(
         ctx,
@@ -153,6 +221,44 @@ fn validate_options(opts: &ImageGenOptions) -> Result<(), AppError> {
     Ok(())
 }
 
+fn validate_edit_options(opts: &ImageEditOptions) -> Result<(), AppError> {
+    if edit_prompt_text(opts).trim().is_empty() {
+        return Err(AppError::new(
+            ErrorCode::InvalidArgs,
+            "prompt must not be empty",
+        ));
+    }
+    if opts.images.is_empty() {
+        return Err(AppError::new(ErrorCode::InvalidArgs, "--image is required"));
+    }
+    if opts.images.len() > MAX_EDIT_IMAGE_COUNT {
+        return Err(AppError::new(
+            ErrorCode::InvalidArgs,
+            format!("--image supports at most {MAX_EDIT_IMAGE_COUNT} values"),
+        ));
+    }
+    if let Some(response_format) = opts.response_format.as_deref() {
+        let response_format = response_format.trim();
+        if !matches!(
+            response_format,
+            RESPONSE_FORMAT_URL | RESPONSE_FORMAT_B64_JSON
+        ) {
+            return Err(AppError::new(
+                ErrorCode::InvalidArgs,
+                "--response-format must be url or b64_json",
+            ));
+        }
+        if response_format == RESPONSE_FORMAT_URL && opts.output_file.is_some() {
+            return Err(AppError::new(
+                ErrorCode::InvalidArgs,
+                "--output-file requires --response-format b64_json",
+            ));
+        }
+    }
+
+    Ok(())
+}
+
 fn build_request(opts: &ImageGenOptions, model: &str) -> Value {
     let mut body = serde_json::Map::new();
     body.insert("model".to_string(), json!(model));
@@ -172,7 +278,38 @@ fn build_request(opts: &ImageGenOptions, model: &str) -> Value {
     Value::Object(body)
 }
 
+fn build_edit_request(opts: &ImageEditOptions, model: &str) -> Result<Value, AppError> {
+    let mut body = serde_json::Map::new();
+    body.insert("model".to_string(), json!(model));
+    body.insert("prompt".to_string(), json!(edit_prompt_text(opts)));
+    let images = build_edit_image_inputs(&opts.images)?;
+    if images.len() == 1 {
+        body.insert("image".to_string(), images[0].clone());
+    } else {
+        body.insert("images".to_string(), Value::Array(images));
+    }
+
+    if let Some(aspect_ratio) = opts.aspect_ratio.as_deref() {
+        body.insert("aspect_ratio".to_string(), json!(aspect_ratio));
+    }
+    if let Some(resolution) = opts.resolution.as_deref() {
+        body.insert("resolution".to_string(), json!(resolution));
+    }
+    if let Some(response_format) = image_edit_response_format(opts) {
+        body.insert("response_format".to_string(), json!(response_format));
+    }
+
+    Ok(Value::Object(body))
+}
+
 fn prompt_text(opts: &ImageGenOptions) -> &str {
+    opts.prompt
+        .as_deref()
+        .or(opts.prompt_flag.as_deref())
+        .unwrap_or("")
+}
+
+fn edit_prompt_text(opts: &ImageEditOptions) -> &str {
     opts.prompt
         .as_deref()
         .or(opts.prompt_flag.as_deref())
@@ -193,6 +330,73 @@ fn image_response_format(opts: &ImageGenOptions) -> Option<String> {
             (opts.output_file.is_some() || opts.output_dir.is_some())
                 .then_some(RESPONSE_FORMAT_B64_JSON.to_string())
         })
+}
+
+fn image_edit_response_format(opts: &ImageEditOptions) -> Option<String> {
+    opts.response_format
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+        .or_else(|| {
+            opts.output_file
+                .is_some()
+                .then_some(RESPONSE_FORMAT_B64_JSON.to_string())
+        })
+}
+
+fn build_edit_image_inputs(values: &[String]) -> Result<Vec<Value>, AppError> {
+    values
+        .iter()
+        .map(|value| build_edit_image_input(value))
+        .collect()
+}
+
+fn build_edit_image_input(value: &str) -> Result<Value, AppError> {
+    let value = value.trim();
+    if value.is_empty() {
+        return Err(AppError::new(
+            ErrorCode::InvalidArgs,
+            "--image value must not be empty",
+        ));
+    }
+    if is_remote_or_data_image(value) {
+        return Ok(json!({
+            "type": "image_url",
+            "url": value
+        }));
+    }
+
+    let path = Path::new(value);
+    let bytes = fs::read(path).map_err(|error| {
+        AppError::io(format!(
+            "failed to read image edit input {}: {error}",
+            path.display()
+        ))
+    })?;
+    let mime = image_mime_type(path);
+    Ok(json!({
+        "type": "image_url",
+        "url": format!("data:{mime};base64,{}", BASE64_STANDARD.encode(bytes))
+    }))
+}
+
+fn is_remote_or_data_image(value: &str) -> bool {
+    value.starts_with("http://") || value.starts_with("https://") || value.starts_with("data:")
+}
+
+fn image_mime_type(path: &Path) -> &'static str {
+    match path
+        .extension()
+        .and_then(|value| value.to_str())
+        .map(|value| value.to_ascii_lowercase())
+        .as_deref()
+    {
+        Some("jpg" | "jpeg") => "image/jpeg",
+        Some("webp") => "image/webp",
+        Some("gif") => "image/gif",
+        _ => "image/png",
+    }
 }
 
 fn parse_image_response(
@@ -227,6 +431,40 @@ fn parse_image_response(
             "resolution": opts.resolution.clone(),
             "count": image_count(opts),
             "response_format": image_response_format(opts)
+        }),
+    })
+}
+
+fn parse_image_edit_response(
+    opts: &ImageEditOptions,
+    model: &str,
+    upstream: &upstream::UpstreamJsonEnvelope,
+) -> Result<ImageGenData, AppError> {
+    let images = if let Some(output_file) = opts.output_file.as_deref() {
+        let image_b64 = extract_image_b64(&upstream.response)?;
+        save_base64_image(output_file, &image_b64)?;
+        vec![output_file.display().to_string()]
+    } else {
+        extract_image_references(&upstream.response)?
+    };
+    let image = images.first().cloned().ok_or_else(|| {
+        AppError::new(
+            ErrorCode::RequestFailed,
+            "images API payload did not include an image URL or data",
+        )
+    })?;
+
+    Ok(ImageGenData {
+        provider: "xai".to_string(),
+        credential_source: upstream.credential_source.clone(),
+        model: model.to_string(),
+        image,
+        images,
+        aspect_ratio: opts.aspect_ratio.clone(),
+        extra: json!({
+            "resolution": opts.resolution.clone(),
+            "input_count": opts.images.len(),
+            "response_format": image_edit_response_format(opts)
         }),
     })
 }
@@ -370,10 +608,11 @@ fn save_base64_image(path: &Path, image_b64: &str) -> Result<(), AppError> {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_request, extract_image_b64, extract_image_b64_values, extract_image_reference,
-        extract_image_references, parse_image_response, validate_options,
+        build_edit_image_input, build_edit_request, build_request, extract_image_b64,
+        extract_image_b64_values, extract_image_reference, extract_image_references,
+        parse_image_edit_response, parse_image_response, validate_edit_options, validate_options,
     };
-    use crate::args::{ImageGenOptions, TaskCommonOptions};
+    use crate::args::{ImageEditOptions, ImageGenOptions, TaskCommonOptions};
     use crate::upstream::{ResponseUsageSummary, UpstreamJsonEnvelope};
     use serde_json::json;
     use tempfile::tempdir;
@@ -393,6 +632,24 @@ mod tests {
             response_format: None,
             output_file: None,
             output_dir: None,
+            timeout: Some(60),
+        }
+    }
+
+    fn sample_edit_opts() -> ImageEditOptions {
+        ImageEditOptions {
+            common: TaskCommonOptions {
+                json: true,
+                auth_file: None,
+            },
+            prompt: Some("Make it cinematic".to_string()),
+            prompt_flag: None,
+            images: vec!["https://cdn.x.ai/source.png".to_string()],
+            model: Some("grok-imagine-image".to_string()),
+            aspect_ratio: Some("16:9".to_string()),
+            resolution: Some("1k".to_string()),
+            response_format: None,
+            output_file: None,
             timeout: Some(60),
         }
     }
@@ -441,6 +698,39 @@ mod tests {
     }
 
     #[test]
+    fn validate_edit_options_rejects_missing_image() {
+        let mut opts = sample_edit_opts();
+        opts.images = vec![];
+        let error = validate_edit_options(&opts).unwrap_err();
+        assert_eq!(error.code.as_str(), "invalid_args");
+        assert!(error.message.contains("--image is required"));
+    }
+
+    #[test]
+    fn validate_edit_options_rejects_too_many_images() {
+        let mut opts = sample_edit_opts();
+        opts.images = vec![
+            "https://cdn.x.ai/1.png".to_string(),
+            "https://cdn.x.ai/2.png".to_string(),
+            "https://cdn.x.ai/3.png".to_string(),
+            "https://cdn.x.ai/4.png".to_string(),
+        ];
+        let error = validate_edit_options(&opts).unwrap_err();
+        assert_eq!(error.code.as_str(), "invalid_args");
+        assert!(error.message.contains("--image supports at most 3 values"));
+    }
+
+    #[test]
+    fn validate_edit_options_rejects_url_response_for_file_output() {
+        let mut opts = sample_edit_opts();
+        opts.response_format = Some("url".to_string());
+        opts.output_file = Some(std::path::PathBuf::from("/tmp/edit.png"));
+        let error = validate_edit_options(&opts).unwrap_err();
+        assert_eq!(error.code.as_str(), "invalid_args");
+        assert!(error.message.contains("--output-file requires"));
+    }
+
+    #[test]
     fn build_request_uses_remote_url_by_default() {
         let opts = sample_opts();
         let request = build_request(&opts, "grok-imagine-image");
@@ -478,6 +768,47 @@ mod tests {
         let request = build_request(&opts, "grok-imagine-image");
         assert_eq!(request["n"], 2);
         assert_eq!(request["response_format"], "b64_json");
+    }
+
+    #[test]
+    fn build_edit_request_uses_single_image_field_for_one_input() {
+        let opts = sample_edit_opts();
+        let request = build_edit_request(&opts, "grok-imagine-image").unwrap();
+        assert_eq!(request["model"], "grok-imagine-image");
+        assert_eq!(request["prompt"], "Make it cinematic");
+        assert_eq!(request["image"]["type"], "image_url");
+        assert_eq!(request["image"]["url"], "https://cdn.x.ai/source.png");
+        assert!(request["images"].is_null());
+        assert_eq!(request["aspect_ratio"], "16:9");
+        assert_eq!(request["resolution"], "1k");
+    }
+
+    #[test]
+    fn build_edit_request_uses_images_field_for_multiple_inputs() {
+        let mut opts = sample_edit_opts();
+        opts.images = vec![
+            "https://cdn.x.ai/1.png".to_string(),
+            "https://cdn.x.ai/2.png".to_string(),
+            "https://cdn.x.ai/3.png".to_string(),
+        ];
+        opts.response_format = Some("b64_json".to_string());
+
+        let request = build_edit_request(&opts, "grok-imagine-image").unwrap();
+        assert!(request["image"].is_null());
+        assert_eq!(request["images"].as_array().unwrap().len(), 3);
+        assert_eq!(request["images"][2]["url"], "https://cdn.x.ai/3.png");
+        assert_eq!(request["response_format"], "b64_json");
+    }
+
+    #[test]
+    fn build_edit_image_input_encodes_local_file_as_data_uri() {
+        let temp = tempdir().unwrap();
+        let path = temp.path().join("source.png");
+        std::fs::write(&path, b"hello").unwrap();
+
+        let input = build_edit_image_input(path.to_str().unwrap()).unwrap();
+        assert_eq!(input["type"], "image_url");
+        assert_eq!(input["url"], "data:image/png;base64,aGVsbG8=");
     }
 
     #[test]
@@ -607,6 +938,28 @@ mod tests {
         );
         assert_eq!(std::fs::read(first).unwrap(), b"hello");
         assert_eq!(std::fs::read(second).unwrap(), b"world");
+    }
+
+    #[test]
+    fn parse_image_edit_response_writes_output_file_when_requested() {
+        let temp = tempdir().unwrap();
+        let image_path = temp.path().join("edited.png");
+        let mut opts = sample_edit_opts();
+        opts.output_file = Some(image_path.clone());
+        let upstream = UpstreamJsonEnvelope {
+            credential_source: "xai-oauth".to_string(),
+            response: json!({
+                "data": [{
+                    "b64_json": "aGVsbG8="
+                }]
+            }),
+            usage: ResponseUsageSummary::default(),
+            rate_limits: None,
+        };
+
+        let parsed = parse_image_edit_response(&opts, "grok-imagine-image", &upstream).unwrap();
+        assert_eq!(parsed.image, image_path.display().to_string());
+        assert_eq!(std::fs::read(&image_path).unwrap(), b"hello");
     }
 
     #[test]

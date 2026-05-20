@@ -463,16 +463,15 @@ fn validate_tts_options(opts: &TtsOptions) -> Result<(), AppError> {
             .and_then(|path| path.extension())
             .and_then(|value| value.to_str())
             .map(|value| value.to_ascii_lowercase()),
-    ) {
-        if explicit.codec != path_format {
-            return Err(AppError::new(
-                ErrorCode::InvalidArgs,
-                format!(
-                    "--output extension .{path_format} does not match --output-format {}",
-                    explicit.codec
-                ),
-            ));
-        }
+    ) && explicit.codec != path_format
+    {
+        return Err(AppError::new(
+            ErrorCode::InvalidArgs,
+            format!(
+                "--output extension .{path_format} does not match --output-format {}",
+                explicit.codec
+            ),
+        ));
     }
 
     Ok(())
@@ -902,7 +901,7 @@ fn parse_stt_stream_event(text: &str) -> Result<SttStreamEvent, AppError> {
         .get("is_final")
         .or_else(|| raw.get("final"))
         .and_then(|value| value.as_bool())
-        .unwrap_or_else(|| matches!(event_type.as_str(), "final" | "transcript.final"));
+        .unwrap_or(matches!(event_type.as_str(), "final" | "transcript.final"));
 
     Ok(SttStreamEvent {
         event_type,

@@ -516,12 +516,7 @@ fn video_generation_modality(opts: &VideoGenOptions) -> String {
 
 fn clamp_duration(duration: Option<u64>, has_reference_images: bool) -> u64 {
     let mut value = duration.unwrap_or(DEFAULT_VIDEO_DURATION);
-    if value < 1 {
-        value = 1;
-    }
-    if value > 15 {
-        value = 15;
-    }
+    value = value.clamp(1, 15);
     if has_reference_images && value > 10 {
         value = 10;
     }

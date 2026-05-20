@@ -158,7 +158,7 @@ pub fn exchange_code(ctx: &AppContext, opts: ExchangeCodeOptions) -> CommandResu
             )
         })?;
 
-    let result = exchange_pending_session(
+    exchange_pending_session(
         command,
         ctx,
         opts.common.auth_file.clone(),
@@ -168,7 +168,7 @@ pub fn exchange_code(ctx: &AppContext, opts: ExchangeCodeOptions) -> CommandResu
         opts.common.json,
     )?;
 
-    Ok(result)
+    Ok(())
 }
 
 fn resolve_exchange_inputs(

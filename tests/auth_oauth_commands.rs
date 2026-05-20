@@ -314,14 +314,12 @@ fn auth_login_records_last_auth_error_on_timeout() {
 
 fn wait_for_pending_state(path: &std::path::Path, attempts: usize) -> Option<String> {
     for _ in 0..attempts {
-        if let Ok(raw) = fs::read_to_string(path) {
-            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&raw) {
-                if let Some(state) = json["metadata"]["pending_oauth"]["state"].as_str() {
-                    if !state.is_empty() {
-                        return Some(state.to_string());
-                    }
-                }
-            }
+        if let Ok(raw) = fs::read_to_string(path)
+            && let Ok(json) = serde_json::from_str::<serde_json::Value>(&raw)
+            && let Some(state) = json["metadata"]["pending_oauth"]["state"].as_str()
+            && !state.is_empty()
+        {
+            return Some(state.to_string());
         }
         thread::sleep(Duration::from_millis(100));
     }

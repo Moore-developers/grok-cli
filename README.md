@@ -189,6 +189,8 @@ Prebuilt GitHub Release binaries and Homebrew instructions are described in [doc
 
 ## Development
 
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request, and use [SECURITY.md](SECURITY.md) for private vulnerability reports.
+
 Run tests:
 
 ```bash
@@ -216,3 +218,6 @@ cargo install --path . --force
 - [Usage command spec](docs/reference/usage-command-spec.md)
 - [Release and installation guide](docs/guides/release.md)
 - [Troubleshooting](docs/guides/troubleshooting.md)
+- [Changelog](CHANGELOG.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)

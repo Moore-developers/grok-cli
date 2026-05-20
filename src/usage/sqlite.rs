@@ -161,10 +161,10 @@ COMMIT;
             return self.create_session(&env_session_id, provider);
         }
 
-        if let Some(active) = self.active_session_id()? {
-            if let Some(existing) = self.load_session(&active)? {
-                return Ok(existing);
-            }
+        if let Some(active) = self.active_session_id()?
+            && let Some(existing) = self.load_session(&active)?
+        {
+            return Ok(existing);
         }
 
         let generated = format!("sess_{}", Uuid::new_v4().simple());

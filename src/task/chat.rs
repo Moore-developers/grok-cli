@@ -290,10 +290,9 @@ fn parse_chat_response(model: &str, response: &Value) -> Result<ChatData, AppErr
                 if let Some(content) = item.get("content").and_then(|value| value.as_array()) {
                     for block in content {
                         if block.get("type").and_then(|value| value.as_str()) == Some("output_text")
+                            && let Some(text) = block.get("text").and_then(|value| value.as_str())
                         {
-                            if let Some(text) = block.get("text").and_then(|value| value.as_str()) {
-                                output_text.push_str(text);
-                            }
+                            output_text.push_str(text);
                         }
                     }
                 }

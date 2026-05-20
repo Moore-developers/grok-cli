@@ -241,11 +241,13 @@ grok-cli stt-stream --file ./sample.wav --language en --interim-results
 - [x] 单元测试覆盖 WebSocket URL / query / init payload 构造。
 - [x] 单元测试覆盖 event parser。
 - [x] 命令级测试覆盖参数校验。
-- [ ] 补握手流程测试：连接后先等待 `transcript.created`，再开始发送音频。
-- [ ] 补实时发送策略测试：按 chunk 发送 raw binary frames，避免一次性把大文件塞入 WebSocket。
-- [ ] 补 WAV / raw 输入边界任务：明确是否跳过 WAV header，或在文档中标记 raw PCM 为推荐输入。
-- [ ] 补事件处理任务：覆盖 `transcript.partial`、多个 `transcript.done`、`error` 和服务端 close。
-- [ ] 如果引入 mock WebSocket server，补成功事件流测试。
+- [~] 暂缓握手流程测试：连接后先等待 `transcript.created`，再开始发送音频。
+- [~] 暂缓实时发送策略测试：按 chunk 发送 raw binary frames，避免一次性把大文件塞入 WebSocket。
+- [~] 暂缓 WAV / raw 输入边界任务：明确是否跳过 WAV header，或在文档中标记 raw PCM 为推荐输入。
+- [~] 暂缓事件处理任务：覆盖 `transcript.partial`、多个 `transcript.done`、`error` 和服务端 close。
+- [~] 暂缓 mock WebSocket 成功事件流测试。
+
+暂缓说明：`stt-stream` 当前仍是实验入口，深层 WebSocket mock / 分块发送测试暂不作为发布阻塞项；后续等真实使用收益更明确后再投入。
 
 完成标准：
 

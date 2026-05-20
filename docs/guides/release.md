@@ -2,7 +2,22 @@
 
 This document describes practical ways to publish and install `grok-cli` from GitHub.
 
-## 1. Release Options
+## 1. Current Release Strategy
+
+Recommended first public strategy:
+
+1. Keep source install available with `cargo install --git`.
+2. Use GitHub Releases for prebuilt macOS and Linux binaries.
+3. Keep `publish = false` in `Cargo.toml`; do not publish to crates.io yet.
+4. Add Homebrew only after release names and upgrade cadence settle.
+
+The repository includes:
+
+- `.github/workflows/ci.yml`: runs formatting, clippy, and tests on pushes and pull requests.
+- `.github/workflows/release.yml`: builds release archives when a `v*.*.*` tag is pushed.
+- `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, issue templates, and a PR template.
+
+## 2. Release Options
 
 ### Option A: Source-first release
 
@@ -35,13 +50,12 @@ Cons:
 
 Best default for normal CLI users.
 
-Recommended assets:
+The current release workflow builds these assets:
 
 ```text
 grok-cli-aarch64-apple-darwin.tar.gz
 grok-cli-x86_64-apple-darwin.tar.gz
 grok-cli-x86_64-unknown-linux-gnu.tar.gz
-grok-cli-aarch64-unknown-linux-gnu.tar.gz
 checksums.txt
 ```
 
@@ -144,17 +158,6 @@ Cons:
 - Public package name and release metadata need more care
 - Still requires Rust on user machines
 
-## 2. Recommended Initial Strategy
-
-For the first public GitHub release:
-
-1. Keep source install available with `cargo install --git`
-2. Publish GitHub Release binaries for macOS and Linux
-3. Add a Homebrew tap once release names and update cadence settle
-4. Consider crates.io after the command surface is stable
-
-This gives both developer-friendly and user-friendly install paths without overcommitting too early.
-
 ## 3. Build From Source
 
 Requirements:
@@ -193,8 +196,10 @@ grok-cli --help
 Before tagging:
 
 ```bash
-cargo test
-cargo build --release
+cargo fmt --check
+cargo clippy --all-targets --all-features -- -D warnings
+cargo test --locked
+cargo build --release --locked
 grok-cli --help
 grok-cli usage --help
 ```
@@ -202,27 +207,26 @@ grok-cli usage --help
 Update:
 
 - `Cargo.toml` version
+- `CHANGELOG.md`
 - `README.md`
 - `docs/commands/index.md`
 - `docs/guides/release.md`
 
-Tag:
+Create and push a tag:
 
 ```bash
 git tag v0.1.0
 git push origin v0.1.0
 ```
 
-Build local binary:
+The `Release` workflow will create the GitHub Release and upload archives plus `checksums.txt`.
+
+Manual fallback:
 
 ```bash
-cargo build --release
-```
-
-Package:
-
-```bash
+rm -rf dist
 mkdir -p dist
+cargo build --release --locked
 cp target/release/grok-cli dist/grok-cli
 tar -C dist -czf grok-cli-aarch64-apple-darwin.tar.gz grok-cli
 shasum -a 256 grok-cli-aarch64-apple-darwin.tar.gz > checksums.txt
@@ -230,7 +234,14 @@ shasum -a 256 grok-cli-aarch64-apple-darwin.tar.gz > checksums.txt
 
 Upload the archive and `checksums.txt` to GitHub Releases.
 
-## 5. User Verification
+## 5. Versioning And Branches
+
+- Release tags use `vMAJOR.MINOR.PATCH`, for example `v0.1.0`.
+- `master` is the default development branch.
+- `Cargo.toml` currently has `publish = false`; crates.io is intentionally deferred.
+- Repository URLs currently use `Moore-developers/grok-cli`. The GitHub username `Moore` is already occupied by another account, so do not change repository metadata to `Moore/grok-cli` unless GitHub owner migration becomes possible.
+
+## 6. User Verification
 
 After installation, users should verify:
 

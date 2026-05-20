@@ -131,12 +131,11 @@ fn flush_pending_event(
     let payload = data_lines.join("\n");
     data_lines.clear();
 
-    if event_type == "response.completed" {
-        if let Ok(parsed) = serde_json::from_str::<Value>(&payload) {
-            if let Some(response) = parsed.get("response") {
-                *final_usage = extract_usage_summary_from_stream(response);
-            }
-        }
+    if event_type == "response.completed"
+        && let Ok(parsed) = serde_json::from_str::<Value>(&payload)
+        && let Some(response) = parsed.get("response")
+    {
+        *final_usage = extract_usage_summary_from_stream(response);
     }
 
     match render_mode {

@@ -193,9 +193,8 @@ fn category_key(command: &str) -> &'static str {
     }
 }
 
-fn print_category_block(label: &str, category: &UsageCategorySummary, first: bool) {
-    let prefix = if first { "├" } else { "├" };
-    println!("{prefix}─ {label}");
+fn print_category_block(label: &str, category: &UsageCategorySummary, _first: bool) {
+    println!("├─ {label}");
     println!("│   ├─ Requests:       {}", category.request_count);
     println!(
         "│   ├─ Commands:       {}",

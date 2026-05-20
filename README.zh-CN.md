@@ -191,6 +191,8 @@ GitHub Release 二进制包和 Homebrew 发布方式见 [docs/guides/release.md]
 
 ## 开发
 
+欢迎参与贡献。提交 PR 前请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)，安全问题请按 [SECURITY.md](SECURITY.md) 私下报告。
+
 运行测试：
 
 ```bash
@@ -218,3 +220,6 @@ cargo install --path . --force
 - [`usage` 命令规格](docs/reference/usage-command-spec.md)
 - [发布与安装指南](docs/guides/release.md)
 - [故障排查](docs/guides/troubleshooting.md)
+- [更新日志](CHANGELOG.md)
+- [贡献指南](CONTRIBUTING.md)
+- [安全策略](SECURITY.md)

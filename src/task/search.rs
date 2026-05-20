@@ -64,10 +64,10 @@ fn execute_non_stream(
     )
     .map_err(|error| CommandError::new(command, opts.common.json, error))?;
 
-    let data = parse_x_search_response(&opts, &model, &upstream)
+    let data = parse_x_search_response(&opts, model, &upstream)
         .map_err(|error| CommandError::new(command, opts.common.json, error))?;
     let estimated_cost_micro_usd = pricing::estimate_text_cost_micro_usd(
-        &model,
+        model,
         upstream.usage.input_tokens,
         upstream.usage.output_tokens,
     )

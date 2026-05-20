@@ -594,7 +594,7 @@ Phase 15 完成标准：
 - [x] Phase 16.4: Streaming STT
   - [x] 新增实时 STT 协议设计与实验入口
   - [x] 补 WebSocket 参数构造和事件解析测试
-  - [ ] 补真实协议成功流 mock WebSocket 测试和实时发送细节
+  - [~] 暂缓真实协议成功流 mock WebSocket 测试和实时发送细节，不作为当前发布阻塞项
 - [x] Phase 16.5: Image editing
   - [x] 新增 image edit / multi-image edit 独立命令设计
   - [x] 补请求构造、输入数量校验和命令级 stub 测试
@@ -671,11 +671,11 @@ Phase 16 完成标准：
 - [x] 建立 `src/state/model.rs` / `src/state/storage.rs`
 - [x] 跑通 `state`、`status`
 - [x] 替换 README / docs 里的 GitHub `<owner>` 占位符
-- [ ] 增加 GitHub Release workflow 或明确手动 release 流程
+- [x] 增加 GitHub Release workflow，并在 release guide 保留手动 release 兜底流程
 - [x] 确认是否保留 `publish = false`，或准备 crates.io 发布元数据
-- [ ] 确认 GitHub owner 是否从 `Moore-developers` 迁移为 `Moore`，并同步 remote、Cargo metadata、README、release docs
-- [ ] 补开源协作文件：`CHANGELOG.md`、`CONTRIBUTING.md`、`SECURITY.md`
-- [ ] 补 GitHub issue / PR templates
+- [x] 确认 GitHub owner 是否从 `Moore-developers` 迁移为 `Moore`，并同步 remote、Cargo metadata、README、release docs。当前 `Moore` 用户名已被占用，继续使用 `Moore-developers`。
+- [x] 补开源协作文件：`CHANGELOG.md`、`CONTRIBUTING.md`、`SECURITY.md`
+- [x] 补 GitHub issue / PR templates
 
 ## 验收标准
 

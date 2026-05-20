@@ -197,6 +197,31 @@ fn task_stt_rejects_missing_file() {
 }
 
 #[test]
+fn task_stt_stream_rejects_missing_file() {
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args(["stt-stream", "--json"])
+        .assert()
+        .code(2)
+        .stdout(predicate::str::contains("\"code\":\"invalid_args\""))
+        .stdout(predicate::str::contains("file must not be empty"));
+}
+
+#[test]
+fn task_stt_stream_help_lists_streaming_parameters() {
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args(["stt-stream", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--interim-results"))
+        .stdout(predicate::str::contains("--endpointing"))
+        .stdout(predicate::str::contains("--encoding"))
+        .stdout(predicate::str::contains("--sample-rate"))
+        .stdout(predicate::str::contains("--keyterm"));
+}
+
+#[test]
 fn task_stt_rejects_file_and_url_together() {
     let temp = tempdir().unwrap();
     let input_file = temp.path().join("sample.wav");

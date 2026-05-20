@@ -230,23 +230,23 @@ grok-cli stt-stream --file ./sample.wav --language en --interim-results
 
 任务：
 
-- [ ] 确认 WebSocket 依赖选择和当前 `Cargo.toml` 影响。
-- [ ] 新增 `stt-stream` 顶层命令或隐藏实验入口。
-- [ ] 支持官方 WebSocket 参数：`interim_results`、`endpointing`、`encoding`、`sample_rate`、`language`、`diarize`、`filler_words`、`multichannel`、`channels`、`keyterm`。
-- [ ] 定义 JSON event 输出格式。
-- [ ] 定义人类输出格式，区分 interim 和 final。
+- [x] 确认 WebSocket 依赖选择和当前 `Cargo.toml` 影响。
+- [x] 新增 `stt-stream` 顶层命令或隐藏实验入口。
+- [x] 支持官方 WebSocket 参数：`interim_results`、`endpointing`、`encoding`、`sample_rate`、`language`、`diarize`、`filler_words`、`multichannel`、`channels`、`keyterm`。
+- [x] 定义 JSON event 输出格式。
+- [x] 定义人类输出格式，区分 interim 和 final。
 
 测试要求：
 
-- [ ] 单元测试覆盖 WebSocket URL / query / init payload 构造。
-- [ ] 单元测试覆盖 event parser。
-- [ ] 命令级测试覆盖参数校验。
+- [x] 单元测试覆盖 WebSocket URL / query / init payload 构造。
+- [x] 单元测试覆盖 event parser。
+- [x] 命令级测试覆盖参数校验。
 - [ ] 如果引入 mock WebSocket server，补成功事件流测试。
 
 完成标准：
 
-- [ ] 先以实验入口落地，测试覆盖协议构造和事件解析。
-- [ ] 文档明确这是 streaming STT，不替代 batch `stt`。
+- [x] 先以实验入口落地，测试覆盖协议构造和事件解析。
+- [x] 文档明确这是 streaming STT，不替代 batch `stt`。
 
 ## Phase 16.5: Image Editing
 

@@ -46,6 +46,9 @@ pub enum TopLevelCommand {
     Tts(TtsOptions),
     /// Transcribe speech to text.
     Stt(SttOptions),
+    /// Stream speech to text over WebSocket.
+    #[command(name = "stt-stream")]
+    SttStream(SttStreamOptions),
 }
 
 #[derive(Debug, Clone, Args)]
@@ -381,6 +384,58 @@ pub struct SttOptions {
     #[arg(long = "filler-words")]
     pub filler_words: bool,
     /// Request timeout in seconds. Defaults to 120 for STT.
+    #[arg(long)]
+    pub timeout: Option<u64>,
+}
+
+#[derive(Debug, Clone, Args)]
+#[command(
+    about = "Stream speech to text over WebSocket",
+    long_about = "Stream speech to text over xAI's WebSocket STT endpoint.\n\nThis is an experimental streaming entry point. It sends a local audio file as binary frames, then sends an audio.done control message and prints transcript events as they arrive. Batch transcription remains available through `grok-cli stt`."
+)]
+pub struct SttStreamOptions {
+    #[command(flatten)]
+    pub common: TaskCommonOptions,
+    /// Audio file to stream. You can pass it positionally or with --file.
+    #[arg(value_name = "PATH", conflicts_with = "file_flag")]
+    pub file: Option<PathBuf>,
+    /// Audio file to stream for scripts that prefer named flags.
+    #[arg(long = "file", value_name = "PATH", id = "file_flag")]
+    pub file_flag: Option<PathBuf>,
+    /// Override the streaming STT model for this request.
+    #[arg(long)]
+    pub model: Option<String>,
+    /// Language code, defaults to en.
+    #[arg(long)]
+    pub language: Option<String>,
+    /// Enable interim transcription events.
+    #[arg(long = "interim-results")]
+    pub interim_results: bool,
+    /// Endpointing mode or duration value accepted by xAI.
+    #[arg(long)]
+    pub endpointing: Option<String>,
+    /// Raw audio encoding, for example pcm_s16le.
+    #[arg(long)]
+    pub encoding: Option<String>,
+    /// Raw audio sample rate in Hz.
+    #[arg(long = "sample-rate")]
+    pub sample_rate: Option<u32>,
+    /// Enable speaker diarization.
+    #[arg(long)]
+    pub diarize: bool,
+    /// Include filler words in transcripts.
+    #[arg(long = "filler-words")]
+    pub filler_words: bool,
+    /// Treat input as multichannel audio.
+    #[arg(long)]
+    pub multichannel: bool,
+    /// Comma-separated channel list to transcribe, for example 0,1.
+    #[arg(long)]
+    pub channels: Option<String>,
+    /// Key term to bias transcription toward. Repeatable.
+    #[arg(long = "keyterm")]
+    pub keyterms: Vec<String>,
+    /// Maximum WebSocket session duration in seconds.
     #[arg(long)]
     pub timeout: Option<u64>,
 }

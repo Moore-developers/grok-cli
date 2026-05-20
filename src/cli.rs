@@ -21,5 +21,6 @@ pub fn dispatch(ctx: &AppContext, cli: Cli) -> CommandResult {
         TopLevelCommand::Video(opts) => task::video::execute(ctx, opts),
         TopLevelCommand::Tts(opts) => task::audio::execute_tts(ctx, opts),
         TopLevelCommand::Stt(opts) => task::audio::execute_stt(ctx, opts),
+        TopLevelCommand::SttStream(opts) => task::audio::execute_stt_stream(ctx, opts),
     }
 }

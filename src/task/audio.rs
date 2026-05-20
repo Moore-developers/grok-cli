@@ -1,4 +1,5 @@
 use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
 
 use reqwest::blocking::multipart::{Form, Part};
@@ -6,9 +7,12 @@ use serde::Serialize;
 use serde_json::{Value, json};
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
+use tungstenite::client::IntoClientRequest;
+use tungstenite::{Message, connect};
 
 use crate::app::AppContext;
-use crate::args::{SttOptions, TtsOptions};
+use crate::args::{SttOptions, SttStreamOptions, TtsOptions};
+use crate::auth::resolver::{RuntimeCredentialOptions, resolve_runtime_credentials_with_options};
 use crate::cli::CommandResult;
 use crate::error::{AppError, CommandError, ErrorCode};
 use crate::model;
@@ -19,14 +23,17 @@ use crate::usage::tracker;
 
 const DEFAULT_TTS_MODEL: &str = "grok-tts";
 const DEFAULT_STT_MODEL: &str = "grok-transcribe";
+const DEFAULT_STT_STREAM_MODEL: &str = "grok-transcribe";
 const TTS_PATH: &str = "/tts";
 const TTS_VOICES_PATH: &str = "/tts/voices";
 const STT_PATH: &str = "/stt";
+const STT_STREAM_PATH: &str = "/stt";
 const DEFAULT_AUDIO_EXTENSION: &str = "mp3";
 const DEFAULT_TTS_VOICE_ID: &str = "eve";
 const DEFAULT_TTS_LANGUAGE: &str = "en";
 const DEFAULT_STT_LANGUAGE: &str = "en";
 const DEFAULT_TTS_SAMPLE_RATE: u32 = 24_000;
+const DEFAULT_STT_STREAM_CHUNK_SIZE: usize = 64 * 1024;
 
 #[derive(Debug, Clone, Serialize)]
 struct TtsData {
@@ -89,6 +96,22 @@ struct SttFormFields {
     diarize: bool,
     keyterms: Vec<String>,
     filler_words: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct SttStreamSummaryData {
+    success: bool,
+    provider: String,
+    credential_source: String,
+    events: Vec<SttStreamEvent>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+struct SttStreamEvent {
+    event_type: String,
+    transcript: Option<String>,
+    is_final: bool,
+    raw: Value,
 }
 
 pub fn execute_tts(ctx: &AppContext, opts: TtsOptions) -> CommandResult {
@@ -268,6 +291,158 @@ pub fn execute_stt(ctx: &AppContext, opts: SttOptions) -> CommandResult {
     Ok(())
 }
 
+pub fn execute_stt_stream(ctx: &AppContext, opts: SttStreamOptions) -> CommandResult {
+    let command = "stt-stream";
+    validate_stt_stream_options(&opts)
+        .map_err(|error| CommandError::new(command, opts.common.json, error))?;
+
+    let credentials = resolve_runtime_credentials_with_options(
+        ctx,
+        opts.common.auth_file.as_deref(),
+        RuntimeCredentialOptions {
+            refresh_if_expiring: true,
+        },
+    )
+    .map_err(|error| CommandError::new(command, opts.common.json, error))?;
+
+    let model = opts
+        .model
+        .clone()
+        .unwrap_or_else(|| DEFAULT_STT_STREAM_MODEL.to_string());
+    let endpoint = build_stt_stream_url(&credentials.base_url, &opts, &model)
+        .map_err(|error| CommandError::new(command, opts.common.json, error))?;
+    let file_path = stt_stream_file(&opts);
+    let bytes = fs::read(file_path).map_err(|error| {
+        CommandError::new(
+            command,
+            opts.common.json,
+            AppError::io(format!(
+                "failed to read streaming transcription file {}: {error}",
+                file_path.display()
+            )),
+        )
+    })?;
+
+    let mut request = endpoint.into_client_request().map_err(|error| {
+        CommandError::new(
+            command,
+            opts.common.json,
+            AppError::new(
+                ErrorCode::RequestFailed,
+                format!("failed to build streaming STT WebSocket request: {error}"),
+            ),
+        )
+    })?;
+    request.headers_mut().insert(
+        tungstenite::http::header::AUTHORIZATION,
+        tungstenite::http::HeaderValue::from_str(&format!(
+            "{} {}",
+            credentials.token_type, credentials.access_token
+        ))
+        .map_err(|error| {
+            CommandError::new(
+                command,
+                opts.common.json,
+                AppError::new(
+                    ErrorCode::RequestFailed,
+                    format!("failed to build authorization header: {error}"),
+                ),
+            )
+        })?,
+    );
+
+    let (mut socket, _) = connect(request).map_err(|error| {
+        CommandError::new(
+            command,
+            opts.common.json,
+            AppError::new(
+                ErrorCode::RequestFailed,
+                format!("streaming STT WebSocket connection failed: {error}"),
+            ),
+        )
+    })?;
+    for chunk in bytes.chunks(DEFAULT_STT_STREAM_CHUNK_SIZE) {
+        socket
+            .write(Message::Binary(chunk.to_vec().into()))
+            .map_err(|error| {
+                CommandError::new(
+                    command,
+                    opts.common.json,
+                    AppError::new(
+                        ErrorCode::RequestFailed,
+                        format!("failed to stream audio chunk: {error}"),
+                    ),
+                )
+            })?;
+    }
+    socket
+        .write(Message::Text(
+            json!({"type": "audio.done"}).to_string().into(),
+        ))
+        .map_err(|error| {
+            CommandError::new(
+                command,
+                opts.common.json,
+                AppError::new(
+                    ErrorCode::RequestFailed,
+                    format!("failed to finish streaming audio: {error}"),
+                ),
+            )
+        })?;
+
+    let mut events = Vec::new();
+    loop {
+        match socket.read() {
+            Ok(Message::Text(text)) => {
+                let event = parse_stt_stream_event(text.as_ref())
+                    .map_err(|error| CommandError::new(command, opts.common.json, error))?;
+                let is_done = event.event_type == "done";
+                if opts.common.json {
+                    events.push(event);
+                } else {
+                    print_stt_stream_event(&event);
+                }
+                if is_done {
+                    break;
+                }
+            }
+            Ok(Message::Close(_)) => break,
+            Ok(Message::Ping(payload)) => {
+                let _ = socket.write(Message::Pong(payload));
+            }
+            Ok(Message::Binary(_)) | Ok(Message::Pong(_)) | Ok(Message::Frame(_)) => {}
+            Err(tungstenite::Error::Io(error))
+                if error.kind() == io::ErrorKind::WouldBlock
+                    || error.kind() == io::ErrorKind::TimedOut =>
+            {
+                break;
+            }
+            Err(error) => {
+                return Err(CommandError::new(
+                    command,
+                    opts.common.json,
+                    AppError::new(
+                        ErrorCode::RequestFailed,
+                        format!("streaming STT WebSocket read failed: {error}"),
+                    ),
+                ));
+            }
+        }
+    }
+
+    if opts.common.json {
+        let data = SttStreamSummaryData {
+            success: true,
+            provider: "xai".to_string(),
+            credential_source: credentials.provider,
+            events,
+        };
+        output::print_json_success(command, &data);
+    }
+
+    Ok(())
+}
+
 fn validate_tts_options(opts: &TtsOptions) -> Result<(), AppError> {
     if opts.list_voices {
         return Ok(());
@@ -348,6 +523,16 @@ fn validate_stt_options(opts: &SttOptions) -> Result<(), AppError> {
     build_stt_form_fields(opts).map(|_| ())
 }
 
+fn validate_stt_stream_options(opts: &SttStreamOptions) -> Result<(), AppError> {
+    if stt_stream_file(opts).as_os_str().is_empty() {
+        return Err(AppError::new(
+            ErrorCode::InvalidArgs,
+            "file must not be empty",
+        ));
+    }
+    Ok(())
+}
+
 fn build_stt_form_fields(opts: &SttOptions) -> Result<SttFormFields, AppError> {
     let has_file = opts.file.is_some() || opts.file_flag.is_some();
     let url = opts
@@ -413,6 +598,77 @@ fn non_empty_string(value: Option<&str>) -> Option<String> {
 
 fn bool_field(value: bool) -> String {
     if value { "true" } else { "false" }.to_string()
+}
+
+fn build_stt_stream_url(
+    base_url: &str,
+    opts: &SttStreamOptions,
+    model: &str,
+) -> Result<String, AppError> {
+    let mut url = url::Url::parse(base_url).map_err(|error| {
+        AppError::new(
+            ErrorCode::InvalidArgs,
+            format!("invalid xAI base URL for streaming STT: {error}"),
+        )
+    })?;
+    url.set_scheme(match url.scheme() {
+        "https" => "wss",
+        "http" => "ws",
+        scheme => {
+            return Err(AppError::new(
+                ErrorCode::InvalidArgs,
+                format!("unsupported xAI base URL scheme for streaming STT: {scheme}"),
+            ));
+        }
+    })
+    .map_err(|_| {
+        AppError::new(
+            ErrorCode::InvalidArgs,
+            "failed to convert xAI base URL into WebSocket URL",
+        )
+    })?;
+    let base_path = url.path().trim_end_matches('/');
+    let stream_path = format!("{base_path}{STT_STREAM_PATH}");
+    url.set_path(&stream_path);
+    url.set_query(None);
+    {
+        let mut query = url.query_pairs_mut();
+        query.append_pair("model", model);
+        query.append_pair(
+            "language",
+            opts.language.as_deref().unwrap_or(DEFAULT_STT_LANGUAGE),
+        );
+        if opts.interim_results {
+            query.append_pair("interim_results", "true");
+        }
+        if let Some(endpointing) = non_empty_string(opts.endpointing.as_deref()) {
+            query.append_pair("endpointing", &endpointing);
+        }
+        if let Some(encoding) = non_empty_string(opts.encoding.as_deref()) {
+            query.append_pair("encoding", &encoding);
+        }
+        if let Some(sample_rate) = opts.sample_rate {
+            query.append_pair("sample_rate", &sample_rate.to_string());
+        }
+        if opts.diarize {
+            query.append_pair("diarize", "true");
+        }
+        if opts.filler_words {
+            query.append_pair("filler_words", "true");
+        }
+        if opts.multichannel {
+            query.append_pair("multichannel", "true");
+        }
+        if let Some(channels) = non_empty_string(opts.channels.as_deref()) {
+            query.append_pair("channels", &channels);
+        }
+        for keyterm in &opts.keyterms {
+            if let Some(keyterm) = non_empty_string(Some(keyterm)) {
+                query.append_pair("keyterm", &keyterm);
+            }
+        }
+    }
+    Ok(url.to_string())
 }
 
 fn add_text_if_present(form: Form, key: &'static str, value: Option<String>) -> Form {
@@ -586,6 +842,13 @@ fn stt_file(opts: &SttOptions) -> &Path {
         .unwrap_or_else(|| Path::new(""))
 }
 
+fn stt_stream_file(opts: &SttStreamOptions) -> &Path {
+    opts.file
+        .as_deref()
+        .or(opts.file_flag.as_deref())
+        .unwrap_or_else(|| Path::new(""))
+}
+
 fn extract_transcript(response: &serde_json::Value) -> Result<String, AppError> {
     response
         .get("text")
@@ -616,16 +879,59 @@ fn parse_stt_response(credential_source: &str, response: &Value) -> Result<SttDa
     })
 }
 
+fn parse_stt_stream_event(text: &str) -> Result<SttStreamEvent, AppError> {
+    let raw = serde_json::from_str::<Value>(text).map_err(|error| {
+        AppError::new(
+            ErrorCode::RequestFailed,
+            format!("failed to decode streaming STT event: {error}"),
+        )
+    })?;
+    let event_type = raw
+        .get("type")
+        .or_else(|| raw.get("event"))
+        .and_then(|value| value.as_str())
+        .unwrap_or("transcript")
+        .to_string();
+    let transcript = raw
+        .get("text")
+        .or_else(|| raw.get("transcript"))
+        .or_else(|| raw.pointer("/channel/alternatives/0/transcript"))
+        .and_then(|value| value.as_str())
+        .map(ToOwned::to_owned);
+    let is_final = raw
+        .get("is_final")
+        .or_else(|| raw.get("final"))
+        .and_then(|value| value.as_bool())
+        .unwrap_or_else(|| matches!(event_type.as_str(), "final" | "transcript.final"));
+
+    Ok(SttStreamEvent {
+        event_type,
+        transcript,
+        is_final,
+        raw,
+    })
+}
+
+fn print_stt_stream_event(event: &SttStreamEvent) {
+    match event.transcript.as_deref() {
+        Some(transcript) if !transcript.trim().is_empty() => {
+            let kind = if event.is_final { "final" } else { "interim" };
+            println!("{kind}: {transcript}");
+        }
+        _ => println!("event: {}", event.event_type),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
 
     use super::{
-        SttInput, build_stt_form, build_stt_form_fields, build_tts_request, extract_transcript,
-        parse_stt_response, resolve_tts_output_path, validate_stt_options, validate_tts_options,
-        write_audio_file,
+        SttInput, build_stt_form, build_stt_form_fields, build_stt_stream_url, build_tts_request,
+        extract_transcript, parse_stt_response, parse_stt_stream_event, resolve_tts_output_path,
+        validate_stt_options, validate_stt_stream_options, validate_tts_options, write_audio_file,
     };
-    use crate::args::{SttOptions, TaskCommonOptions, TtsOptions};
+    use crate::args::{SttOptions, SttStreamOptions, TaskCommonOptions, TtsOptions};
     use serde_json::json;
     use tempfile::tempdir;
 
@@ -670,6 +976,29 @@ mod tests {
             diarize: false,
             keyterms: vec![],
             filler_words: false,
+            timeout: Some(60),
+        }
+    }
+
+    fn sample_stt_stream_opts(path: std::path::PathBuf) -> SttStreamOptions {
+        SttStreamOptions {
+            common: TaskCommonOptions {
+                json: true,
+                auth_file: None,
+            },
+            file: Some(path),
+            file_flag: None,
+            model: Some("grok-transcribe".to_string()),
+            language: Some("en".to_string()),
+            interim_results: false,
+            endpointing: None,
+            encoding: None,
+            sample_rate: None,
+            diarize: false,
+            filler_words: false,
+            multichannel: false,
+            channels: None,
+            keyterms: vec![],
             timeout: Some(60),
         }
     }
@@ -778,6 +1107,15 @@ mod tests {
     }
 
     #[test]
+    fn validate_stt_stream_options_rejects_missing_file() {
+        let mut opts = sample_stt_stream_opts(PathBuf::from(""));
+        opts.file = None;
+        let error = validate_stt_stream_options(&opts).unwrap_err();
+        assert_eq!(error.code.as_str(), "invalid_args");
+        assert!(error.message.contains("file must not be empty"));
+    }
+
+    #[test]
     fn validate_stt_options_rejects_file_and_url_together() {
         let temp = tempdir().unwrap();
         let path = temp.path().join("sample.wav");
@@ -832,6 +1170,49 @@ mod tests {
     }
 
     #[test]
+    fn build_stt_stream_url_includes_query_parameters() {
+        let mut opts = sample_stt_stream_opts(PathBuf::from("/tmp/audio.raw"));
+        opts.language = Some("zh".to_string());
+        opts.interim_results = true;
+        opts.endpointing = Some("500".to_string());
+        opts.encoding = Some("pcm_s16le".to_string());
+        opts.sample_rate = Some(16_000);
+        opts.diarize = true;
+        opts.filler_words = true;
+        opts.multichannel = true;
+        opts.channels = Some("0,1".to_string());
+        opts.keyterms = vec!["Grok".to_string(), "xAI".to_string()];
+
+        let url = build_stt_stream_url("https://api.x.ai/v1", &opts, "grok-transcribe").unwrap();
+
+        assert!(url.starts_with("wss://api.x.ai/v1/stt?"));
+        assert!(url.contains("model=grok-transcribe"));
+        assert!(url.contains("language=zh"));
+        assert!(url.contains("interim_results=true"));
+        assert!(url.contains("endpointing=500"));
+        assert!(url.contains("encoding=pcm_s16le"));
+        assert!(url.contains("sample_rate=16000"));
+        assert!(url.contains("diarize=true"));
+        assert!(url.contains("filler_words=true"));
+        assert!(url.contains("multichannel=true"));
+        assert!(url.contains("channels=0%2C1"));
+        assert!(url.contains("keyterm=Grok"));
+        assert!(url.contains("keyterm=xAI"));
+    }
+
+    #[test]
+    fn build_stt_stream_url_defaults_language_and_maps_http_to_ws() {
+        let mut opts = sample_stt_stream_opts(PathBuf::from("/tmp/audio.raw"));
+        opts.language = None;
+
+        let url =
+            build_stt_stream_url("http://127.0.0.1:8080/v1", &opts, "grok-transcribe").unwrap();
+
+        assert!(url.starts_with("ws://127.0.0.1:8080/v1/stt?"));
+        assert!(url.contains("language=en"));
+    }
+
+    #[test]
     fn build_stt_form_accepts_existing_file() {
         let temp = tempdir().unwrap();
         let path = temp.path().join("sample.wav");
@@ -873,5 +1254,27 @@ mod tests {
         assert_eq!(parsed.duration, Some(1.25));
         assert_eq!(parsed.words.unwrap(), response["words"]);
         assert_eq!(parsed.channels.unwrap(), response["channels"]);
+    }
+
+    #[test]
+    fn parse_stt_stream_event_handles_final_transcript() {
+        let event = parse_stt_stream_event(
+            r#"{"type":"transcript.final","text":"Hello Grok","is_final":true}"#,
+        )
+        .unwrap();
+        assert_eq!(event.event_type, "transcript.final");
+        assert_eq!(event.transcript.as_deref(), Some("Hello Grok"));
+        assert!(event.is_final);
+    }
+
+    #[test]
+    fn parse_stt_stream_event_handles_nested_transcript() {
+        let event = parse_stt_stream_event(
+            r#"{"type":"Results","channel":{"alternatives":[{"transcript":"Nested text"}]}}"#,
+        )
+        .unwrap();
+        assert_eq!(event.event_type, "Results");
+        assert_eq!(event.transcript.as_deref(), Some("Nested text"));
+        assert!(!event.is_final);
     }
 }

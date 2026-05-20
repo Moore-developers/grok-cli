@@ -28,6 +28,7 @@ time = { version = "0.3.47", features = ["serde", "formatting", "parsing"] }
 webbrowser = "1.2.1"
 rusqlite = { version = "0.37.0", features = ["bundled"] }
 dialoguer = "0.11"
+tungstenite = { version = "0.29.0", features = ["native-tls"] }
 
 [dev-dependencies]
 assert_cmd = "2"

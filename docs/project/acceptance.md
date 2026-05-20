@@ -89,6 +89,7 @@ cargo run -- tts "Hello from Grok" --output-format mp3 --sample-rate 24000 --bit
 cargo run -- tts --list-voices --json
 cargo run -- stt ./sample.wav
 cargo run -- stt ./sample.wav --diarize --keyterm Grok --filler-words --json
+cargo run -- stt-stream ./sample.wav --interim-results
 ```
 
 期望：
@@ -101,6 +102,7 @@ cargo run -- stt ./sample.wav --diarize --keyterm Grok --filler-words --json
 - `tts --list-voices --json` 返回 `voices`
 - STT 返回 `transcript`
 - STT 高级参数请求成功时仍保留 `transcript`，并在上游返回时保留 `language` / `duration` / `words` / `channels`
+- Streaming STT 输出 interim / final 事件；`--json` 时返回 `events`
 - 当 access token 接近过期时，媒体命令会先自动 refresh，再发起真实请求
 
 真实验收补充：

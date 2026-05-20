@@ -5,7 +5,7 @@
 ## 顶层命令
 
 ```text
-grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|video|tts|stt> ...
+grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|video|tts|stt|stt-stream> ...
 ```
 
 ## 认证命令
@@ -39,6 +39,7 @@ grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|video|
 | `video` | [`video.md`](./video.md) | 使用 Grok Imagine 生成视频。 |
 | `tts` | [`tts.md`](./tts.md) | 文本转语音，并保存本地音频文件。 |
 | `stt` | [`stt.md`](./stt.md) | 将本地音频文件转写为文本。 |
+| `stt-stream` | [`stt-stream.md`](./stt-stream.md) | 通过 WebSocket 实验性实时转写本地音频。 |
 
 ## 使用统计
 
@@ -67,6 +68,7 @@ grok-cli image "A cinematic skyline at sunrise"
 grok-cli video "Animate a futuristic skyline" --duration 8
 grok-cli tts "Hello from Grok"
 grok-cli stt ./sample.wav
+grok-cli stt-stream ./sample.wav --interim-results
 grok-cli usage
 ```
 

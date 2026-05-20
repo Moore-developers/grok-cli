@@ -103,6 +103,12 @@ cargo run -- image-edit --image ./source.png --prompt "Make it cinematic"
 cargo run -- video "Animate a futuristic skyline" --duration 8
 ```
 
+### 视频编辑
+
+```bash
+cargo run -- video-edit --video-url https://example.com/source.mp4 --prompt "Make it cinematic"
+```
+
 ### 文本转语音
 
 ```bash
@@ -122,7 +128,7 @@ cargo run -- stt-stream ./sample.wav --interim-results
 ```
 
 说明：
-- 图片、图片编辑、视频、TTS、STT 现在都会在发请求前检查 access token 是否即将过期
+- 图片、图片编辑、视频、视频编辑、TTS、STT 现在都会在发请求前检查 access token 是否即将过期
 - 如果已接近过期，命令会先自动 refresh，再继续真实请求
 - `stt-stream` 是实验入口，适合继续验证 WebSocket 实时转写协议
 

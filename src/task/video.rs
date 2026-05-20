@@ -2,7 +2,7 @@ use serde::Serialize;
 use serde_json::{Value, json};
 
 use crate::app::AppContext;
-use crate::args::VideoGenOptions;
+use crate::args::{TaskCommonOptions, VideoEditOptions, VideoGenOptions};
 use crate::cli::CommandResult;
 use crate::error::{AppError, CommandError, ErrorCode};
 use crate::model;
@@ -13,6 +13,7 @@ use crate::usage::tracker;
 
 const DEFAULT_VIDEO_MODEL: &str = "grok-imagine-video";
 const VIDEO_GENERATIONS_PATH: &str = "/videos/generations";
+const VIDEO_EDITS_PATH: &str = "/videos/edits";
 const DEFAULT_POLL_INTERVAL_MILLIS: u64 = 5_000;
 const DEFAULT_VIDEO_POLL_TIMEOUT_SECONDS: u64 = 600;
 const DEFAULT_VIDEO_DURATION: u64 = 8;
@@ -33,41 +34,67 @@ struct VideoGenData {
     extra: Value,
 }
 
+struct VideoTaskRequest {
+    command: &'static str,
+    common: TaskCommonOptions,
+    model: Option<String>,
+    create_path: &'static str,
+    request: Value,
+    timeout: Option<u64>,
+    modality: String,
+    aspect_ratio: Option<String>,
+    duration: Option<u64>,
+    resolution: Option<String>,
+}
+
 pub fn execute(ctx: &AppContext, opts: VideoGenOptions) -> CommandResult {
     let command = "video";
     validate_options(&opts).map_err(|error| CommandError::new(command, opts.common.json, error))?;
+    let task = video_generation_task(&opts, command);
+    execute_video_task(ctx, task)
+}
 
-    let auth_file = opts.common.auth_file.as_deref();
+pub fn execute_edit(ctx: &AppContext, opts: VideoEditOptions) -> CommandResult {
+    let command = "video-edit";
+    validate_edit_options(&opts)
+        .map_err(|error| CommandError::new(command, opts.common.json, error))?;
+    let task = video_edit_task(&opts, command);
+    execute_video_task(ctx, task)
+}
+
+fn execute_video_task(ctx: &AppContext, task: VideoTaskRequest) -> CommandResult {
+    let command = task.command;
+    let json_output = task.common.json;
+    let auth_file = task.common.auth_file.as_deref();
     let state = auth_file
         .map(|path| ctx.state_store.resolve_path(Some(path)))
         .or_else(|| Some(ctx.state_store.resolve_path(None)))
         .and_then(|path| ctx.state_store.load_valid_state(&path).ok());
-    let model = opts.model.clone().unwrap_or_else(|| {
+    let model = task.model.clone().unwrap_or_else(|| {
         model::default_model_for_task(state.as_ref(), "video", DEFAULT_VIDEO_MODEL)
     });
-    let request = build_request(&opts, &model);
     let created = upstream::post_json_api_with_options(
         ctx,
-        opts.common.auth_file.as_deref(),
-        VIDEO_GENERATIONS_PATH,
-        &request,
+        task.common.auth_file.as_deref(),
+        task.create_path,
+        &task.request,
         Some(upstream::DEFAULT_MEDIA_TIMEOUT_SECONDS),
         upstream::UpstreamAuthOptions {
             refresh_if_expiring: true,
         },
     )
-    .map_err(|error| CommandError::new(command, opts.common.json, error))?;
+    .map_err(|error| CommandError::new(command, json_output, error))?;
 
     let request_id = extract_request_id(&created.response)
-        .map_err(|error| CommandError::new(command, opts.common.json, error))?;
-    let polled = poll_video_result(ctx, &opts, &request_id)
-        .map_err(|error| CommandError::new(command, opts.common.json, error))?;
+        .map_err(|error| CommandError::new(command, json_output, error))?;
+    let polled = poll_video_result(ctx, &task.common, task.timeout, &request_id)
+        .map_err(|error| CommandError::new(command, json_output, error))?;
 
-    let data = parse_video_response(&opts, &model, &request_id, &polled)
-        .map_err(|error| CommandError::new(command, opts.common.json, error))?;
+    let data = parse_video_task_response(&task, &model, &request_id, &polled)
+        .map_err(|error| CommandError::new(command, json_output, error))?;
     tracker::record_usage(
         ctx,
-        opts.common.auth_file.as_deref(),
+        task.common.auth_file.as_deref(),
         &polled.credential_source,
         UsageDelta {
             provider: polled.credential_source.clone(),
@@ -77,9 +104,9 @@ pub fn execute(ctx: &AppContext, opts: VideoGenOptions) -> CommandResult {
             ..UsageDelta::default()
         },
     )
-    .map_err(|error| CommandError::new(command, opts.common.json, error))?;
+    .map_err(|error| CommandError::new(command, json_output, error))?;
 
-    if opts.common.json {
+    if json_output {
         output::print_json_success(command, &data);
     } else {
         println!("provider: {}", data.provider);
@@ -124,6 +151,57 @@ fn validate_options(opts: &VideoGenOptions) -> Result<(), AppError> {
     Ok(())
 }
 
+fn validate_edit_options(opts: &VideoEditOptions) -> Result<(), AppError> {
+    if edit_prompt_text(opts).trim().is_empty() {
+        return Err(AppError::new(
+            ErrorCode::InvalidArgs,
+            "prompt must not be empty",
+        ));
+    }
+
+    if non_empty_string(opts.video_url.as_deref()).is_none() {
+        return Err(AppError::new(
+            ErrorCode::InvalidArgs,
+            "--video-url is required",
+        ));
+    }
+
+    Ok(())
+}
+
+fn video_generation_task(opts: &VideoGenOptions, command: &'static str) -> VideoTaskRequest {
+    VideoTaskRequest {
+        command,
+        common: opts.common.clone(),
+        model: opts.model.clone(),
+        create_path: VIDEO_GENERATIONS_PATH,
+        request: build_request(opts, DEFAULT_VIDEO_MODEL),
+        timeout: opts.timeout,
+        modality: video_generation_modality(opts),
+        aspect_ratio: Some(normalize_aspect_ratio(opts.aspect_ratio.as_deref()).to_string()),
+        duration: Some(clamp_duration(
+            opts.duration,
+            !opts.reference_image_urls.is_empty(),
+        )),
+        resolution: Some(normalize_resolution(opts.resolution.as_deref()).to_string()),
+    }
+}
+
+fn video_edit_task(opts: &VideoEditOptions, command: &'static str) -> VideoTaskRequest {
+    VideoTaskRequest {
+        command,
+        common: opts.common.clone(),
+        model: opts.model.clone(),
+        create_path: VIDEO_EDITS_PATH,
+        request: build_edit_request(opts, DEFAULT_VIDEO_MODEL),
+        timeout: opts.timeout,
+        modality: "edit".to_string(),
+        aspect_ratio: None,
+        duration: None,
+        resolution: None,
+    }
+}
+
 fn build_request(opts: &VideoGenOptions, model: &str) -> Value {
     let mut body = serde_json::Map::new();
     body.insert("model".to_string(), json!(model));
@@ -159,11 +237,35 @@ fn build_request(opts: &VideoGenOptions, model: &str) -> Value {
     Value::Object(body)
 }
 
+fn build_edit_request(opts: &VideoEditOptions, model: &str) -> Value {
+    let mut body = serde_json::Map::new();
+    body.insert("model".to_string(), json!(model));
+    body.insert("prompt".to_string(), json!(edit_prompt_text(opts)));
+    if let Some(video_url) = non_empty_string(opts.video_url.as_deref()) {
+        body.insert("video".to_string(), json!({ "url": video_url }));
+    }
+    Value::Object(body)
+}
+
 fn prompt_text(opts: &VideoGenOptions) -> &str {
     opts.prompt
         .as_deref()
         .or(opts.prompt_flag.as_deref())
         .unwrap_or("")
+}
+
+fn edit_prompt_text(opts: &VideoEditOptions) -> &str {
+    opts.prompt
+        .as_deref()
+        .or(opts.prompt_flag.as_deref())
+        .unwrap_or("")
+}
+
+fn non_empty_string(value: Option<&str>) -> Option<String> {
+    value
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
 }
 
 fn extract_request_id(response: &Value) -> Result<String, AppError> {
@@ -182,11 +284,12 @@ fn extract_request_id(response: &Value) -> Result<String, AppError> {
 
 fn poll_video_result(
     ctx: &AppContext,
-    opts: &VideoGenOptions,
+    common: &TaskCommonOptions,
+    timeout: Option<u64>,
     request_id: &str,
 ) -> Result<upstream::UpstreamJsonEnvelope, AppError> {
     let endpoint = format!("/videos/{request_id}");
-    let poll_timeout = std::time::Duration::from_secs(video_poll_timeout_seconds(opts.timeout));
+    let poll_timeout = std::time::Duration::from_secs(video_poll_timeout_seconds(timeout));
     let started_at = std::time::Instant::now();
 
     while started_at.elapsed() < poll_timeout {
@@ -194,7 +297,7 @@ fn poll_video_result(
         let request_timeout_seconds = video_poll_request_timeout_seconds(remaining);
         let response = upstream::get_json_api_with_options(
             ctx,
-            opts.common.auth_file.as_deref(),
+            common.auth_file.as_deref(),
             &endpoint,
             Some(request_timeout_seconds),
             upstream::UpstreamAuthOptions {
@@ -247,8 +350,8 @@ fn is_terminal_video_status(response: &Value) -> bool {
     )
 }
 
-fn parse_video_response(
-    opts: &VideoGenOptions,
+fn parse_video_task_response(
+    task: &VideoTaskRequest,
     model: &str,
     request_id: &str,
     upstream: &upstream::UpstreamJsonEnvelope,
@@ -284,39 +387,49 @@ fn parse_video_response(
             .unwrap_or("video generation did not complete successfully");
         return Err(AppError::new(
             ErrorCode::RequestFailed,
-            format!("video generation failed for {request_id}: {message}"),
+            format!("{} failed for {request_id}: {message}", task.command),
         ));
     }
 
     let video_url = extract_video_url(&upstream.response)?;
-    let modality = if opts.image_url.is_some() || !opts.reference_image_urls.is_empty() {
-        "image".to_string()
-    } else {
-        "text".to_string()
-    };
 
     Ok(VideoGenData {
         provider: "xai".to_string(),
         credential_source: upstream.credential_source.clone(),
         model: model.to_string(),
         video: video_url,
-        modality,
-        aspect_ratio: Some(normalize_aspect_ratio(opts.aspect_ratio.as_deref()).to_string()),
-        duration: Some(
-            upstream
-                .response
-                .get("video")
-                .and_then(|value| value.get("duration"))
-                .and_then(|value| value.as_u64())
-                .unwrap_or_else(|| {
-                    clamp_duration(opts.duration, !opts.reference_image_urls.is_empty())
-                }),
-        ),
+        modality: task.modality.clone(),
+        aspect_ratio: task.aspect_ratio.clone(),
+        duration: upstream
+            .response
+            .get("video")
+            .and_then(|value| value.get("duration"))
+            .and_then(|value| value.as_u64())
+            .or(task.duration),
         extra: json!({
             "request_id": request_id,
-            "resolution": normalize_resolution(opts.resolution.as_deref())
+            "resolution": task.resolution
         }),
     })
+}
+
+#[cfg(test)]
+fn parse_video_response(
+    opts: &VideoGenOptions,
+    model: &str,
+    request_id: &str,
+    upstream: &upstream::UpstreamJsonEnvelope,
+) -> Result<VideoGenData, AppError> {
+    let task = video_generation_task(opts, "video");
+    parse_video_task_response(&task, model, request_id, upstream)
+}
+
+fn video_generation_modality(opts: &VideoGenOptions) -> String {
+    if opts.image_url.is_some() || !opts.reference_image_urls.is_empty() {
+        "image".to_string()
+    } else {
+        "text".to_string()
+    }
 }
 
 fn clamp_duration(duration: Option<u64>, has_reference_images: bool) -> u64 {
@@ -381,10 +494,11 @@ fn extract_video_url(response: &Value) -> Result<String, AppError> {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_request, extract_request_id, extract_video_url, parse_video_response,
-        validate_options, video_poll_request_timeout_seconds, video_poll_timeout_seconds,
+        build_edit_request, build_request, extract_request_id, extract_video_url,
+        parse_video_response, validate_edit_options, validate_options,
+        video_poll_request_timeout_seconds, video_poll_timeout_seconds,
     };
-    use crate::args::{TaskCommonOptions, VideoGenOptions};
+    use crate::args::{TaskCommonOptions, VideoEditOptions, VideoGenOptions};
     use crate::upstream::UpstreamJsonEnvelope;
     use serde_json::json;
 
@@ -406,6 +520,20 @@ mod tests {
         }
     }
 
+    fn sample_edit_opts() -> VideoEditOptions {
+        VideoEditOptions {
+            common: TaskCommonOptions {
+                json: true,
+                auth_file: None,
+            },
+            prompt: Some("Give the woman a silver necklace".to_string()),
+            prompt_flag: None,
+            video_url: Some("https://cdn.x.ai/source.mp4".to_string()),
+            model: Some("grok-imagine-video".to_string()),
+            timeout: Some(60),
+        }
+    }
+
     #[test]
     fn validate_options_rejects_empty_prompt() {
         let mut opts = sample_opts();
@@ -421,6 +549,24 @@ mod tests {
         let error = validate_options(&opts).unwrap_err();
         assert_eq!(error.code.as_str(), "invalid_args");
         assert!(error.message.contains("--reference-image-url"));
+    }
+
+    #[test]
+    fn validate_edit_options_rejects_empty_prompt() {
+        let mut opts = sample_edit_opts();
+        opts.prompt = Some("   ".to_string());
+        let error = validate_edit_options(&opts).unwrap_err();
+        assert_eq!(error.code.as_str(), "invalid_args");
+        assert!(error.message.contains("prompt must not be empty"));
+    }
+
+    #[test]
+    fn validate_edit_options_rejects_missing_video_url() {
+        let mut opts = sample_edit_opts();
+        opts.video_url = None;
+        let error = validate_edit_options(&opts).unwrap_err();
+        assert_eq!(error.code.as_str(), "invalid_args");
+        assert!(error.message.contains("--video-url is required"));
     }
 
     #[test]
@@ -447,6 +593,19 @@ mod tests {
             "https://cdn.x.ai/ref-1.png"
         );
         assert_eq!(request["duration"], 8);
+    }
+
+    #[test]
+    fn build_edit_request_wraps_video_url_without_generation_fields() {
+        let opts = sample_edit_opts();
+        let request = build_edit_request(&opts, "grok-imagine-video");
+        assert_eq!(request["model"], "grok-imagine-video");
+        assert_eq!(request["prompt"], "Give the woman a silver necklace");
+        assert_eq!(request["video"]["url"], "https://cdn.x.ai/source.mp4");
+        assert!(request["video_url"].is_null());
+        assert!(request["duration"].is_null());
+        assert!(request["aspect_ratio"].is_null());
+        assert!(request["resolution"].is_null());
     }
 
     #[test]

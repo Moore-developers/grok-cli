@@ -152,6 +152,76 @@ fn task_video_gen_rejects_combined_image_and_reference_inputs() {
         ));
 }
 
+#[test]
+fn task_video_edit_rejects_missing_video_url() {
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "video-edit",
+            "--json",
+            "--prompt",
+            "Give the woman a silver necklace",
+        ])
+        .assert()
+        .code(2)
+        .stdout(predicate::str::contains("\"code\":\"invalid_args\""))
+        .stdout(predicate::str::contains("--video-url is required"));
+}
+
+#[test]
+fn task_video_edit_polls_until_completed_and_returns_video_url() {
+    let temp = tempdir().unwrap();
+    let auth_file = temp.path().join("auth.json");
+    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    write_auth_state(&auth_file, &format!("http://127.0.0.1:{port}/v1"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let create_request = read_request(&mut stream);
+        assert!(create_request.contains("POST /v1/videos/edits"));
+        assert!(create_request.contains("\"prompt\":\"Give the woman a silver necklace\""));
+        assert!(create_request.contains("\"video\":{\"url\":\"https://cdn.x.ai/source.mp4\"}"));
+        assert!(!create_request.contains("\"video_url\""));
+        assert!(!create_request.contains("\"duration\""));
+        assert!(!create_request.contains("\"aspect_ratio\""));
+        assert!(!create_request.contains("\"resolution\""));
+        write_response(&mut stream, "200 OK", r#"{"request_id":"edit_123"}"#);
+
+        let (mut stream, _) = listener.accept().unwrap();
+        let poll_request = read_request(&mut stream);
+        assert!(poll_request.contains("GET /v1/videos/edit_123"));
+        write_response(
+            &mut stream,
+            "200 OK",
+            r#"{"status":"done","video":{"url":"https://cdn.x.ai/edited-video.mp4","duration":8}}"#,
+        );
+    });
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "video-edit",
+            "--json",
+            "--auth-file",
+            auth_file.to_str().unwrap(),
+            "--prompt",
+            "Give the woman a silver necklace",
+            "--video-url",
+            "https://cdn.x.ai/source.mp4",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"model\":\"grok-imagine-video\""))
+        .stdout(predicate::str::contains(
+            "\"video\":\"https://cdn.x.ai/edited-video.mp4\"",
+        ))
+        .stdout(predicate::str::contains("\"modality\":\"edit\""))
+        .stdout(predicate::str::contains("\"request_id\":\"edit_123\""));
+
+    server.join().unwrap();
+}
+
 fn write_auth_state(path: &std::path::Path, base_url: &str) {
     fs::write(
         path,

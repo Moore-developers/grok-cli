@@ -601,7 +601,7 @@ Phase 15 完成标准：
 - [ ] Phase 16.6: Imagine video follow-up
   - [x] 核对 video editing / extension 官方接口
   - [x] 拆分后续任务或新增独立计划
-  - [ ] 实现 `video-edit`
+  - [x] 实现 `video-edit`
   - [ ] 实现 `video-extend`
 
 Phase 16 完成标准：

@@ -292,7 +292,7 @@ grok-cli image-edit --image ./a.png --image ./b.png --image ./c.png --prompt "Bl
 - [x] 核对官方 video editing / extension endpoint。
 - [x] 对比当前 [`src/task/video.rs`](../../src/task/video.rs) 参数面。
 - [x] 决定是扩展 `video` 还是新增 `video-edit` / `video-extend`。
-- [ ] 每个新增能力按相同测试门槛补测试。
+- [ ] 每个新增能力按相同测试门槛补测试。当前 `video-edit` 已补测试，`video-extend` 待补。
 
 完成标准：
 
@@ -313,23 +313,23 @@ grok-cli video-extend --video-url https://example.com/source.mp4 --prompt "The c
 
 可执行任务计划：
 
-- [ ] 在 `src/args.rs` 新增 `VideoEditOptions`，顶层命令 `video-edit`，参数：`PROMPT` / `--prompt`、`--video-url`、`--model`、`--timeout`、通用 `--json` / `--auth-file`。
+- [x] 在 `src/args.rs` 新增 `VideoEditOptions`，顶层命令 `video-edit`，参数：`PROMPT` / `--prompt`、`--video-url`、`--model`、`--timeout`、通用 `--json` / `--auth-file`。
 - [ ] 在 `src/args.rs` 新增 `VideoExtendOptions`，顶层命令 `video-extend`，参数：`PROMPT` / `--prompt`、`--video-url`、`--duration`、`--model`、`--timeout`、通用 `--json` / `--auth-file`。
-- [ ] 在 `src/task/video.rs` 抽取共享异步视频执行路径，支持不同 create endpoint、request builder、modality。
-- [ ] `video-edit` 请求 `POST /videos/edits`，发送 `video: {"url": ...}`。
+- [x] 在 `src/task/video.rs` 抽取共享异步视频执行路径，支持不同 create endpoint、request builder、modality。
+- [x] `video-edit` 请求 `POST /videos/edits`，发送 `video: {"url": ...}`。
 - [ ] `video-extend` 请求 `POST /videos/extensions`，发送 `video: {"url": ...}` 和 clamp 后的 `duration`。
-- [ ] 输出沿用 `VideoGenData` 的稳定字段：`video`、`modality`、`duration`、`extra.request_id`。
-- [ ] 文档新增 `docs/commands/video-edit.md` 和 `docs/commands/video-extend.md`，并更新命令索引、验收文档、samples。
+- [x] 输出沿用 `VideoGenData` 的稳定字段：`video`、`modality`、`duration`、`extra.request_id`。
+- [ ] 文档新增 `docs/commands/video-edit.md` 和 `docs/commands/video-extend.md`，并更新命令索引、验收文档、samples。当前 `video-edit` 已完成，`video-extend` 待补。
 
 测试要求：
 
-- [ ] 模块级测试覆盖 `video-edit` 缺 prompt / 缺 video URL 校验。
-- [ ] 模块级测试覆盖 `video-edit` 请求体使用 `video: {"url": ...}`，且不包含 `duration` / `aspect_ratio` / `resolution`。
+- [x] 模块级测试覆盖 `video-edit` 缺 prompt / 缺 video URL 校验。
+- [x] 模块级测试覆盖 `video-edit` 请求体使用 `video: {"url": ...}`，且不包含 `duration` / `aspect_ratio` / `resolution`。
 - [ ] 模块级测试覆盖 `video-extend` duration clamp 到 `2..=10`，默认 6。
 - [ ] 模块级测试覆盖 `video-extend` 请求体为 `video: {"url": ...}`。
-- [ ] 命令级 stub 测试覆盖 `video-edit` create + poll 成功流。
+- [x] 命令级 stub 测试覆盖 `video-edit` create + poll 成功流。
 - [ ] 命令级 stub 测试覆盖 `video-extend` create + poll 成功流。
-- [ ] contract 回归确认 `video-edit` / `video-extend` 出现在 help。
+- [ ] contract 回归确认 `video-edit` / `video-extend` 出现在 help。当前 `video-edit` 已覆盖，`video-extend` 待补。
 
 ## 执行顺序
 

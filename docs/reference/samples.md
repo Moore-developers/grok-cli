@@ -173,6 +173,34 @@
 
 ## 7. `tts --json`
 
+## 7. `video-edit --json`
+
+```json
+{
+  "ok": true,
+  "command": "video-edit",
+  "data": {
+    "provider": "xai",
+    "credential_source": "xai-oauth",
+    "model": "grok-imagine-video",
+    "video": "https://cdn.x.ai/edited-video.mp4",
+    "modality": "edit",
+    "duration": 8,
+    "extra": {
+      "request_id": "edit_123",
+      "resolution": null
+    }
+  }
+}
+```
+
+默认行为说明：
+- `video-edit` 请求 `POST /videos/edits`。
+- 请求体使用 `video: {"url": ...}`，不发送 `duration`、`aspect_ratio`、`resolution`。
+- 创建请求后会轮询 `GET /videos/{request_id}` 到终态。
+
+## 8. `tts --json`
+
 ```json
 {
   "ok": true,
@@ -193,7 +221,7 @@
 }
 ```
 
-## 7.1 `tts --list-voices --json`
+## 8.1 `tts --list-voices --json`
 
 ```json
 {
@@ -214,7 +242,7 @@
 }
 ```
 
-## 8. `stt --json`
+## 9. `stt --json`
 
 ```json
 {
@@ -248,7 +276,7 @@
 - `transcript` 始终保留，旧脚本可以继续读取它。
 - `language`、`duration`、`words`、`channels` 只有上游返回时才出现。
 
-## 8.1 媒体能力真实验证补充
+## 9.1 媒体能力真实验证补充
 
 `2026-05-20` 真实验证结果：
 
@@ -273,7 +301,7 @@
 - 手动执行一次 `refresh` 后，`video` 的三条真实分支全部恢复成功
 - 现已把这一步前置为媒体命令内建编排，不再要求用户自己先发现再刷新
 
-## 9. 典型错误信封
+## 10. 典型错误信封
 
 ```json
 {
@@ -288,7 +316,7 @@
 }
 ```
 
-## 10. `usage`
+## 11. `usage`
 
 人类可读输出示例：
 

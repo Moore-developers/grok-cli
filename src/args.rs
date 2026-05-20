@@ -45,6 +45,9 @@ pub enum TopLevelCommand {
     ImageEdit(ImageEditOptions),
     /// Generate a video with Grok Imagine.
     Video(VideoGenOptions),
+    /// Edit videos with Grok Imagine.
+    #[command(name = "video-edit")]
+    VideoEdit(VideoEditOptions),
     /// Convert text to speech.
     Tts(TtsOptions),
     /// Transcribe speech to text.
@@ -323,6 +326,28 @@ pub struct VideoGenOptions {
     #[arg(long)]
     pub resolution: Option<String>,
     /// Override the video model for this request.
+    #[arg(long)]
+    pub model: Option<String>,
+    /// Total video polling timeout in seconds. Single HTTP requests stay capped at 120 seconds.
+    #[arg(long)]
+    pub timeout: Option<u64>,
+}
+
+#[derive(Debug, Clone, Args)]
+#[command(about = "Edit videos with Grok Imagine")]
+pub struct VideoEditOptions {
+    #[command(flatten)]
+    pub common: TaskCommonOptions,
+    /// Video edit prompt. You can pass it positionally or with --prompt.
+    #[arg(value_name = "PROMPT", conflicts_with = "prompt_flag")]
+    pub prompt: Option<String>,
+    /// Video edit prompt for scripts that prefer named flags.
+    #[arg(long = "prompt", value_name = "PROMPT", id = "prompt_flag")]
+    pub prompt_flag: Option<String>,
+    /// Source video URL to edit.
+    #[arg(long = "video-url")]
+    pub video_url: Option<String>,
+    /// Override the video edit model for this request.
     #[arg(long)]
     pub model: Option<String>,
     /// Total video polling timeout in seconds. Single HTTP requests stay capped at 120 seconds.

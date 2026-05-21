@@ -2,76 +2,70 @@
 
 > 把 Grok / xAI 带进终端、脚本和 agent 工作流的一把 CLI。
 
-## 概览
+## 特性
 
-`grok-cli` 把 Grok / xAI 直接带进终端优先、脚本优先、agent 驱动的工作流。只需通过 SuperGrok 或 X Premium+ 完成 OAuth 登录，无需额外 API Key，也不用单独维护一套付费接入体系。
+- **OAuth 认证** — SuperGrok 或 X Premium+ 登录，无需 API Key。
+- **扁平命令面** — 一个 CLI 搞定聊天、搜索、图片、视频、音频和 usage。
+- **默认流式输出** — 人类可读正文，`--json` 给自动化用。
+- **媒体输入** — 图片、视频、音频支持本地文件和远程 URL。
+- **跨平台** — macOS Apple Silicon 和 Windows x64 提供预构建包。
 
-它把登录、聊天、搜索、媒体、音频和 usage 统一收进一个 CLI，同时把认证、自动化输出、本地文件、远程 URL 和跨平台安装整合成一个入口。无论你在使用 Codex、Claude Code、Cursor，还是自定义 automation、agent runtime、skill、脚本、CI 与验证流程，`grok-cli` 都能自然嵌入日常工作流，成为你挖掘产品需求、追踪时事热点、观察 SaaS 动向的日常辅助工具。官方支持的集成路径也覆盖 OpenClaw 和 Hermes Agent，方便接入现有 agent 生态。
-
-## 亮点
-
-- 直接 OAuth 登录，支持 SuperGrok 或 X Premium+。
-- 扁平的命令面，覆盖登录、聊天、搜索、媒体、音频、状态、模型和 usage。
-- 面向人类默认流式输出，面向自动化提供 `--json` 和 `--raw-stream`。
-- 支持本地文件和远程 URL 的图片、视频、音频工作流。
-- 适合 Codex、Claude Code、Cursor 和其他 agent runtime。
-- 提供 macOS Apple Silicon 和 Windows x64 的预构建产物。
-
-## 快速安装
-
-先选一种最适合你的方式：
-
-| 需求 | 推荐方式 | 示例 |
-| --- | --- | --- |
-| 在 Codex、Claude Code、Cursor 或其他 agent runtime 里使用 | Skill | `npx --yes skills add Moore-developers/grok-cli --skill grok-cli --global --yes` |
-| 从源码安装 | Cargo | `cargo install --git https://github.com/Moore-developers/grok-cli.git --locked` |
-| 跳过 Rust，直接用预编译产物 | Release binary | 从 [GitHub Releases](https://github.com/Moore-developers/grok-cli/releases/latest) 下载 |
-
-如果你不确定，agent 工作流优先选 Skill。对 macOS Apple Silicon 和 Windows x64，内置 skill 应该先优先使用 release binary，再考虑源码安装。
-如果你要走源码安装，`grok-cli` 需要 Rust 1.88+，仓库默认工具链固定在 Rust 1.92.0。
-
-## 给人用
-
-文本命令同时照顾“给人直接用”和“给脚本稳定接入”两种场景：
-
-- `chat` 和 `search` 默认以流式方式打印可读正文，适合人直接盯着看
-- `--json` 会切回稳定的非流式结构化结果，适合 SKILL、脚本和自动化
-- `--stream` 是显式声明“使用格式化流式输出”
-- `--raw-stream` 才会输出原始事件流，适合调试或程序消费
-
-公开命令面是扁平的：
-
-```text
-grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-edit|video|video-edit|video-extend|tts|stt|stt-stream> ...
-```
-
-浏览器登录：
-
-浏览器登录：
+## 安装
 
 ```bash
+# Agent runtime（推荐）
+npx --yes skills add Moore-developers/grok-cli --skill grok-cli --global --yes
+
+# 从源码安装（需 Rust 1.88+）
+cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
+
+# 预编译包
+# 从 GitHub Releases 下载
+```
+
+源码安装需 Rust 1.88+（工具链锁定 1.92.0）。macOS Apple Silicon 和 Windows x64 上内置 skill 优先使用 release binary。
+
+## 快速开始
+
+```bash
+# 1. 浏览器登录
 grok-cli login
-```
 
-查看登录状态：
-
-```bash
+# 2. 查看登录状态
 grok-cli status
-```
 
-聊天：
-
-```bash
+# 3. 第一条命令
 grok-cli chat "总结最近 AI 新闻"
+
+# 4. 查看用量
+grok-cli usage
 ```
 
-搜索 X：
+没有浏览器？用 `grok-cli login --manual-paste` 走验证码登录。
+
+## 使用方式
+
+### 聊天与搜索
 
 ```bash
-grok-cli search "今天大家怎么评价 Grok?"
+# 流式输出（默认）
+grok-cli chat "AI 领域有什么新进展？"
+grok-cli search "大家怎么评价 Grok 3？"
+
+# 非流式
+grok-cli chat "总结 AI 新闻" --no-stream
+
+# 带 X 搜索结果的聊天
+grok-cli chat "xAI 最新动态" --with-x-search
+
+# 纯聊天不带网页搜索
+grok-cli chat "你好" --no-web-search
+
+# JSON 给脚本用
+grok-cli search --json --query "Grok 更新"
 ```
 
-生成媒体：
+### 图片与视频
 
 ```bash
 grok-cli image "日出时分的电影感城市天际线"
@@ -79,40 +73,29 @@ grok-cli image-edit --image ./source.png --prompt "变得更有电影感"
 grok-cli video "让未来城市天际线动起来" --duration 8
 grok-cli video-edit --video-url https://example.com/source.mp4 --prompt "变得更有电影感"
 grok-cli video-extend --video-url https://example.com/source.mp4 --prompt "延续镜头运动" --duration 6
+```
+
+### 音频
+
+```bash
 grok-cli tts "你好，我是 Grok"
 grok-cli stt ./sample.wav
 grok-cli stt-stream ./sample.wav --interim-results
 ```
 
-查看本地用量：
+### 模型
 
 ```bash
-grok-cli usage
+# 查看当前模型
+grok-cli model
+
+# 设置 chat 和 search 的默认模型
+grok-cli model --model grok-4.3
 ```
 
-## 给脚本用
+## JSON 输出
 
-给人用时，推荐直接写位置参数。给脚本、SKILL 或自动化用时，可以继续使用显式参数和 JSON：
-
-```bash
-grok-cli chat --json --prompt "总结最近 AI 新闻"
-grok-cli search --json --query "Grok Hermes 最新动态"
-grok-cli image --json --prompt "一座赛博朋克城市"
-grok-cli image-edit --json --image ./source.png --prompt "变得更有电影感"
-grok-cli tts --json --text "你好，我是 Grok"
-grok-cli stt --json --file ./sample.wav
-grok-cli stt-stream --json --file ./sample.wav
-grok-cli usage --json
-```
-
-如果你想要人类可读但不想看流式过程，可以显式加 `--no-stream`：
-
-```bash
-grok-cli chat "总结最近 AI 新闻" --no-stream
-grok-cli search "今天大家怎么评价 Grok?" --no-stream
-```
-
-成功 JSON 统一长这样：
+所有命令都支持 `--json`，输出结构统一：
 
 ```json
 {
@@ -122,7 +105,7 @@ grok-cli search "今天大家怎么评价 Grok?" --no-stream
 }
 ```
 
-失败 JSON 也使用统一结构：
+失败时：
 
 ```json
 {
@@ -139,134 +122,56 @@ grok-cli search "今天大家怎么评价 Grok?" --no-stream
 
 ## 给 AI agent 用
 
-`grok-cli` 适合 Codex、Claude Code、Cursor、自定义自动化、agent runtime、skill、脚本、CI 和验证流程。OpenClaw 和 Hermes Agent 覆盖官方支持的集成路径。
-
-安装内置 skill：
+适合 Codex、Claude Code、Cursor 等 agent runtime。安装内置 skill，自动处理认证和命令路由：
 
 ```bash
 npx --yes skills add Moore-developers/grok-cli --skill grok-cli --global --yes
 ```
 
-当你希望助手帮你处理安装检查、OAuth 登录和命令路由时，就用这个 skill。
-
-## 核心概念
-
-| 概念 | 含义 |
-| --- | --- |
-| 扁平命令面 | 一个 CLI 入口覆盖登录、聊天、搜索、媒体、音频、模型、状态和 usage。 |
-| 默认流式 | `chat` 和 `search` 默认给人类输出可读正文。 |
-| 脚本模式 | `--json` 提供稳定输出；`--no-stream` 和 `--raw-stream` 用来微调输出模式。 |
-| 本地文件 | 图片、视频和音频命令在上游支持的地方接受本地路径。 |
-| 本地状态 | OAuth token 存在 `auth.json`，usage 历史存在 SQLite。 |
-
 ## 命令说明
 
-- `login`：用系统浏览器发起 xAI OAuth 登录。
-- `status`：查看当前是否有可用 OAuth 会话。
-- `refresh`：刷新已保存的 access token。
-- `logout`：删除本地登录状态。
-- `chat`：执行 Grok 文本聊天，默认带通用网页搜索。
-- `search`：通过 Grok `x_search` 搜索 X。
-- `image`：生成图片。
-- `image-edit`：基于一张或多张参考图编辑图片。
-- `video`：生成视频。
-- `video-edit`：编辑已有视频。
-- `video-extend`：扩展已有视频。
-- `tts`：文本转语音。
-- `stt`：语音转文字。
-- `stt-stream`：通过 WebSocket 实时语音转文字，当前是实验入口。
-- `usage`：查看本地 session usage 和最近 rate-limit 快照。
-- `model`：配置 `chat` 和 `search` 共享默认文本模型。
-- `state`：查看本地认证状态的脱敏摘要。
+| 命令 | 说明 |
+| --- | --- |
+| `login` | 在系统浏览器中发起 xAI OAuth 登录 |
+| `status` | 检查 OAuth 会话状态 |
+| `refresh` | 刷新 access token |
+| `logout` | 删除本地登录状态 |
+| `chat` | Grok 文本聊天（默认含网页搜索） |
+| `search` | 搜索 X |
+| `image` | 生成图片 |
+| `image-edit` | 编辑参考图片 |
+| `video` | 生成视频 |
+| `video-edit` | 编辑视频 |
+| `video-extend` | 扩展视频 |
+| `tts` | 文字转语音 |
+| `stt` | 语音转文字 |
+| `stt-stream` | WebSocket 实时语音转文字（实验） |
+| `usage` | 查看本地用量和 rate-limit 快照 |
+| `model` | 设置 `chat` 和 `search` 的默认模型 |
+| `state` | 查看脱敏的本地认证状态 |
 
-任何命令都可以加 `--help`：
-
-```bash
-grok-cli chat --help
-grok-cli usage --help
-```
+任何命令加 `--help` 查看详情。
 
 ## 状态文件
 
-默认路径：
+- **Auth token**：`~/.grok-cli/auth.json`
+- **Usage 历史**：`~/.grok-cli/session.db`（SQLite）
 
-- OAuth 状态：`~/.grok-cli/auth.json`
-- Session usage 数据库：`~/.grok-cli/session.db`
-
-OAuth token 存在 `auth.json`。
-
-Usage 历史存在 SQLite，包含 session 总量、每次命令事件、文本/图片/视频/音频分类统计，以及最近一次 rate-limit 快照。
-
-媒体文件内容不会存进 SQLite。
-
-## 安装方式
-
-从源码安装：
-
-```bash
-git clone https://github.com/Moore-developers/grok-cli.git
-cd grok-cli
-cargo install --path .
-```
-
-源码安装要求 Rust 1.88 或更新版本，因为当前 crate 使用 edition 2024，并在 `Cargo.toml` 里声明了 `rust-version = "1.88"`。仓库默认工具链在 `rust-toolchain.toml` 中固定为 Rust 1.92.0。
-
-GitHub 仓库公开后，可以直接安装：
-
-```bash
-cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
-```
-
-安装指定 tag：
-
-```bash
-cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.1 --locked
-```
-
-已覆盖的 Release 产物：
-
-- macOS Apple Silicon：`grok-cli-macos-aarch64-apple-darwin.tar.gz`
-- Windows x64：`grok-cli-windows-x86_64-pc-windows-msvc.zip`
-
-每个发布产物都应该有一个同名 `.sha256` 校验文件。预构建二进制包不是完整平台矩阵，而是按当前可维护的平台提供。对 macOS Apple Silicon 和 Windows x64，推荐直接使用 release binary，或者通过内置 [`grok-cli` skill](skills/grok-cli/SKILL.md) 自动完成安装和命令调用；其他平台再走 `cargo install --git`。
+Usage 记录 session 总量、每次命令事件、媒体类型统计和 rate-limit 快照。媒体文件不存数据库。
 
 ## 开发
 
-欢迎参与贡献。提交 PR 前请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)，安全问题请按 [SECURITY.md](SECURITY.md) 私下报告。
-
-运行测试：
-
 ```bash
 cargo test
-```
-
-构建 release：
-
-```bash
 cargo build --release
-```
-
-打包并上传本地 macOS Apple Silicon 发布产物：
-
-```bash
-scripts/package-local-macos-release.sh v0.1.1 --upload
-```
-
-安装本地版本：
-
-```bash
 cargo install --path . --force
 ```
 
+欢迎贡献，请阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 和 [SECURITY.md](SECURITY.md)。
+
 ## 文档
 
-- [English README](README.md)
-- [文档索引](docs/zh/index.md)
 - [快速开始](docs/zh/guides/quickstart.md)
 - [命令参考](docs/zh/commands/index.md)
-- [`usage` 命令规格](docs/zh/reference/usage-command-spec.md)
-- [发布与安装指南](docs/zh/guides/release.md)
 - [故障排查](docs/zh/guides/troubleshooting.md)
 - [更新日志](CHANGELOG.md)
-- [贡献指南](CONTRIBUTING.md)
-- [安全策略](SECURITY.md)

@@ -55,6 +55,8 @@ If the user's platform has a covered no-Rust release asset, point them to the Gi
 https://github.com/Moore-developers/grok-cli/releases/latest
 ```
 
+If a covered release asset is missing, do not silently switch the user to a source build on a product platform. Tell them the binary release is incomplete for that platform and only proceed with Cargo if they explicitly choose a developer source install.
+
 Expected assets:
 
 ```text

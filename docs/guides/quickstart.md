@@ -10,7 +10,7 @@ npx --yes skills add https://github.com/Moore-developers/grok-cli --skill grok-c
 
 The skill can check whether `grok-cli` is installed, install it when possible, handle OAuth login, and then resume the original Grok task.
 
-For source installs:
+For source installs or developer builds on uncovered platforms:
 
 ```bash
 cargo install --git https://github.com/Moore-developers/grok-cli.git --locked

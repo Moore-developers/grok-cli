@@ -75,7 +75,8 @@ If `grok-cli` is missing or any required command is absent, first identify the p
 - macOS Apple Silicon: prefer the GitHub Release asset `grok-cli-macos-aarch64-apple-darwin.tar.gz`.
 - Windows x64: prefer the GitHub Release asset `grok-cli-windows-x86_64-pc-windows-msvc.zip`.
 - macOS Intel and Linux: use Cargo source install.
-- If a covered release asset is missing unexpectedly, surface that clearly and only then fall back to Cargo if the user wants a source build.
+- If a covered release asset is missing unexpectedly, surface that clearly and do not silently fall back to Cargo on a product platform.
+- Only use Cargo when the user explicitly asks for a source build, or when the platform is source-first.
 
 Only check whether Cargo is available when the platform is source-first or when the user explicitly wants a source build:
 

@@ -8,6 +8,7 @@
 2. [计划任务清单](../plan-task.md)
 3. [SuperGrok 媒体能力补齐计划](./supergrok-media-capability-plan.md)
 4. [发布前最终验证计划](./pre-release-validation-plan.md)
+5. [发布前验证结果](./pre-release-validation-results.md)
 
 ## 文档职责
 
@@ -36,6 +37,10 @@
 ### [发布前最终验证计划](./pre-release-validation-plan.md)
 
 记录公开推广前的最终确认项：真实媒体测试、SKILL 补全、极简性能分析、安装/OAuth 闭环和安全隐私护栏。
+
+### [发布前验证结果](./pre-release-validation-results.md)
+
+记录每个阶段的脱敏验证结果、发现的问题和后续动作。计划文档负责说明要做什么，结果文档负责说明已经验证到哪里。
 
 ## 使用建议
 

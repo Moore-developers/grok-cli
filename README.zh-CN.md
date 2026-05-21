@@ -4,11 +4,9 @@
 
 ## 概览
 
-`grok-cli` 把 Grok / xAI 带进终端优先、脚本优先和 agent 驱动的工作流。它支持通过 SuperGrok 或 X Premium+ 订阅直接 OAuth 登录，不需要额外 API Key 或单独付费体系。
+`grok-cli` 把 Grok / xAI 直接带进终端优先、脚本优先、agent 驱动的工作流。只需通过 SuperGrok 或 X Premium+ 完成 OAuth 登录，无需额外 API Key，也不用单独维护一套付费接入体系。
 
-它给你一套 CLI，统一登录、聊天、搜索、媒体、音频和 usage，也把认证、自动化输出、本地文件、远程 URL 和不同平台安装收进同一个入口。
-
-OpenClaw 和 Hermes Agent 覆盖官方支持的集成路径；`grok-cli` 适合 Codex、Claude Code、Cursor、自定义自动化、agent runtime、skill、脚本、CI 和验证流程。
+它把登录、聊天、搜索、媒体、音频和 usage 统一收进一个 CLI，同时把认证、自动化输出、本地文件、远程 URL 和跨平台安装整合成一个入口。无论你在使用 Codex、Claude Code、Cursor，还是自定义 automation、agent runtime、skill、脚本、CI 与验证流程，`grok-cli` 都能自然嵌入日常工作流，成为你挖掘产品需求、追踪时事热点、观察 SaaS 动向的日常辅助工具。官方支持的集成路径也覆盖 OpenClaw 和 Hermes Agent，方便接入现有 agent 生态。
 
 ## 亮点
 

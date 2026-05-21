@@ -6,11 +6,9 @@
 
 ## Overview
 
-`grok-cli` brings Grok / xAI into terminal-first, scriptable, and agent-driven workflows. It supports SuperGrok or X Premium+ through direct OAuth login, so you do not need a separate API key or standalone billing setup.
+`grok-cli` brings Grok / xAI directly into terminal-first, script-first, and agent-driven workflows. Sign in with SuperGrok or X Premium+ through OAuth only, with no extra API key and no separate paid access stack to maintain.
 
-It gives you one CLI for login, chat, search, media, audio, and usage tracking. It also keeps authentication, automation output, local files, remote URLs, and platform-specific installs in one place.
-
-OpenClaw and Hermes Agent cover the officially supported integration paths; `grok-cli` is for Codex, Claude Code, Cursor, custom automation, agent runtimes, skills, scripts, CI jobs, and validation flows.
+It unifies login, chat, search, media, audio, and usage in one CLI, while bringing authentication, automation output, local files, remote URLs, and cross-platform installation into a single entry point. Whether you are using Codex, Claude Code, Cursor, custom automation, agent runtimes, skills, scripts, CI, or validation flows, `grok-cli` fits naturally into your daily workflow as a helper for product discovery, tracking current events, and watching SaaS trends. Official integration paths also cover OpenClaw and Hermes Agent, making it easy to plug into an existing agent ecosystem.
 
 ## Highlights
 

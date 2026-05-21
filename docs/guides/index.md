@@ -6,7 +6,7 @@
 
 1. [快速开始](./quickstart.md)：从安装、登录到第一次真实调用。
 2. [故障排查](./troubleshooting.md)：认证、权限、媒体、stream 等常见问题。
-3. [发布与安装指南](./release.md)：SKILL-first 发布、macOS/Linux source-first、Windows GitHub Release binary、Cargo 安装、版本 tag 和后续分发路径。
+3. [发布与安装指南](./release.md)：SKILL-first 发布、macOS Apple Silicon 本地构建上传、macOS Intel/Linux source-first、Windows GitHub Release binary、Cargo 安装、版本 tag 和后续分发路径。
 
 ## 文档职责
 
@@ -35,10 +35,11 @@
 
 适合准备把项目发布给其他用户时使用。当前覆盖：
 
-- macOS / Linux 从 GitHub source 安装
-- Windows 从 GitHub Release 下载预构建 binary
+- macOS Apple Silicon 从 GitHub Release 下载维护者本地构建的 tarball，或从 GitHub source 安装
+- macOS Intel / Linux 从 GitHub source 安装
+- Windows 从 GitHub Release 下载 GitHub Actions 构建的预构建 binary
 - 通过仓库内置 `grok-cli` skill 自动安装和调用 CLI
-- 为什么只给 Windows 发布预构建二进制
+- 为什么只给当前可维护的平台发布预构建二进制
 - Homebrew / crates.io / winget / Scoop 的后续选择
 - 发布前检查清单
 

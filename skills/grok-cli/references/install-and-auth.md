@@ -31,19 +31,22 @@ If `grok-cli` is missing or incomplete, check Cargo:
 command -v cargo
 ```
 
-If Cargo is missing on macOS or Linux, explain that Rust/Cargo is required and suggest installing Rust with `rustup`.
+If Cargo is missing on macOS Intel or Linux, explain that Rust/Cargo is required and suggest installing Rust with `rustup`.
 
-If Cargo is missing on Windows and the user wants a no-Rust install path, point them to the GitHub Release binary:
+If Cargo is missing and the user's platform has a covered no-Rust release asset, point them to the GitHub Release page:
 
 ```text
 https://github.com/Moore-developers/grok-cli/releases/latest
 ```
 
-Expected asset:
+Expected assets:
 
 ```text
+grok-cli-macos-aarch64-apple-darwin.tar.gz
 grok-cli-windows-x86_64-pc-windows-msvc.zip
 ```
+
+Use the macOS tarball only for Apple Silicon (`arm64` / `aarch64`) Macs. Do not offer it for macOS Intel. Use the Windows zip only for Windows x64. Each covered asset should have a matching `.sha256` checksum file.
 
 Pinned public install:
 

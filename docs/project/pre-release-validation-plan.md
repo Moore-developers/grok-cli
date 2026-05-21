@@ -7,11 +7,11 @@
 - 确认新增媒体能力在真实 xAI / SuperGrok OAuth 环境下可用。
 - 把仓库内置 `grok-cli` skill 做成用户主入口：基础能力在主 `SKILL.md` 里直接可用，高级参数和完整命令面通过关联文件按需加载。
 - 建立一套极简性能分析策略，只记录安装后的大概 CPU、内存和体积大小。
-- 保持首版发布策略为 SKILL-first；macOS / Linux 走 source-first，Windows 走 GitHub Release binary。
+- 保持首版发布策略为 SKILL-first；macOS Apple Silicon 可上传维护者本地构建的 Release tarball，macOS Intel / Linux 走 source-first，Windows 走 GitHub Release binary。
 
 ## 不做的事
 
-- 暂不恢复 macOS / Linux 的 GitHub Release binary workflow。
+- 暂不恢复 macOS / Linux 的 GitHub Actions release binary workflow。
 - 暂不做 `stt-stream` 深层 WebSocket mock / 分块发送测试。
 - 暂不发布 crates.io / Homebrew / winget / Scoop。
 - 暂不把真实 OAuth token、session db、媒体文件或转写内容提交进仓库。
@@ -22,8 +22,9 @@
 
 任务：
 
-- [ ] 从干净环境验证 macOS / Linux 的 `cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.0 --locked`。
-- [ ] 验证 Windows Release binary 打包、命名和下载说明。
+- [ ] 从干净环境验证 macOS / Linux / Windows source install 的 `cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.0 --locked`。
+- [ ] 验证 macOS Apple Silicon 本地 release tarball 打包、命名、checksum 和上传说明。
+- [ ] 验证 Windows Release binary 打包、命名、checksum 和下载说明。
 - [ ] 验证安装后 `grok-cli --version`、`grok-cli --help`、`grok-cli status --json`。
 - [ ] 验证 `skills/grok-cli` 可以复制到 `~/.agents/skills/grok-cli` 或 `~/.codex/skills/grok-cli`。
 - [ ] 验证 skill 在 CLI 缺失时能走安装检查路径。
@@ -32,7 +33,8 @@
 
 验收标准：
 
-- macOS / Linux 用户无需下载预构建二进制。
+- macOS Apple Silicon 用户可以下载维护者本地构建的 Release tarball，也可以从源码构建。
+- macOS Intel / Linux 用户无需下载预构建二进制。
 - Windows 用户可以直接下载 Release binary。
 - 用户如果已有 Rust/Cargo，可以通过 skill 或 `cargo install --git` 完成安装。
 - 用户如果没有 Rust/Cargo，skill 能清楚说明前置条件，或在 Windows 场景下引导下载 Release binary。
@@ -271,7 +273,7 @@ Notes:
 
 请确认以下选择：
 
-- 是否接受首版继续 SKILL-first；macOS / Linux source-first，Windows 发布 GitHub Release binary。
+- 是否接受首版继续 SKILL-first；macOS Apple Silicon 上传本地构建 tarball，macOS Intel / Linux source-first，Windows 发布 GitHub Release binary。
 - 是否按上述顺序先做安装/OAuth，再补 SKILL references，再做真实媒体测试。
 - `stt-stream` 是否继续保持实验入口，只做基础文档和现有测试，不进入深层 mock。
 - 极简性能分析是否只记录 CPU、内存和体积大小，不做深入诊断。

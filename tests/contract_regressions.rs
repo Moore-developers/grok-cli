@@ -125,6 +125,11 @@ fn bundled_skill_requires_command_surface_check() {
         fs::read_to_string(root.join("skills/grok-cli/references/install-and-auth.md")).unwrap();
     let windows_release_workflow =
         fs::read_to_string(root.join(".github/workflows/windows-release.yml")).unwrap();
+    let local_macos_release_script =
+        fs::read_to_string(root.join("scripts/package-local-macos-release.sh")).unwrap();
+    let release_doc = fs::read_to_string(root.join("docs/guides/release.md")).unwrap();
+    let readme = fs::read_to_string(root.join("README.md")).unwrap();
+    let readme_zh = fs::read_to_string(root.join("README.zh-CN.md")).unwrap();
     let advanced_ref =
         fs::read_to_string(root.join("skills/grok-cli/references/commands-advanced.md")).unwrap();
     let media_ref =
@@ -159,10 +164,29 @@ fn bundled_skill_requires_command_surface_check() {
 
     assert!(install_ref.contains("grok-cli --help"));
     assert!(install_ref.contains("--tag v0.1.0 --locked --force"));
+    assert!(install_ref.contains("grok-cli-macos-aarch64-apple-darwin.tar.gz"));
     assert!(install_ref.contains("grok-cli-windows-x86_64-pc-windows-msvc.zip"));
+    assert!(install_ref.contains(".sha256"));
     assert!(windows_release_workflow.contains("windows-latest"));
     assert!(windows_release_workflow.contains("x86_64-pc-windows-msvc"));
     assert!(windows_release_workflow.contains("grok-cli-windows-x86_64-pc-windows-msvc.zip"));
+    assert!(windows_release_workflow.contains("Get-FileHash"));
+    assert!(
+        windows_release_workflow.contains("grok-cli-windows-x86_64-pc-windows-msvc.zip.sha256")
+    );
+    assert!(local_macos_release_script.contains("aarch64-apple-darwin"));
+    assert!(local_macos_release_script.contains("grok-cli-macos-${target}.tar.gz"));
+    assert!(local_macos_release_script.contains("cargo build --release --locked"));
+    assert!(local_macos_release_script.contains("gh release upload"));
+    assert!(local_macos_release_script.contains("--clobber"));
+    assert!(local_macos_release_script.contains("working tree has uncommitted changes"));
+    assert!(release_doc.contains("scripts/package-local-macos-release.sh v0.1.0 --upload"));
+    assert!(release_doc.contains("grok-cli-macos-aarch64-apple-darwin.tar.gz.sha256"));
+    assert!(!release_doc.contains("grok-cli-windows_x86_64"));
+    assert!(readme.contains("grok-cli-macos-aarch64-apple-darwin.tar.gz"));
+    assert!(readme.contains("grok-cli-windows-x86_64-pc-windows-msvc.zip"));
+    assert!(readme_zh.contains("grok-cli-macos-aarch64-apple-darwin.tar.gz"));
+    assert!(readme_zh.contains("grok-cli-windows-x86_64-pc-windows-msvc.zip"));
     assert!(skill.contains("What Users Can Do Through This Skill"));
     assert!(skill.contains("Skill Test Prompts"));
     assert!(skill.contains("Common Parameter Cheat Sheet"));

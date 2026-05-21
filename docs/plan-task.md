@@ -671,7 +671,7 @@ Phase 16 完成标准：
 - [x] 建立 `src/state/model.rs` / `src/state/storage.rs`
 - [x] 跑通 `state`、`status`
 - [x] 替换 README / docs 里的 GitHub `<owner>` 占位符
-- [x] 明确首版采用 SKILL-first 发布策略：macOS / Linux source-first，Windows 由 GitHub Release binary 分发
+- [x] 明确首版采用 SKILL-first 发布策略：macOS Apple Silicon 可上传本地构建 tarball，macOS Intel / Linux source-first，Windows 由 GitHub Release binary 分发
 - [x] 确认是否保留 `publish = false`，或准备 crates.io 发布元数据
 - [x] 确认 GitHub owner 是否从 `Moore-developers` 迁移为 `Moore`，并同步 remote、Cargo metadata、README、release docs。当前 `Moore` 用户名已被占用，继续使用 `Moore-developers`。
 - [x] 补开源协作文件：`CHANGELOG.md`、`CONTRIBUTING.md`、`SECURITY.md`

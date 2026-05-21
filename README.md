@@ -14,7 +14,7 @@ OAuth-first command-line access to Grok / xAI capabilities.
 - Text-to-speech, batch speech-to-text, and experimental streaming speech-to-text
 - Local session usage accounting in SQLite
 
-The recommended public distribution path is SKILL-first. macOS (Intel and Apple Silicon) and Linux are source-first through Cargo, while Windows users can download a prebuilt GitHub Release binary. A bundled skill at [`skills/grok-cli/SKILL.md`](skills/grok-cli/SKILL.md) can check whether `grok-cli` is installed, install it from GitHub with Cargo when needed, run OAuth login, and then execute the user's Grok task. See [`skills/README.md`](skills/README.md) for skill installation notes.
+The recommended public distribution path is SKILL-first. Cargo install works across platforms; macOS Apple Silicon users may also use a maintainer-uploaded GitHub Release tarball when available, while Windows users can download a GitHub Actions-built release binary. macOS Intel and Linux remain source-first through Cargo. A bundled skill at [`skills/grok-cli/SKILL.md`](skills/grok-cli/SKILL.md) can check whether `grok-cli` is installed, install it from GitHub with Cargo when needed, run OAuth login, and then execute the user's Grok task. See [`skills/README.md`](skills/README.md) for skill installation notes.
 
 Text commands are optimized for both humans and automation:
 
@@ -37,7 +37,7 @@ Install directly from GitHub:
 cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
 ```
 
-Windows users can download the latest release binary from [GitHub Releases](https://github.com/Moore-developers/grok-cli/releases/latest).
+macOS Apple Silicon and Windows users can also download covered release assets from [GitHub Releases](https://github.com/Moore-developers/grok-cli/releases/latest).
 
 Log in with the browser:
 
@@ -189,7 +189,12 @@ From a tag:
 cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.0 --locked
 ```
 
-Prebuilt binaries are intentionally not the default distribution path. The recommended path is `cargo install --git`, or using the bundled [`grok-cli` skill](skills/grok-cli/SKILL.md) to perform installation and command execution automatically.
+Covered release assets:
+
+- macOS Apple Silicon: `grok-cli-macos-aarch64-apple-darwin.tar.gz`
+- Windows x64: `grok-cli-windows-x86_64-pc-windows-msvc.zip`
+
+Each release asset should have a matching `.sha256` checksum file. Prebuilt binaries are intentionally targeted rather than a full platform matrix. The recommended path is `cargo install --git`, or using the bundled [`grok-cli` skill](skills/grok-cli/SKILL.md) to perform installation and command execution automatically.
 
 ## Development
 
@@ -205,6 +210,12 @@ Build a release binary:
 
 ```bash
 cargo build --release
+```
+
+Package and upload a local macOS Apple Silicon release asset:
+
+```bash
+scripts/package-local-macos-release.sh v0.1.0 --upload
 ```
 
 Install the local release binary:

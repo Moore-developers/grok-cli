@@ -5,7 +5,7 @@ description: Use this skill whenever the user wants to use Grok or xAI through t
 
 # Grok CLI Skill
 
-This skill turns a user's Grok / xAI request into a deterministic `grok-cli` workflow. It is SKILL-first. macOS (Intel and Apple Silicon) and Linux users stay source-first through Cargo, while Windows users can use the GitHub Release binary. If `grok-cli` is missing or missing required command surfaces, install it from GitHub with Cargo, then run the requested command.
+This skill turns a user's Grok / xAI request into a deterministic `grok-cli` workflow. It is SKILL-first. Cargo install works across platforms. macOS Apple Silicon users may also use a maintainer-uploaded GitHub Release tarball when available, Windows users can use the GitHub Actions-built GitHub Release binary, and macOS Intel / Linux users stay source-first through Cargo. If `grok-cli` is missing or missing required command surfaces, install it from GitHub with Cargo, then run the requested command.
 
 Repository:
 
@@ -76,7 +76,14 @@ If `grok-cli` is missing or any required command is absent, check whether Cargo 
 command -v cargo
 ```
 
-If Cargo is missing, tell the user they need Rust/Cargo first and point them to install Rust with `rustup`. For Windows users who do not want Rust/Cargo, point them to the GitHub Release binary instead of trying to invent a source install workaround.
+If Cargo is missing, tell the user they need Rust/Cargo first and point them to install Rust with `rustup`.
+
+Use GitHub Release binaries only when the user's platform is covered and they prefer a no-Cargo route:
+
+- macOS Apple Silicon: `grok-cli-macos-aarch64-apple-darwin.tar.gz`
+- Windows x64: `grok-cli-windows-x86_64-pc-windows-msvc.zip`
+
+For macOS Intel and Linux, do not invent a binary install path. Use Cargo/source install.
 
 If Cargo exists, install from the latest repository state when the user asked for latest:
 

@@ -14,7 +14,7 @@
 - 文本转语音、批量语音转文字和实验性实时语音转文字
 - 基于 SQLite 的本地会话 usage 统计
 
-推荐的公开分发方式是 SKILL-first。macOS（Intel 和 Apple Silicon）以及 Linux 仍然走 source-first / Cargo 安装，Windows 用户可以直接下载 GitHub Release 的预构建二进制。仓库内置 [`skills/grok-cli/SKILL.md`](skills/grok-cli/SKILL.md)，可以先检查本机是否已安装 `grok-cli`，缺失时通过 Cargo 从 GitHub 安装，然后处理 OAuth 登录并继续执行用户的 Grok 任务。Skill 安装说明见 [`skills/README.md`](skills/README.md)。
+推荐的公开分发方式是 SKILL-first。Cargo 安装可跨平台使用；macOS Apple Silicon 用户也可以使用维护者本地构建并上传到 GitHub Release 的 tarball，Windows 用户可以下载 GitHub Actions 构建的发布二进制。macOS Intel 和 Linux 仍然走 source-first / Cargo 安装。仓库内置 [`skills/grok-cli/SKILL.md`](skills/grok-cli/SKILL.md)，可以先检查本机是否已安装 `grok-cli`，缺失时通过 Cargo 从 GitHub 安装，然后处理 OAuth 登录并继续执行用户的 Grok 任务。Skill 安装说明见 [`skills/README.md`](skills/README.md)。
 
 文本命令同时照顾“给人直接用”和“给脚本稳定接入”两种场景：
 
@@ -37,7 +37,7 @@ grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-
 cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
 ```
 
-Windows 用户可以从 [GitHub Releases](https://github.com/Moore-developers/grok-cli/releases/latest) 下载最新发布二进制。
+macOS Apple Silicon 和 Windows 用户也可以从 [GitHub Releases](https://github.com/Moore-developers/grok-cli/releases/latest) 下载已覆盖平台的发布产物。
 
 浏览器登录：
 
@@ -191,7 +191,12 @@ cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
 cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.0 --locked
 ```
 
-预构建二进制包不是默认分发路径。推荐使用 `cargo install --git`，或者通过内置 [`grok-cli` skill](skills/grok-cli/SKILL.md) 自动完成安装和命令调用。
+已覆盖的 Release 产物：
+
+- macOS Apple Silicon：`grok-cli-macos-aarch64-apple-darwin.tar.gz`
+- Windows x64：`grok-cli-windows-x86_64-pc-windows-msvc.zip`
+
+每个发布产物都应该有一个同名 `.sha256` 校验文件。预构建二进制包不是完整平台矩阵，而是按当前可维护的平台提供。推荐使用 `cargo install --git`，或者通过内置 [`grok-cli` skill](skills/grok-cli/SKILL.md) 自动完成安装和命令调用。
 
 ## 开发
 
@@ -207,6 +212,12 @@ cargo test
 
 ```bash
 cargo build --release
+```
+
+打包并上传本地 macOS Apple Silicon 发布产物：
+
+```bash
+scripts/package-local-macos-release.sh v0.1.0 --upload
 ```
 
 安装本地版本：

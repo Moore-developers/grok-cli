@@ -17,9 +17,9 @@ https://github.com/Moore-developers/grok-cli
 
 1. Identify the user's intended Grok capability.
 2. Ensure `grok-cli` is installed, runnable, and exposes the required commands.
-3. Verify login with `grok-cli status --json`.
+3. Verify login with `grok-cli status --json`, including `logged_in`, `access_token_expiring`, `relogin_required`, and entitlement fields.
 4. Verify account permission with a lightweight real capability check before the user's requested task.
-5. If login or permission is not usable, run the correct recovery step: `grok-cli login` for missing/relogin-required auth, `grok-cli refresh --json` for stale credentials, or a clear entitlement explanation for tier failures.
+5. If login or permission is not usable, run the correct recovery step: `grok-cli login` for missing/relogin-required auth, `grok-cli refresh --json` for expiring or stale credentials, or a clear entitlement explanation for tier failures.
 6. Re-check `grok-cli status --json` after login or refresh.
 7. Retry the readiness check once after recovery.
 8. Resume the original user task with the correct `grok-cli` command only after readiness is confirmed.
@@ -35,15 +35,18 @@ Do not run the user's requested Grok task until this gate passes:
 
 1. Install or repair `grok-cli`.
 2. Verify the binary with `grok-cli --version` and `grok-cli --help`.
-3. Verify login with `grok-cli status --json`.
+3. Verify login with `grok-cli status --json` and inspect `logged_in`, `access_token_expiring`, `relogin_required`, and entitlement fields.
 4. If login is missing, invalid, or relogin is required, run `grok-cli login`, then run `grok-cli status --json` again.
-5. Verify permission with a minimal real command for the intended capability:
-   - Text or search tasks: `grok-cli chat --json --no-stream --prompt "Reply with exactly: ok" --timeout 120`.
+5. If `access_token_expiring` is true, run `grok-cli refresh --json`, then run `grok-cli status --json` again before any capability probe.
+6. Verify permission with a minimal real command for the intended capability:
+   - Text tasks: `grok-cli chat --json --no-stream --prompt "Reply with exactly: ok" --timeout 120`.
+   - Search tasks: `grok-cli search --json --query "Grok" --timeout 120`.
    - Usage tasks: `grok-cli usage --json`.
    - Media or audio tasks: run `grok-cli status --json` first, then rely on the real requested media/audio command because permission can vary by endpoint.
-6. If the permission check fails with stale credentials such as `bad-credentials`, run `grok-cli refresh --json`, then `grok-cli status --json`, then retry the permission check once.
-7. If the permission check fails with `entitlement_denied` or `xai_oauth_tier_denied`, explain that the account or subscription cannot access that capability. Do not claim reinstalling will fix it.
-8. Once the gate passes, run the user's original command.
+7. A successful search readiness probe with sparse or empty citations still passes the capability gate; use evidence sufficiency rules only when summarizing the user's real search results.
+8. If the permission check fails with stale credentials such as `bad-credentials`, run `grok-cli refresh --json`, then `grok-cli status --json`, then retry the permission check once.
+9. If the permission check fails with `entitlement_denied` or `xai_oauth_tier_denied`, explain that the account or subscription cannot access that capability. Do not claim reinstalling will fix it.
+10. Once the gate passes, run the user's original command.
 
 ## What Users Can Do Through This Skill
 
@@ -131,11 +134,12 @@ For Release binary installs:
 2. Download the asset and matching `.sha256` from the latest GitHub Release.
 3. Verify the checksum when possible.
 4. Extract the binary.
-5. Put `grok-cli` or `grok-cli.exe` in a directory already on `PATH`, or create `~/.local/bin` and tell the user to add it to `PATH` if needed.
-6. Run `grok-cli --version` and `grok-cli --help`.
-7. Run `grok-cli status --json` before any real capability call.
-8. If status is not usable, complete OAuth handling first.
-9. Resume the original Grok task after verification.
+5. Put `grok-cli` or `grok-cli.exe` in a directory already on `PATH`; if none is suitable, use `~/.local/bin`, temporarily add it to the current shell `PATH`, and tell the user how to make that permanent.
+6. If `command -v grok-cli` still fails but `~/.local/bin/grok-cli` exists and is executable, treat this as a PATH configuration issue, not a failed install. Continue by temporarily exporting `PATH="$HOME/.local/bin:$PATH"` or using `~/.local/bin/grok-cli` directly for verification.
+7. Run `grok-cli --version` and `grok-cli --help`.
+8. Run `grok-cli status --json` before any real capability call.
+9. If status is not usable, complete OAuth handling first.
+10. Resume the original Grok task after verification.
 
 If Cargo is the chosen path, install from the latest repository state when the user asked for latest:
 
@@ -171,6 +175,13 @@ If the status says auth is missing, invalid, or relogin is required, run:
 
 ```bash
 grok-cli login
+```
+
+If `status --json` reports `access_token_expiring`, refresh before the first capability check:
+
+```bash
+grok-cli refresh --json
+grok-cli status --json
 ```
 
 If a capability call fails with a credential validation error such as `bad-credentials`, run:

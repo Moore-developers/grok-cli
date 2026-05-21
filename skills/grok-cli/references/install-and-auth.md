@@ -72,11 +72,12 @@ Release binary install flow:
 2. Download the asset and matching `.sha256`.
 3. Verify the checksum when possible.
 4. Extract the binary.
-5. Put `grok-cli` or `grok-cli.exe` in a directory already on `PATH`; if none is suitable, use `~/.local/bin` and tell the user to add it to `PATH`.
-6. Run `grok-cli --version` and `grok-cli --help`.
-7. Run `grok-cli status --json`.
-8. If status is not usable, complete OAuth handling before any real capability call.
-9. Continue the original Grok task.
+5. Put `grok-cli` or `grok-cli.exe` in a directory already on `PATH`; if none is suitable, use `~/.local/bin`, temporarily add it to the current shell `PATH`, and tell the user how to make that permanent.
+6. If `command -v grok-cli` still fails but `~/.local/bin/grok-cli` exists and is executable, treat this as a PATH configuration issue, not a failed install. Continue by temporarily exporting `PATH="$HOME/.local/bin:$PATH"` or using `~/.local/bin/grok-cli` directly for verification.
+7. Run `grok-cli --version` and `grok-cli --help`.
+8. Run `grok-cli status --json`.
+9. If status is not usable, complete OAuth handling before any real capability call.
+10. Continue the original Grok task.
 
 Pinned public install:
 
@@ -112,17 +113,26 @@ Readiness flow before the user's requested task:
 
 1. Install or repair `grok-cli`.
 2. Run `grok-cli --version` and `grok-cli --help`.
-3. Run `grok-cli status --json`.
+3. Run `grok-cli status --json` and inspect `logged_in`, `access_token_expiring`, `relogin_required`, and entitlement fields.
 4. If auth is missing, invalid, or relogin is required, run `grok-cli login`, then `grok-cli status --json`.
-5. Verify permission with a minimal real capability check before the user's command. For text and search tasks, use:
+5. If `access_token_expiring` is true, run `grok-cli refresh --json`, then `grok-cli status --json` before any capability probe.
+6. Verify permission with a minimal real capability check before the user's command. For text tasks, use:
 
 ```bash
 grok-cli chat --json --no-stream --prompt "Reply with exactly: ok" --timeout 120
 ```
 
-6. If the permission check returns stale credentials such as `bad-credentials`, run `grok-cli refresh --json`, then `grok-cli status --json`, and retry the permission check once.
-7. If the permission check returns `entitlement_denied` or `xai_oauth_tier_denied`, explain the account/tier blocker and stop before running the user's requested command.
-8. Only run the user's original Grok command after login and permission are verified.
+For search tasks, use a real search probe:
+
+```bash
+grok-cli search --json --query "Grok" --timeout 120
+```
+
+A successful search readiness probe with sparse or empty citations still passes the capability gate; evaluate citation sufficiency only when summarizing the user's real search results.
+
+7. If the permission check returns stale credentials such as `bad-credentials`, run `grok-cli refresh --json`, then `grok-cli status --json`, and retry the permission check once.
+8. If the permission check returns `entitlement_denied` or `xai_oauth_tier_denied`, explain the account/tier blocker and stop before running the user's requested command.
+9. Only run the user's original Grok command after login and permission are verified.
 
 Public OAuth and state flags:
 
@@ -132,10 +142,17 @@ Public OAuth and state flags:
 - `state`: `--json`, `--auth-file <PATH>`.
 - `logout`: `--json`, `--auth-file <PATH>`.
 
-If auth is missing, expired, invalid, or `relogin_required` is true:
+If auth is missing, invalid, or `relogin_required` is true:
 
 ```bash
 grok-cli login
+grok-cli status --json
+```
+
+If `access_token_expiring` is true, refresh before the first real capability call:
+
+```bash
+grok-cli refresh --json
 grok-cli status --json
 ```
 

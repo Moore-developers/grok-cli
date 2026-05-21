@@ -176,8 +176,14 @@ fn bundled_skill_requires_command_surface_check() {
     assert!(install_ref.contains("grok-cli status --json"));
     assert!(install_ref.contains("bad-credentials"));
     assert!(install_ref.contains("grok-cli refresh --json"));
+    assert!(install_ref.contains("access_token_expiring"));
+    assert!(install_ref.contains("grok-cli search --json --query \"Grok\" --timeout 120"));
+    assert!(install_ref.contains("PATH configuration issue"));
+    assert!(install_ref.contains("PATH=\"$HOME/.local/bin:$PATH\""));
     assert!(install_ref.contains("Readiness flow before the user's requested task"));
-    assert!(install_ref.contains("Only run the user's original Grok command after login and permission are verified"));
+    assert!(install_ref.contains(
+        "Only run the user's original Grok command after login and permission are verified"
+    ));
     assert!(install_ref.contains("rustc --version"));
     assert!(install_ref.contains("Rust 1.88 or newer"));
     assert!(install_ref.contains("Rust 1.92.0"));
@@ -210,11 +216,16 @@ fn bundled_skill_requires_command_surface_check() {
     assert!(skill.contains("Readiness Gate"));
     assert!(skill.contains("Verify permission with a minimal real command"));
     assert!(skill.contains("Reply with exactly: ok"));
+    assert!(skill.contains("grok-cli search --json --query \"Grok\" --timeout 120"));
+    assert!(skill.contains("access_token_expiring"));
+    assert!(skill.contains("PATH configuration issue"));
     assert!(skill.contains("Do not run the user's requested Grok task until this gate passes"));
     assert!(skill.contains("grok-cli status --json"));
     assert!(skill.contains("bad-credentials"));
     assert!(skill.contains("grok-cli refresh --json"));
-    assert!(skill.contains("Do not present an empty or generic answer as a real X discussion summary"));
+    assert!(
+        skill.contains("Do not present an empty or generic answer as a real X discussion summary")
+    );
     assert!(skill.contains("Rust 1.88 or newer"));
     assert!(skill.contains("Rust 1.92.0"));
     assert!(skill.contains("rustc --version"));
@@ -266,8 +277,13 @@ fn bundled_skill_requires_command_surface_check() {
     assert!(advanced_ref.contains("video-extend"));
     assert!(advanced_ref.contains("--auth-file"));
     assert!(errors_ref.contains("bad-credentials"));
-    assert!(errors_ref.contains("install, status, login if required, refresh if credentials are stale, permission check"));
+    assert!(errors_ref.contains("access_token_expiring"));
+    assert!(errors_ref.contains(
+        "install, status, login if required, refresh if credentials are stale, permission check"
+    ));
     assert!(errors_ref.contains("Sparse Search Results"));
+    assert!(errors_ref.contains("PATH configuration issue"));
+    assert!(errors_ref.contains("platform-specific install path"));
     assert!(advanced_ref.contains("stt-stream"));
     assert!(advanced_ref.contains("endpointing"));
     assert!(skill_validation.contains("A1 | `login`"));

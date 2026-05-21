@@ -5,6 +5,10 @@ use tempfile::tempdir;
 use std::fs;
 use std::path::Path;
 
+fn package_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
+}
+
 #[test]
 fn top_level_help_lists_all_primary_command_groups() {
     Command::cargo_bin("grok-cli")
@@ -118,6 +122,11 @@ fn state_reports_invalid_json_as_state_error() {
 #[test]
 fn bundled_skill_requires_command_surface_check() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let package_version = package_version();
+    let release_tag = format!("v{package_version}");
+    let install_command_fragment = format!("--tag {release_tag} --locked --force");
+    let release_script_example =
+        format!("scripts/package-local-macos-release.sh {release_tag} --upload");
     let skill = fs::read_to_string(root.join("skills/grok-cli/SKILL.md")).unwrap();
     let basic_ref =
         fs::read_to_string(root.join("skills/grok-cli/references/commands-basic.md")).unwrap();
@@ -163,7 +172,7 @@ fn bundled_skill_requires_command_surface_check() {
     }
 
     assert!(install_ref.contains("grok-cli --help"));
-    assert!(install_ref.contains("--tag v0.1.0 --locked --force"));
+    assert!(install_ref.contains(&install_command_fragment));
     assert!(install_ref.contains("grok-cli-macos-aarch64-apple-darwin.tar.gz"));
     assert!(install_ref.contains("grok-cli-windows-x86_64-pc-windows-msvc.zip"));
     assert!(install_ref.contains(".sha256"));
@@ -180,7 +189,7 @@ fn bundled_skill_requires_command_surface_check() {
     assert!(local_macos_release_script.contains("gh release upload"));
     assert!(local_macos_release_script.contains("--clobber"));
     assert!(local_macos_release_script.contains("working tree has uncommitted changes"));
-    assert!(release_doc.contains("scripts/package-local-macos-release.sh v0.1.0 --upload"));
+    assert!(release_doc.contains(&release_script_example));
     assert!(release_doc.contains("grok-cli-macos-aarch64-apple-darwin.tar.gz.sha256"));
     assert!(!release_doc.contains("grok-cli-windows_x86_64"));
     assert!(readme.contains("grok-cli-macos-aarch64-apple-darwin.tar.gz"));
@@ -237,6 +246,7 @@ fn bundled_skill_requires_command_surface_check() {
     assert!(skill_validation.contains("A27 | `stt-stream`"));
     assert!(skill_validation.contains("P1 | `login`"));
     assert!(skill_validation.contains("P15 | `stt-stream`"));
-    assert!(skill_validation.contains("本地文件场景"));
-    assert!(skill_validation.contains("N1. 不应编造本地视频扩展命令"));
+    assert!(skill_validation.contains("## Local File Scenarios"));
+    assert!(skill_validation.contains("Local streaming transcription"));
+    assert!(skill_validation.contains("### N1. Do not invent a local video extension command"));
 }

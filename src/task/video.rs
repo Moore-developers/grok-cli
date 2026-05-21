@@ -41,12 +41,14 @@ struct VideoGenData {
     extra: Value,
 }
 
+type VideoRequestBuilder = dyn Fn(&str) -> Result<Value, AppError>;
+
 struct VideoTaskRequest {
     command: &'static str,
     common: TaskCommonOptions,
     model: Option<String>,
     create_path: &'static str,
-    build_request: Box<dyn Fn(&str) -> Result<Value, AppError>>,
+    build_request: Box<VideoRequestBuilder>,
     timeout: Option<u64>,
     modality: String,
     aspect_ratio: Option<String>,

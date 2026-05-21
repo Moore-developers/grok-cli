@@ -9,6 +9,7 @@
 3. [SuperGrok 媒体能力补齐计划](./supergrok-media-capability-plan.md)
 4. [发布前最终验证计划](./pre-release-validation-plan.md)
 5. [发布前验证结果](./pre-release-validation-results.md)
+6. [参数真实补测计划与结果](./parameter-validation-plan.md)
 
 ## 文档职责
 
@@ -41,6 +42,10 @@
 ### [发布前验证结果](./pre-release-validation-results.md)
 
 记录每个阶段的脱敏验证结果、发现的问题和后续动作。计划文档负责说明要做什么，结果文档负责说明已经验证到哪里。
+
+### [参数真实补测计划与结果](./parameter-validation-plan.md)
+
+记录发布前真实媒体验证后新增的一轮参数补测，重点覆盖本地 path 视频输入、图片落盘、TTS voice 列表与 STT 高级参数。
 
 ## 使用建议
 

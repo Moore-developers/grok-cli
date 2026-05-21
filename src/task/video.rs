@@ -214,20 +214,11 @@ fn validate_extend_options(opts: &VideoExtendOptions) -> Result<(), AppError> {
         ));
     }
 
-    if non_empty_string(opts.video_url.as_deref()).is_none() && opts.video.is_none() {
+    if non_empty_string(opts.video_url.as_deref()).is_none() {
         return Err(AppError::new(
             ErrorCode::InvalidArgs,
-            "--video-url or --video is required",
+            "--video-url is required",
         ));
-    }
-    if opts.video_url.is_some() && opts.video.is_some() {
-        return Err(AppError::new(
-            ErrorCode::InvalidArgs,
-            "--video-url cannot be combined with --video",
-        ));
-    }
-    if let Some(path) = opts.video.as_deref() {
-        validate_local_file_exists(path)?;
     }
 
     Ok(())
@@ -370,12 +361,6 @@ fn build_extend_request(opts: &VideoExtendOptions, model: &str) -> Result<Value,
     );
     if let Some(video_url) = non_empty_string(opts.video_url.as_deref()) {
         body.insert("video".to_string(), json!({ "url": video_url }));
-    }
-    if let Some(video_path) = opts.video.as_deref() {
-        body.insert(
-            "video".to_string(),
-            json!({ "url": local_file_data_uri(video_path, MediaKind::Video)? }),
-        );
     }
     Ok(Value::Object(body))
 }
@@ -756,7 +741,6 @@ mod tests {
             prompt: Some("The camera pans left".to_string()),
             prompt_flag: None,
             video_url: Some("https://cdn.x.ai/source.mp4".to_string()),
-            video: None,
             duration: Some(6),
             model: Some("grok-imagine-video".to_string()),
             timeout: Some(60),
@@ -813,7 +797,7 @@ mod tests {
         opts.video_url = None;
         let error = validate_extend_options(&opts).unwrap_err();
         assert_eq!(error.code.as_str(), "invalid_args");
-        assert!(error.message.contains("--video-url or --video is required"));
+        assert!(error.message.contains("--video-url is required"));
     }
 
     #[test]

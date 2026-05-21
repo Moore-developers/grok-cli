@@ -381,55 +381,28 @@ fn task_video_extend_rejects_missing_video_url() {
         .assert()
         .code(2)
         .stdout(predicate::str::contains("\"code\":\"invalid_args\""))
-        .stdout(predicate::str::contains("--video-url or --video is required"));
+        .stdout(predicate::str::contains("--video-url is required"));
 }
 
 #[test]
-fn task_video_extend_accepts_local_video_file() {
+fn task_video_extend_rejects_local_video_file_argument() {
     let temp = tempdir().unwrap();
-    let auth_file = temp.path().join("auth.json");
     let video_file = temp.path().join("source.mp4");
     fs::write(&video_file, b"fake-mp4").unwrap();
-
-    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
-    let port = listener.local_addr().unwrap().port();
-    write_auth_state(&auth_file, &format!("http://127.0.0.1:{port}/v1"));
-
-    let server = thread::spawn(move || {
-        let (mut stream, _) = listener.accept().unwrap();
-        let create_request = read_request(&mut stream);
-        assert!(create_request.contains("POST /v1/videos/extensions"));
-        assert!(create_request.contains("\"video\":{\"url\":\"data:video/mp4;base64,ZmFrZS1tcDQ=\"}"));
-        write_response(&mut stream, "200 OK", r#"{"request_id":"ext_local"}"#);
-
-        let (mut stream, _) = listener.accept().unwrap();
-        let _ = read_request(&mut stream);
-        write_response(
-            &mut stream,
-            "200 OK",
-            r#"{"status":"done","video":{"url":"https://cdn.x.ai/extended-video.mp4","duration":12}}"#,
-        );
-    });
 
     Command::cargo_bin("grok-cli")
         .unwrap()
         .args([
             "video-extend",
             "--json",
-            "--auth-file",
-            auth_file.to_str().unwrap(),
             "--prompt",
             "Extend a local video",
             "--video",
             video_file.to_str().unwrap(),
         ])
         .assert()
-        .success()
-        .stdout(predicate::str::contains(
-            "\"video\":\"https://cdn.x.ai/extended-video.mp4\"",
-        ));
-
-    server.join().unwrap();
+        .failure()
+        .stderr(predicate::str::contains("unexpected argument '--video'"));
 }
 
 #[test]

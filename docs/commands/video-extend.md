@@ -6,16 +6,12 @@
 
 该命令独立于 [`video`](./video.md) 和 [`video-edit`](./video-edit.md)。`video` 负责生成新视频，`video-edit` 负责编辑已有视频，`video-extend` 负责在已有 MP4 视频末尾追加新片段。
 
+注意：`video-extend` 只支持远程视频 URL，不支持本地视频 path。真实补测中，本地 MP4 会被 CLI 转成 `data:video/mp4;base64,...` 并进入上游服务端，但 xAI 扩展任务最终返回 internal error；因此首版不提供 `--video <PATH>`，避免暴露实际不可用的入口。本地视频如需扩展，请先上传到可公开访问的 URL，再使用 `--video-url`。
+
 ## 常用方式
 
 ```bash
 grok-cli video-extend --video-url https://example.com/source.mp4 --prompt "The camera pans left" --duration 6
-```
-
-使用本地视频文件：
-
-```bash
-grok-cli video-extend --video ./source.mp4 --prompt "The camera pans left" --duration 6
 ```
 
 脚本或 SKILL：
@@ -29,7 +25,6 @@ grok-cli video-extend --json --video-url https://example.com/source.mp4 --prompt
 - `PROMPT`：位置参数，视频扩展提示词。
 - `--prompt <PROMPT>`：脚本友好的显式提示词参数。
 - `--video-url <URL>`：要扩展的源视频 URL。
-- `--video <PATH>`：要扩展的本地视频路径。
 - `--duration <SECONDS>`：扩展片段时长，默认 `6` 秒，会被限制到 `2..=10`。
 - `--json`：使用统一 JSON 信封输出。
 - `--auth-file <PATH>`：覆盖 OAuth 状态文件路径。
@@ -40,7 +35,7 @@ grok-cli video-extend --json --video-url https://example.com/source.mp4 --prompt
 
 - 默认模型为 `grok-imagine-video`。
 - 请求 `POST /videos/extensions`，请求体发送 `video: {"url": ...}` 和归一化后的 `duration`。
-- 本地视频会编码成 data URI 后作为 `video.url` 发送。
+- 必须提供 `--video-url`；本地视频 path 不在当前能力面中。
 - 不发送 `aspect_ratio`、`resolution`；扩展输出继承输入视频属性。
 - 先读取创建响应中的 `request_id`，再轮询 `GET /videos/{request_id}` 到终态。
 - 成功后写入本地 usage SQLite 的 video 分类。

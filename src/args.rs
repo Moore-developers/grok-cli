@@ -381,9 +381,6 @@ pub struct VideoExtendOptions {
     /// Source video URL to extend.
     #[arg(long = "video-url")]
     pub video_url: Option<String>,
-    /// Source local video path to extend.
-    #[arg(long = "video", value_name = "PATH")]
-    pub video: Option<PathBuf>,
     /// Requested extension duration in seconds. Defaults to 6 and is clamped to 2..=10.
     #[arg(long)]
     pub duration: Option<u64>,

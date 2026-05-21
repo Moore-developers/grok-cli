@@ -27,6 +27,11 @@ cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
 
 Source installs require Rust 1.88+ (toolchain pinned to 1.92.0). On macOS Apple Silicon and Windows x64, the bundled skill prefers the release binary.
 
+Release assets:
+
+- macOS Apple Silicon: `grok-cli-macos-aarch64-apple-darwin.tar.gz`
+- Windows x64: `grok-cli-windows-x86_64-pc-windows-msvc.zip`
+
 ## Quick Start
 
 ```bash

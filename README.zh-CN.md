@@ -25,6 +25,11 @@ cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
 
 源码安装需 Rust 1.88+（工具链锁定 1.92.0）。macOS Apple Silicon 和 Windows x64 上内置 skill 优先使用 release binary。
 
+预编译包名称：
+
+- macOS Apple Silicon：`grok-cli-macos-aarch64-apple-darwin.tar.gz`
+- Windows x64：`grok-cli-windows-x86_64-pc-windows-msvc.zip`
+
 ## 快速开始
 
 ```bash

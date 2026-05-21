@@ -5,7 +5,7 @@ description: Use this skill whenever the user wants to use Grok or xAI through t
 
 # Grok CLI Skill
 
-This skill turns a user's Grok / xAI request into a deterministic `grok-cli` workflow. It is SKILL-first and source-first: users do not need prebuilt release binaries. If `grok-cli` is missing or missing required command surfaces, install it from GitHub with Cargo, then run the requested command.
+This skill turns a user's Grok / xAI request into a deterministic `grok-cli` workflow. It is SKILL-first. macOS (Intel and Apple Silicon) and Linux users stay source-first through Cargo, while Windows users can use the GitHub Release binary. If `grok-cli` is missing or missing required command surfaces, install it from GitHub with Cargo, then run the requested command.
 
 Repository:
 
@@ -76,7 +76,7 @@ If `grok-cli` is missing or any required command is absent, check whether Cargo 
 command -v cargo
 ```
 
-If Cargo is missing, tell the user they need Rust/Cargo first and point them to install Rust with `rustup`. Do not attempt a prebuilt binary install path; this project intentionally uses source-first distribution.
+If Cargo is missing, tell the user they need Rust/Cargo first and point them to install Rust with `rustup`. For Windows users who do not want Rust/Cargo, point them to the GitHub Release binary instead of trying to invent a source install workaround.
 
 If Cargo exists, install from the latest repository state when the user asked for latest:
 

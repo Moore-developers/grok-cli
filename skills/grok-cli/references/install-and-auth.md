@@ -31,7 +31,19 @@ If `grok-cli` is missing or incomplete, check Cargo:
 command -v cargo
 ```
 
-If Cargo is missing, explain that Rust/Cargo is required and suggest installing Rust with `rustup`. Do not invent a prebuilt binary path.
+If Cargo is missing on macOS or Linux, explain that Rust/Cargo is required and suggest installing Rust with `rustup`.
+
+If Cargo is missing on Windows and the user wants a no-Rust install path, point them to the GitHub Release binary:
+
+```text
+https://github.com/Moore-developers/grok-cli/releases/latest
+```
+
+Expected asset:
+
+```text
+grok-cli-windows-x86_64-pc-windows-msvc.zip
+```
 
 Pinned public install:
 

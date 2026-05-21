@@ -123,6 +123,8 @@ fn bundled_skill_requires_command_surface_check() {
         fs::read_to_string(root.join("skills/grok-cli/references/commands-basic.md")).unwrap();
     let install_ref =
         fs::read_to_string(root.join("skills/grok-cli/references/install-and-auth.md")).unwrap();
+    let windows_release_workflow =
+        fs::read_to_string(root.join(".github/workflows/windows-release.yml")).unwrap();
     let advanced_ref =
         fs::read_to_string(root.join("skills/grok-cli/references/commands-advanced.md")).unwrap();
     let media_ref =
@@ -157,6 +159,10 @@ fn bundled_skill_requires_command_surface_check() {
 
     assert!(install_ref.contains("grok-cli --help"));
     assert!(install_ref.contains("--tag v0.1.0 --locked --force"));
+    assert!(install_ref.contains("grok-cli-windows-x86_64-pc-windows-msvc.zip"));
+    assert!(windows_release_workflow.contains("windows-latest"));
+    assert!(windows_release_workflow.contains("x86_64-pc-windows-msvc"));
+    assert!(windows_release_workflow.contains("grok-cli-windows-x86_64-pc-windows-msvc.zip"));
     assert!(skill.contains("What Users Can Do Through This Skill"));
     assert!(skill.contains("Skill Test Prompts"));
     assert!(skill.contains("Common Parameter Cheat Sheet"));

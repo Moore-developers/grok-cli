@@ -4,36 +4,46 @@ This document describes the current public release strategy for `grok-cli`.
 
 ## 1. Current Strategy
 
-`grok-cli` is distributed source-first and SKILL-first.
+`grok-cli` is distributed SKILL-first.
+
+- macOS (Intel and Apple Silicon) and Linux are source-first: users build or install with Cargo.
+- Windows users can download a prebuilt GitHub Release binary.
 
 Recommended user paths:
 
 1. Use the bundled [`grok-cli` skill](../../skills/grok-cli/SKILL.md). See [skills README](../../skills/README.md) for installation notes. The skill checks whether the CLI is installed, installs it from GitHub with Cargo when needed, runs OAuth login, and resumes the user's original Grok task.
-2. Install directly with Cargo:
+2. Install directly with Cargo on macOS or Linux:
 
 ```bash
 cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
 ```
 
-3. Install a tagged version:
+3. Install a tagged version from source on macOS or Linux:
 
 ```bash
 cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.0 --locked
 ```
 
-The project intentionally does not publish prebuilt GitHub Release binaries for the first public version. Users build on their own machine through Cargo, which keeps the release process simple and avoids platform-specific binary maintenance.
+4. Download the Windows GitHub Release binary:
 
-## 2. Why Not Prebuilt Binaries Yet
+   - Latest release page: [GitHub Releases](https://github.com/Moore-developers/grok-cli/releases/latest)
+   - Asset: `grok-cli-windows-x86_64-pc-windows-msvc.zip`
+   - Unzip and run `grok-cli.exe`
 
-Skipping prebuilt binaries avoids:
+The project intentionally keeps macOS and Linux source-first so those platforms do not need prebuilt binary maintenance. Windows gets a prebuilt binary because it gives the clearest no-Rust install path and can be published from GitHub Actions with one dedicated build target.
+
+## 2. Why This Split
+
+Keeping only one release binary path avoids:
 
 - macOS codesigning and notarization work.
-- Windows MSVC and antivirus false-positive maintenance.
 - Linux libc / distro compatibility questions.
-- Slow or flaky hosted release runners.
+- Slow or flaky hosted release runners across multiple platforms.
 - Releasing binaries that were not exercised on the maintainer's target machines.
 
-The tradeoff is that users need Rust/Cargo installed. The bundled skill is responsible for detecting that requirement and explaining it clearly.
+Windows gets the binary because it removes the heaviest setup burden for the largest no-Cargo install path.
+
+The tradeoff for macOS and Linux is that users need Rust/Cargo installed. The bundled skill is responsible for detecting that requirement and explaining it clearly.
 
 ## 3. Build From Source
 
@@ -69,7 +79,19 @@ grok-cli --version
 grok-cli --help
 ```
 
-## 4. Maintainer Release Checklist
+This is the recommended path for macOS (Intel and Apple Silicon) and Linux users who want to build locally.
+
+## 4. Windows Binary Install
+
+If the user is on Windows and wants the prebuilt route:
+
+1. Open the [latest GitHub Release](https://github.com/Moore-developers/grok-cli/releases/latest).
+2. Download `grok-cli-windows-x86_64-pc-windows-msvc.zip`.
+3. Unzip it and run `grok-cli.exe --version` and `grok-cli.exe --help`.
+
+If the user prefers a source build on Windows and already has Rust/Cargo installed, `cargo install --git` still works.
+
+## 5. Maintainer Release Checklist
 
 Before tagging:
 
@@ -97,20 +119,22 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-Create a GitHub Release from the tag with release notes only. Do not upload prebuilt binaries unless the release strategy changes.
+GitHub Actions builds the Windows release asset from the tag and attaches it to the GitHub Release together with release notes.
 
-## 5. Future Distribution Options
+## 6. Future Distribution Options
 
 These are intentionally deferred:
 
-- GitHub Release binaries for macOS, Linux, and Windows
+- GitHub Release binaries for macOS and Linux
 - Homebrew tap
 - crates.io
 - winget / Scoop
+- Windows ARM64 release binary
+- Additional installer formats
 
 If demand appears from non-Rust users, add those channels later with explicit platform testing and release ownership.
 
-## 6. User Verification
+## 7. User Verification
 
 After installation, users should verify:
 

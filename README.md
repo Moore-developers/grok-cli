@@ -14,7 +14,7 @@ OAuth-first command-line access to Grok / xAI capabilities.
 - Text-to-speech, batch speech-to-text, and experimental streaming speech-to-text
 - Local session usage accounting in SQLite
 
-The recommended public distribution path is SKILL-first and source-first. A bundled skill at [`skills/grok-cli/SKILL.md`](skills/grok-cli/SKILL.md) can check whether `grok-cli` is installed, install it from GitHub with Cargo when needed, run OAuth login, and then execute the user's Grok task. See [`skills/README.md`](skills/README.md) for skill installation notes.
+The recommended public distribution path is SKILL-first. macOS (Intel and Apple Silicon) and Linux are source-first through Cargo, while Windows users can download a prebuilt GitHub Release binary. A bundled skill at [`skills/grok-cli/SKILL.md`](skills/grok-cli/SKILL.md) can check whether `grok-cli` is installed, install it from GitHub with Cargo when needed, run OAuth login, and then execute the user's Grok task. See [`skills/README.md`](skills/README.md) for skill installation notes.
 
 Text commands are optimized for both humans and automation:
 
@@ -36,6 +36,8 @@ Install directly from GitHub:
 ```bash
 cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
 ```
+
+Windows users can download the latest release binary from [GitHub Releases](https://github.com/Moore-developers/grok-cli/releases/latest).
 
 Log in with the browser:
 

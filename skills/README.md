@@ -7,7 +7,8 @@ This directory contains agent skills that make `grok-cli` easier to use from an 
 The [`grok-cli`](./grok-cli/SKILL.md) skill is the recommended user-facing entry point. It:
 
 - Checks whether `grok-cli` is installed.
-- Installs `grok-cli` from GitHub with Cargo when missing.
+- Prefers GitHub Release binaries on macOS Apple Silicon and Windows x64.
+- Falls back to Cargo source install on macOS Intel and Linux.
 - Checks OAuth status.
 - Runs `grok-cli login` when needed.
 - Resumes the user's original Grok / xAI task.
@@ -28,4 +29,4 @@ npx --yes skills list
 npx --yes skills remove grok-cli --global --yes
 ```
 
-After that, ask your agent to use Grok or xAI. The skill will install the CLI on first use if needed.
+After that, ask your agent to use Grok or xAI. The skill will install the CLI on first use if needed, using a release binary first on covered platforms.

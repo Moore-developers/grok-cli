@@ -29,7 +29,8 @@ Pick the path that matches how you want to use `grok-cli`:
 | Build from source | Cargo | `cargo install --git https://github.com/Moore-developers/grok-cli.git --locked` |
 | Skip Rust and use a prebuilt binary | Release binary | Download from [GitHub Releases](https://github.com/Moore-developers/grok-cli/releases/latest) |
 
-If you are not sure, start with Skill for agent workflows or Cargo for source builds.
+If you are not sure, start with Skill for agent workflows. On macOS Apple Silicon and Windows x64, the bundled skill should prefer the release binary before considering a source build.
+If you do build from source, `grok-cli` requires Rust 1.88+ and the repository toolchain is pinned to Rust 1.92.0.
 
 Text commands are optimized for both humans and automation:
 
@@ -208,6 +209,8 @@ cd grok-cli
 cargo install --path .
 ```
 
+Source installs require Rust 1.88 or newer because the crate uses edition 2024 and declares `rust-version = "1.88"`. The repository toolchain is pinned to Rust 1.92.0 in `rust-toolchain.toml`.
+
 From GitHub after the repository is public:
 
 ```bash
@@ -225,7 +228,7 @@ Covered release assets:
 - macOS Apple Silicon: `grok-cli-macos-aarch64-apple-darwin.tar.gz`
 - Windows x64: `grok-cli-windows-x86_64-pc-windows-msvc.zip`
 
-Each release asset should have a matching `.sha256` checksum file. Prebuilt binaries are intentionally targeted rather than a full platform matrix. The recommended path is `cargo install --git`, or using the bundled [`grok-cli` skill](skills/grok-cli/SKILL.md) to perform installation and command execution automatically.
+Each release asset should have a matching `.sha256` checksum file. Prebuilt binaries are intentionally targeted rather than a full platform matrix. On macOS Apple Silicon and Windows x64, the recommended path is the release binary, either directly or through the bundled [`grok-cli` skill](skills/grok-cli/SKILL.md). On other platforms, use `cargo install --git`.
 
 ## Development
 

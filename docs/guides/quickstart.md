@@ -16,6 +16,8 @@ For source installs:
 cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
 ```
 
+Source installs require Rust 1.88+.
+
 For local development from a checkout:
 
 ```bash

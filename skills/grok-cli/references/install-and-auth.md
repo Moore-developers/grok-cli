@@ -25,15 +25,31 @@ This matters because older pre-release installs can report a valid version while
 
 ## Install Or Repair
 
-If `grok-cli` is missing or incomplete, check Cargo:
+If `grok-cli` is missing or incomplete, first decide whether the platform should use a release binary or a source build:
+
+- macOS Apple Silicon: prefer `grok-cli-macos-aarch64-apple-darwin.tar.gz`
+- Windows x64: prefer `grok-cli-windows-x86_64-pc-windows-msvc.zip`
+- macOS Intel and Linux: use Cargo source install
+
+Only check Cargo for source installs or when the user explicitly wants to build from source:
 
 ```bash
 command -v cargo
 ```
 
+For source installs, also check the compiler version:
+
+```bash
+rustc --version
+```
+
+`grok-cli` source installs require Rust 1.88 or newer because the crate uses edition 2024 and declares `rust-version = "1.88"`. CI and local development are pinned to Rust 1.92.0 via `rust-toolchain.toml`.
+
 If Cargo is missing on macOS Intel or Linux, explain that Rust/Cargo is required and suggest installing Rust with `rustup`.
 
-If Cargo is missing and the user's platform has a covered no-Rust release asset, point them to the GitHub Release page:
+If `rustc` is older than 1.88, explain the requirement explicitly. Do not say only "upgrade Rust". Say that source install requires Rust 1.88+ and that the repository toolchain is currently 1.92.0, then suggest `rustup update` before retrying.
+
+If the user's platform has a covered no-Rust release asset, point them to the GitHub Release page:
 
 ```text
 https://github.com/Moore-developers/grok-cli/releases/latest

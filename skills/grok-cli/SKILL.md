@@ -1,11 +1,11 @@
 ---
 name: grok-cli
-description: Use this skill whenever the user wants to use Grok or xAI through the grok-cli command line, including chat, X search, image generation/editing, video generation/editing/extension, text-to-speech, speech-to-text, OAuth login/status, or local usage stats. This skill should also be used when grok-cli may need to be installed first; it handles checking for the CLI, installing it from GitHub with Cargo, running JSON-mode commands, and resuming the user's original Grok task after login.
+description: Use this skill whenever the user wants to use Grok or xAI through the grok-cli command line, including chat, X search, image generation/editing, video generation/editing/extension, text-to-speech, speech-to-text, OAuth login/status, or local usage stats. This skill should also be used when grok-cli may need to be installed first; it handles checking for the CLI, preferring GitHub Release binaries on covered platforms, falling back to Cargo source install when needed, running JSON-mode commands, and resuming the user's original Grok task after login.
 ---
 
 # Grok CLI Skill
 
-This skill turns a user's Grok / xAI request into a deterministic `grok-cli` workflow. It is SKILL-first. Cargo install works across platforms. macOS Apple Silicon users may also use a maintainer-uploaded GitHub Release tarball when available, Windows users can use the GitHub Actions-built GitHub Release binary, and macOS Intel / Linux users stay source-first through Cargo. If `grok-cli` is missing or missing required command surfaces, install it from GitHub with Cargo, then run the requested command.
+This skill turns a user's Grok / xAI request into a deterministic `grok-cli` workflow. It is SKILL-first. On covered release platforms, prefer the prebuilt GitHub Release binary instead of compiling from source. Today that means macOS Apple Silicon uses the maintainer-uploaded release tarball, Windows x64 uses the GitHub Actions-built release zip, and macOS Intel / Linux stay source-first through Cargo.
 
 Repository:
 
@@ -70,18 +70,38 @@ video-extend
 stt-stream
 ```
 
-If `grok-cli` is missing or any required command is absent, check whether Cargo is available:
+If `grok-cli` is missing or any required command is absent, first identify the platform and choose the install path in this order:
+
+- macOS Apple Silicon: prefer the GitHub Release asset `grok-cli-macos-aarch64-apple-darwin.tar.gz`.
+- Windows x64: prefer the GitHub Release asset `grok-cli-windows-x86_64-pc-windows-msvc.zip`.
+- macOS Intel and Linux: use Cargo source install.
+- If a covered release asset is missing unexpectedly, surface that clearly and only then fall back to Cargo if the user wants a source build.
+
+Only check whether Cargo is available when the platform is source-first or when the user explicitly wants a source build:
 
 ```bash
 command -v cargo
 ```
 
-Use GitHub Release binaries only when the user's platform is covered and they prefer a no-Cargo route:
+For source installs, also check the active compiler version:
+
+```bash
+rustc --version
+```
+
+`grok-cli` source installs require Rust 1.88 or newer because the crate uses edition 2024 and declares `rust-version = "1.88"`. CI and local development are pinned to Rust 1.92.0 through `rust-toolchain.toml`.
+
+Use GitHub Release binaries by default when the user's platform is covered:
 
 - macOS Apple Silicon: `grok-cli-macos-aarch64-apple-darwin.tar.gz`
 - Windows x64: `grok-cli-windows-x86_64-pc-windows-msvc.zip`
 
-If Cargo is missing, prefer one of those Release binaries on supported platforms instead of forcing a Rust install. For macOS Intel and Linux, do not invent a binary install path; tell the user they need Rust/Cargo first and point them to install Rust with `rustup`.
+If Cargo is missing on macOS Intel or Linux, do not invent a binary install path; tell the user they need Rust/Cargo first and point them to install Rust with `rustup`.
+
+If `rustc --version` is older than 1.88, stop and explain the exact requirement instead of telling the user to "upgrade Rust" generically. Say that `grok-cli` source install requires Rust 1.88+ and that the repository toolchain is currently 1.92.0. Then suggest either:
+
+- using the release binary on macOS Apple Silicon or Windows x64, or
+- running `rustup update` before retrying the source install on source-first platforms.
 
 For Release binary installs:
 
@@ -93,7 +113,7 @@ For Release binary installs:
 6. Run `grok-cli --version` and `grok-cli --help`.
 7. Resume the original Grok task after verification.
 
-If Cargo exists, install from the latest repository state when the user asked for latest:
+If Cargo is the chosen path, install from the latest repository state when the user asked for latest:
 
 ```bash
 cargo install --git https://github.com/Moore-developers/grok-cli.git --locked --force

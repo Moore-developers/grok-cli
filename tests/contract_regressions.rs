@@ -172,6 +172,10 @@ fn bundled_skill_requires_command_surface_check() {
     }
 
     assert!(install_ref.contains("grok-cli --help"));
+    assert!(install_ref.contains("rustc --version"));
+    assert!(install_ref.contains("Rust 1.88 or newer"));
+    assert!(install_ref.contains("Rust 1.92.0"));
+    assert!(install_ref.contains("rust-version = \"1.88\""));
     assert!(install_ref.contains(&install_command_fragment));
     assert!(install_ref.contains("grok-cli-macos-aarch64-apple-darwin.tar.gz"));
     assert!(install_ref.contains("grok-cli-windows-x86_64-pc-windows-msvc.zip"));
@@ -197,6 +201,10 @@ fn bundled_skill_requires_command_surface_check() {
     assert!(readme_zh.contains("grok-cli-macos-aarch64-apple-darwin.tar.gz"));
     assert!(readme_zh.contains("grok-cli-windows-x86_64-pc-windows-msvc.zip"));
     assert!(skill.contains("What Users Can Do Through This Skill"));
+    assert!(skill.contains("Rust 1.88 or newer"));
+    assert!(skill.contains("Rust 1.92.0"));
+    assert!(skill.contains("rustc --version"));
+    assert!(skill.contains("rust-version = \"1.88\""));
     assert!(skill.contains("Skill Test Prompts"));
     assert!(skill.contains("Common Parameter Cheat Sheet"));
     assert!(skill.contains("Reference Map"));

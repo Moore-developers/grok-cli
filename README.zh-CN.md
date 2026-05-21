@@ -29,7 +29,8 @@ OpenClaw 和 Hermes Agent 覆盖官方支持的集成路径；`grok-cli` 适合 
 | 从源码安装 | Cargo | `cargo install --git https://github.com/Moore-developers/grok-cli.git --locked` |
 | 跳过 Rust，直接用预编译产物 | Release binary | 从 [GitHub Releases](https://github.com/Moore-developers/grok-cli/releases/latest) 下载 |
 
-如果你不确定，agent 工作流优先选 Skill，源码构建优先选 Cargo。
+如果你不确定，agent 工作流优先选 Skill。对 macOS Apple Silicon 和 Windows x64，内置 skill 应该先优先使用 release binary，再考虑源码安装。
+如果你要走源码安装，`grok-cli` 需要 Rust 1.88+，仓库默认工具链固定在 Rust 1.92.0。
 
 ## 给人用
 
@@ -210,6 +211,8 @@ cd grok-cli
 cargo install --path .
 ```
 
+源码安装要求 Rust 1.88 或更新版本，因为当前 crate 使用 edition 2024，并在 `Cargo.toml` 里声明了 `rust-version = "1.88"`。仓库默认工具链在 `rust-toolchain.toml` 中固定为 Rust 1.92.0。
+
 GitHub 仓库公开后，可以直接安装：
 
 ```bash
@@ -227,7 +230,7 @@ cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.
 - macOS Apple Silicon：`grok-cli-macos-aarch64-apple-darwin.tar.gz`
 - Windows x64：`grok-cli-windows-x86_64-pc-windows-msvc.zip`
 
-每个发布产物都应该有一个同名 `.sha256` 校验文件。预构建二进制包不是完整平台矩阵，而是按当前可维护的平台提供。推荐使用 `cargo install --git`，或者通过内置 [`grok-cli` skill](skills/grok-cli/SKILL.md) 自动完成安装和命令调用。
+每个发布产物都应该有一个同名 `.sha256` 校验文件。预构建二进制包不是完整平台矩阵，而是按当前可维护的平台提供。对 macOS Apple Silicon 和 Windows x64，推荐直接使用 release binary，或者通过内置 [`grok-cli` skill](skills/grok-cli/SKILL.md) 自动完成安装和命令调用；其他平台再走 `cargo install --git`。
 
 ## 开发
 

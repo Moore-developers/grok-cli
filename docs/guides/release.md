@@ -6,18 +6,20 @@ This document describes the current public release strategy for `grok-cli`.
 
 `grok-cli` is distributed SKILL-first.
 
-- macOS Apple Silicon users can either install from source with Cargo or use a maintainer-uploaded GitHub Release tarball when available.
+- macOS Apple Silicon users should prefer the maintainer-uploaded GitHub Release tarball.
 - macOS Intel and Linux users are source-first: users build or install with Cargo.
-- Windows users can download a GitHub Actions-built GitHub Release binary.
+- Windows x64 users should prefer the GitHub Actions-built GitHub Release binary.
 
 Recommended user paths:
 
-1. Use the bundled [`grok-cli` skill](../../skills/grok-cli/SKILL.md). Install it with `npx --yes skills add Moore-developers/grok-cli --skill grok-cli --global --yes`. See [skills README](../../skills/README.md) for setup notes. The skill checks whether the CLI is installed, installs it from GitHub with Cargo when needed, runs OAuth login, and resumes the user's original Grok task.
-2. Install directly with Cargo on macOS, Linux, or Windows:
+1. Use the bundled [`grok-cli` skill](../../skills/grok-cli/SKILL.md). Install it with `npx --yes skills add Moore-developers/grok-cli --skill grok-cli --global --yes`. See [skills README](../../skills/README.md) for setup notes. The skill checks whether the CLI is installed, prefers the GitHub Release binary on macOS Apple Silicon and Windows x64, falls back to Cargo on source-first platforms, runs OAuth login, and resumes the user's original Grok task.
+2. Install directly with Cargo on macOS, Linux, or Windows when you want a source build:
 
 ```bash
 cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
 ```
+
+Source installs require Rust 1.88 or newer because the crate uses edition 2024 and declares `rust-version = "1.88"`. The repository toolchain is pinned to Rust 1.92.0 in `rust-toolchain.toml`.
 
 3. Install a tagged version from source on macOS, Linux, or Windows:
 
@@ -45,7 +47,7 @@ Keeping only the platforms we can own avoids:
 - Slow or flaky hosted release runners across every platform.
 - Releasing binaries that were not exercised on the maintainer's target machines.
 
-Windows gets a CI binary because it removes the heaviest setup burden for the largest no-Cargo install path. macOS Apple Silicon can get a local maintainer-built tarball because it is fast to build and directly test on the maintainer machine.
+Windows gets a CI binary because it removes the heaviest setup burden for the largest no-Cargo install path. macOS Apple Silicon gets a local maintainer-built tarball because it is fast to build and directly test on the maintainer machine.
 
 The tradeoff for macOS Intel and Linux is that users need Rust/Cargo installed. The bundled skill is responsible for detecting that requirement and explaining it clearly.
 
@@ -53,7 +55,8 @@ The tradeoff for macOS Intel and Linux is that users need Rust/Cargo installed. 
 
 Requirements:
 
-- Rust toolchain from `rust-toolchain.toml`
+- Rust 1.88+ minimum for source install
+- Rust toolchain from `rust-toolchain.toml` for repository development and CI parity
 - A C toolchain supported by Rust
 
 Build:

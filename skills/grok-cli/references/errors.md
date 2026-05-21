@@ -23,6 +23,8 @@
 - `xai_oauth_tier_denied`: account/tier permission issue; do not promise reinstall or relogin will fix it.
 - Credential validation messages such as `bad-credentials`: run `grok-cli refresh --json`, then `grok-cli status --json`, and retry the original command once before asking the user to log in again.
 
+The recovery order is install, status, login if required, refresh if credentials are stale, permission check, then the user's original command. Do not skip from install directly to the user's command.
+
 ## Invalid Arguments
 
 If the CLI returns `invalid_args`, fix the command shape:

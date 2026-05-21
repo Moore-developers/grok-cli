@@ -108,6 +108,22 @@ Check status before real Grok calls:
 grok-cli status --json
 ```
 
+Readiness flow before the user's requested task:
+
+1. Install or repair `grok-cli`.
+2. Run `grok-cli --version` and `grok-cli --help`.
+3. Run `grok-cli status --json`.
+4. If auth is missing, invalid, or relogin is required, run `grok-cli login`, then `grok-cli status --json`.
+5. Verify permission with a minimal real capability check before the user's command. For text and search tasks, use:
+
+```bash
+grok-cli chat --json --no-stream --prompt "Reply with exactly: ok" --timeout 120
+```
+
+6. If the permission check returns stale credentials such as `bad-credentials`, run `grok-cli refresh --json`, then `grok-cli status --json`, and retry the permission check once.
+7. If the permission check returns `entitlement_denied` or `xai_oauth_tier_denied`, explain the account/tier blocker and stop before running the user's requested command.
+8. Only run the user's original Grok command after login and permission are verified.
+
 Public OAuth and state flags:
 
 - `login`: `--json`, `--auth-file <PATH>`, `--no-browser`, `--manual-paste`, `--timeout <SECONDS>`, `--port <PORT>`.

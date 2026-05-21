@@ -176,6 +176,8 @@ fn bundled_skill_requires_command_surface_check() {
     assert!(install_ref.contains("grok-cli status --json"));
     assert!(install_ref.contains("bad-credentials"));
     assert!(install_ref.contains("grok-cli refresh --json"));
+    assert!(install_ref.contains("Readiness flow before the user's requested task"));
+    assert!(install_ref.contains("Only run the user's original Grok command after login and permission are verified"));
     assert!(install_ref.contains("rustc --version"));
     assert!(install_ref.contains("Rust 1.88 or newer"));
     assert!(install_ref.contains("Rust 1.92.0"));
@@ -205,6 +207,10 @@ fn bundled_skill_requires_command_surface_check() {
     assert!(readme_zh.contains("grok-cli-macos-aarch64-apple-darwin.tar.gz"));
     assert!(readme_zh.contains("grok-cli-windows-x86_64-pc-windows-msvc.zip"));
     assert!(skill.contains("What Users Can Do Through This Skill"));
+    assert!(skill.contains("Readiness Gate"));
+    assert!(skill.contains("Verify permission with a minimal real command"));
+    assert!(skill.contains("Reply with exactly: ok"));
+    assert!(skill.contains("Do not run the user's requested Grok task until this gate passes"));
     assert!(skill.contains("grok-cli status --json"));
     assert!(skill.contains("bad-credentials"));
     assert!(skill.contains("grok-cli refresh --json"));
@@ -260,6 +266,7 @@ fn bundled_skill_requires_command_surface_check() {
     assert!(advanced_ref.contains("video-extend"));
     assert!(advanced_ref.contains("--auth-file"));
     assert!(errors_ref.contains("bad-credentials"));
+    assert!(errors_ref.contains("install, status, login if required, refresh if credentials are stale, permission check"));
     assert!(errors_ref.contains("Sparse Search Results"));
     assert!(advanced_ref.contains("stt-stream"));
     assert!(advanced_ref.contains("endpointing"));

@@ -61,7 +61,7 @@ grok-cli --version
 grok-cli --help
 ```
 
-Version alone is not enough. `v0.1.0` was retagged during pre-release validation, so an older local binary can still report `grok-cli 0.1.0` while missing newer commands. Verify that top-level help includes these required commands:
+Version alone is not enough. Older pre-release installs can report a valid version while missing newer commands. Verify that top-level help includes these required commands:
 
 ```text
 image-edit
@@ -102,7 +102,7 @@ cargo install --git https://github.com/Moore-developers/grok-cli.git --locked --
 For a pinned public version:
 
 ```bash
-cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.0 --locked --force
+cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.1 --locked --force
 ```
 
 After installation, verify:

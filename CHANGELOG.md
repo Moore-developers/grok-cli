@@ -6,10 +6,16 @@ The project follows semantic versioning once public releases begin.
 
 ## Unreleased
 
+No changes yet.
+
+## 0.1.1 - 2026-05-21
+
 ### Changed
 
 - Switched the first public release strategy to SKILL-first / source-first distribution.
 - Added a bundled `grok-cli` skill that can check installation, install the CLI with Cargo, handle OAuth, and route Grok tasks through JSON-mode commands.
+- Added GitHub Release packaging guidance for maintainer-built macOS Apple Silicon assets and GitHub Actions-built Windows x64 assets.
+- Added English default documentation with a Chinese mirror under `docs/zh/`.
 
 ## 0.1.0 - 2026-05-21
 

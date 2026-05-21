@@ -200,7 +200,7 @@ cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
 安装指定 tag：
 
 ```bash
-cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.0 --locked
+cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.1 --locked
 ```
 
 已覆盖的 Release 产物：
@@ -229,7 +229,7 @@ cargo build --release
 打包并上传本地 macOS Apple Silicon 发布产物：
 
 ```bash
-scripts/package-local-macos-release.sh v0.1.0 --upload
+scripts/package-local-macos-release.sh v0.1.1 --upload
 ```
 
 安装本地版本：

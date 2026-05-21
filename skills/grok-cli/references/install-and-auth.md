@@ -21,7 +21,7 @@ video-extend
 stt-stream
 ```
 
-This matters because a local binary can report `grok-cli 0.1.0` while still being installed before the public `v0.1.0` tag was finalized.
+This matters because older pre-release installs can report a valid version while still missing newer commands.
 
 ## Install Or Repair
 
@@ -61,7 +61,7 @@ Release binary install flow:
 Pinned public install:
 
 ```bash
-cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.0 --locked --force
+cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.1 --locked --force
 ```
 
 Latest repository install:

@@ -198,7 +198,7 @@ cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
 From a tag:
 
 ```bash
-cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.0 --locked
+cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.1 --locked
 ```
 
 Covered release assets:
@@ -227,7 +227,7 @@ cargo build --release
 Package and upload a local macOS Apple Silicon release asset:
 
 ```bash
-scripts/package-local-macos-release.sh v0.1.0 --upload
+scripts/package-local-macos-release.sh v0.1.1 --upload
 ```
 
 Install the local release binary:

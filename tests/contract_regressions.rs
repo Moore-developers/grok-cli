@@ -3,6 +3,7 @@ use predicates::prelude::*;
 use tempfile::tempdir;
 
 use std::fs;
+use std::path::Path;
 
 #[test]
 fn top_level_help_lists_all_primary_command_groups() {
@@ -112,4 +113,40 @@ fn state_reports_invalid_json_as_state_error() {
         .stdout(predicate::str::contains("\"command\":\"state\""))
         .stdout(predicate::str::contains("\"code\":\"state_file_invalid\""))
         .stdout(predicate::str::contains("invalid json:"));
+}
+
+#[test]
+fn bundled_skill_requires_command_surface_check() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let skill = fs::read_to_string(root.join("skills/grok-cli/SKILL.md")).unwrap();
+    let install_ref =
+        fs::read_to_string(root.join("skills/grok-cli/references/install-and-auth.md")).unwrap();
+
+    for reference in [
+        "references/install-and-auth.md",
+        "references/commands-basic.md",
+        "references/commands-media.md",
+        "references/commands-advanced.md",
+        "references/errors.md",
+        "references/outputs.md",
+    ] {
+        assert!(
+            skill.contains(reference),
+            "SKILL.md should point to {reference}"
+        );
+    }
+
+    for command in ["image-edit", "video-edit", "video-extend", "stt-stream"] {
+        assert!(
+            skill.contains(command),
+            "SKILL.md should verify the {command} command surface"
+        );
+        assert!(
+            install_ref.contains(command),
+            "install reference should verify the {command} command surface"
+        );
+    }
+
+    assert!(install_ref.contains("grok-cli --help"));
+    assert!(install_ref.contains("--tag v0.1.0 --locked --force"));
 }

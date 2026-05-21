@@ -5,7 +5,7 @@ description: Use this skill whenever the user wants to use Grok or xAI through t
 
 # Grok CLI Skill
 
-This skill turns a user's Grok / xAI request into a deterministic `grok-cli` workflow. It is SKILL-first and source-first: users do not need prebuilt release binaries. If `grok-cli` is missing, install it from GitHub with Cargo, then run the requested command.
+This skill turns a user's Grok / xAI request into a deterministic `grok-cli` workflow. It is SKILL-first and source-first: users do not need prebuilt release binaries. If `grok-cli` is missing or missing required command surfaces, install it from GitHub with Cargo, then run the requested command.
 
 Repository:
 
@@ -16,7 +16,7 @@ https://github.com/Moore-developers/grok-cli
 ## Core Workflow
 
 1. Identify the user's intended Grok capability.
-2. Ensure `grok-cli` is installed and runnable.
+2. Ensure `grok-cli` is installed, runnable, and exposes the required commands.
 3. Check OAuth status with `grok-cli status --json`.
 4. If login is missing or expired, run `grok-cli login`.
 5. Resume the original user task with the correct `grok-cli` command.
@@ -31,9 +31,19 @@ First check whether the command exists:
 ```bash
 command -v grok-cli
 grok-cli --version
+grok-cli --help
 ```
 
-If `grok-cli` is missing, check whether Cargo is available:
+Version alone is not enough. `v0.1.0` was retagged during pre-release validation, so an older local binary can still report `grok-cli 0.1.0` while missing newer commands. Verify that top-level help includes these required commands:
+
+```text
+image-edit
+video-edit
+video-extend
+stt-stream
+```
+
+If `grok-cli` is missing or any required command is absent, check whether Cargo is available:
 
 ```bash
 command -v cargo
@@ -41,7 +51,7 @@ command -v cargo
 
 If Cargo is missing, tell the user they need Rust/Cargo first and point them to install Rust with `rustup`. Do not attempt a prebuilt binary install path; this project intentionally uses source-first distribution.
 
-If Cargo exists, install from the latest repository state:
+If Cargo exists, install from the latest repository state when the user asked for latest:
 
 ```bash
 cargo install --git https://github.com/Moore-developers/grok-cli.git --locked --force
@@ -59,6 +69,8 @@ After installation, verify:
 grok-cli --version
 grok-cli --help
 ```
+
+If reinstalling because a command was missing, rerun the original user task after verification. Do not stop at installation.
 
 ## OAuth Handling
 
@@ -145,6 +157,15 @@ Use `usage` for local usage stats:
 ```bash
 grok-cli usage --json
 ```
+
+For complete command options, read only the relevant reference file:
+
+- `references/install-and-auth.md`: install, upgrade, status, login, refresh, logout, state.
+- `references/commands-basic.md`: chat, search, model, usage.
+- `references/commands-media.md`: image, image-edit, video, video-edit, video-extend, tts, stt, stt-stream common use.
+- `references/commands-advanced.md`: advanced flags and combination rules.
+- `references/errors.md`: JSON errors, auth recovery, entitlement handling.
+- `references/outputs.md`: stable JSON fields to read.
 
 ## Error Handling
 

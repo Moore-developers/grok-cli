@@ -62,11 +62,31 @@ Check status before real Grok calls:
 grok-cli status --json
 ```
 
+Public OAuth and state flags:
+
+- `login`: `--json`, `--auth-file <PATH>`, `--no-browser`, `--manual-paste`, `--timeout <SECONDS>`, `--port <PORT>`.
+- `status`: `--json`, `--auth-file <PATH>`.
+- `refresh`: `--json`, `--auth-file <PATH>`.
+- `state`: `--json`, `--auth-file <PATH>`.
+- `logout`: `--json`, `--auth-file <PATH>`.
+
 If auth is missing, expired, invalid, or `relogin_required` is true:
 
 ```bash
 grok-cli login
 grok-cli status --json
+```
+
+Use manual login options when the environment cannot open or receive a browser callback:
+
+```bash
+grok-cli login --no-browser --manual-paste --timeout 300 --port 8787
+```
+
+Use `--auth-file <PATH>` only when the user explicitly wants an alternate local auth state, for example in isolated validation workspaces:
+
+```bash
+grok-cli status --json --auth-file ./tmp/auth.json
 ```
 
 Use refresh when the session exists but the access token is expiring:

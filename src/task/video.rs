@@ -88,8 +88,8 @@ fn execute_video_task(ctx: &AppContext, task: VideoTaskRequest) -> CommandResult
     let model = task.model.clone().unwrap_or_else(|| {
         model::default_model_for_task(state.as_ref(), "video", DEFAULT_VIDEO_MODEL)
     });
-    let request =
-        (task.build_request)(&model).map_err(|error| CommandError::new(command, json_output, error))?;
+    let request = (task.build_request)(&model)
+        .map_err(|error| CommandError::new(command, json_output, error))?;
     let created = upstream::post_json_api_with_options(
         ctx,
         task.common.auth_file.as_deref(),
@@ -861,7 +861,10 @@ mod tests {
         opts.video_url = None;
         opts.video = Some(video);
         let request = build_edit_request(&opts, "grok-imagine-video").unwrap();
-        assert_eq!(request["video"]["url"], "data:video/mp4;base64,ZmFrZS1tcDQ=");
+        assert_eq!(
+            request["video"]["url"],
+            "data:video/mp4;base64,ZmFrZS1tcDQ="
+        );
     }
 
     #[test]

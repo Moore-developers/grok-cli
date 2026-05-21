@@ -268,7 +268,9 @@ fn task_video_edit_rejects_missing_video_url() {
         .assert()
         .code(2)
         .stdout(predicate::str::contains("\"code\":\"invalid_args\""))
-        .stdout(predicate::str::contains("--video-url or --video is required"));
+        .stdout(predicate::str::contains(
+            "--video-url or --video is required",
+        ));
 }
 
 #[test]
@@ -286,7 +288,9 @@ fn task_video_edit_accepts_local_video_file() {
         let (mut stream, _) = listener.accept().unwrap();
         let create_request = read_request(&mut stream);
         assert!(create_request.contains("POST /v1/videos/edits"));
-        assert!(create_request.contains("\"video\":{\"url\":\"data:video/mp4;base64,ZmFrZS1tcDQ=\"}"));
+        assert!(
+            create_request.contains("\"video\":{\"url\":\"data:video/mp4;base64,ZmFrZS1tcDQ=\"}")
+        );
         write_response(&mut stream, "200 OK", r#"{"request_id":"edit_local"}"#);
 
         let (mut stream, _) = listener.accept().unwrap();

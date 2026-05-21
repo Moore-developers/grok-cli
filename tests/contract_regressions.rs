@@ -119,8 +119,16 @@ fn state_reports_invalid_json_as_state_error() {
 fn bundled_skill_requires_command_surface_check() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let skill = fs::read_to_string(root.join("skills/grok-cli/SKILL.md")).unwrap();
+    let basic_ref =
+        fs::read_to_string(root.join("skills/grok-cli/references/commands-basic.md")).unwrap();
     let install_ref =
         fs::read_to_string(root.join("skills/grok-cli/references/install-and-auth.md")).unwrap();
+    let advanced_ref =
+        fs::read_to_string(root.join("skills/grok-cli/references/commands-advanced.md")).unwrap();
+    let media_ref =
+        fs::read_to_string(root.join("skills/grok-cli/references/commands-media.md")).unwrap();
+    let skill_validation =
+        fs::read_to_string(root.join("docs/project/skill-validation-cases.md")).unwrap();
 
     for reference in [
         "references/install-and-auth.md",
@@ -149,4 +157,56 @@ fn bundled_skill_requires_command_surface_check() {
 
     assert!(install_ref.contains("grok-cli --help"));
     assert!(install_ref.contains("--tag v0.1.0 --locked --force"));
+    assert!(skill.contains("What Users Can Do Through This Skill"));
+    assert!(skill.contains("Skill Test Prompts"));
+    assert!(skill.contains("Common Parameter Cheat Sheet"));
+    assert!(skill.contains("Reference Map"));
+    assert!(skill.contains("video-extend --video <PATH>"));
+    assert!(skill.contains("not supported"));
+    assert!(skill.contains("--no-browser"));
+    assert!(skill.contains("--manual-paste"));
+    assert!(skill.contains("--port 8787"));
+    assert!(skill.contains("--auth-file <PATH>"));
+    assert!(skill.contains("--session-db <PATH>"));
+    assert!(skill.contains("--session-id <ID>"));
+    assert!(skill.contains("--allowed-domain example.com"));
+    assert!(skill.contains("--allowed-x-handle xAI"));
+    assert!(skill.contains("--stream"));
+    assert!(skill.contains("--raw-stream"));
+    assert!(skill.contains("--count 1-10"));
+    assert!(skill.contains("--aspect-ratio 1:1"));
+    assert!(skill.contains("--resolution 1k"));
+    assert!(skill.contains("--output ./out.mp3"));
+    assert!(skill.contains("--format true"));
+    assert!(skill.contains("--sample-rate 16000"));
+    assert!(media_ref.contains("video-extend"));
+    assert!(media_ref.contains("--video-url"));
+    assert!(media_ref.contains("--video <PATH>"));
+    assert!(media_ref.contains("--reference-image <PATH>"));
+    assert!(media_ref.contains("--optimize-streaming-latency"));
+    assert!(media_ref.contains("--text-normalization"));
+    assert!(media_ref.contains("--endpointing"));
+    assert!(media_ref.contains("--encoding"));
+    assert!(media_ref.contains("upstream internal error"));
+    assert!(basic_ref.contains("--allowed-domain"));
+    assert!(basic_ref.contains("--excluded-domain"));
+    assert!(basic_ref.contains("--allowed-x-handle"));
+    assert!(basic_ref.contains("--excluded-x-handle"));
+    assert!(basic_ref.contains("--from-date"));
+    assert!(basic_ref.contains("--to-date"));
+    assert!(basic_ref.contains("--stream"));
+    assert!(basic_ref.contains("--raw-stream"));
+    assert!(basic_ref.contains("--allowed-domain"));
+    assert!(basic_ref.contains("--allowed-x-handle"));
+    assert!(advanced_ref.contains("video-edit"));
+    assert!(advanced_ref.contains("video-extend"));
+    assert!(advanced_ref.contains("--auth-file"));
+    assert!(advanced_ref.contains("stt-stream"));
+    assert!(advanced_ref.contains("endpointing"));
+    assert!(skill_validation.contains("A1 | `login`"));
+    assert!(skill_validation.contains("A27 | `stt-stream`"));
+    assert!(skill_validation.contains("P1 | `login`"));
+    assert!(skill_validation.contains("P15 | `stt-stream`"));
+    assert!(skill_validation.contains("本地文件场景"));
+    assert!(skill_validation.contains("N1. 不应编造本地视频扩展命令"));
 }

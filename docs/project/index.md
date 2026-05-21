@@ -10,6 +10,7 @@
 4. [发布前最终验证计划](./pre-release-validation-plan.md)
 5. [发布前验证结果](./pre-release-validation-results.md)
 6. [参数真实补测计划与结果](./parameter-validation-plan.md)
+7. [SKILL 路由验证用例](./skill-validation-cases.md)
 
 ## 文档职责
 
@@ -46,6 +47,10 @@
 ### [参数真实补测计划与结果](./parameter-validation-plan.md)
 
 记录发布前真实媒体验证后新增的一轮参数补测，重点覆盖本地 path 视频输入、图片落盘、TTS voice 列表与 STT 高级参数。
+
+### [SKILL 路由验证用例](./skill-validation-cases.md)
+
+记录 `skills/grok-cli` 在 Codex 和 Claude Code 中的自然语言触发样例，重点验证命令路由、参数形状和不支持能力的拦截行为。
 
 ## 使用建议
 

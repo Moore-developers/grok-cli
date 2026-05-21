@@ -24,6 +24,33 @@ https://github.com/Moore-developers/grok-cli
 
 Keep the original task in mind while handling installation or login. Authentication and installation are setup steps, not the final answer.
 
+## What Users Can Do Through This Skill
+
+Users should be able to rely on this skill as the primary interface for `grok-cli`. Route requests to these supported capabilities:
+
+- General Grok reasoning and writing with `chat`
+- X / Twitter search with `search`
+- Image generation with `image`
+- Image editing with `image-edit`
+- Video generation with `video`
+- Video editing with `video-edit`
+- Video extension with `video-extend`
+- Text-to-speech with `tts`
+- Batch speech-to-text with `stt`
+- Experimental streaming speech-to-text with `stt-stream`
+- OAuth install / login / refresh / status / logout / state
+- Local usage inspection with `usage`
+
+Important support rules:
+
+- `video` supports text-to-video, `--image-url`, local `--image`, `--reference-image-url`, and local `--reference-image`.
+- `video-edit` supports both `--video-url` and local `--video`.
+- `video-extend` supports `--video-url` only.
+- Do not offer `video-extend --video <PATH>`. Real validation showed that local MP4 input can reach xAI, but extension generation ends in upstream internal error. Users should upload the video first and then use `--video-url`.
+- `image-edit --image` accepts local paths and remote URLs.
+- `stt` supports local files and remote `--url`.
+- `stt-stream` is experimental; prefer `stt` unless the user explicitly needs streaming behavior.
+
 ## Installation Check
 
 First check whether the command exists:
@@ -158,14 +185,75 @@ Use `usage` for local usage stats:
 grok-cli usage --json
 ```
 
-For complete command options, read only the relevant reference file:
+## Common Parameter Cheat Sheet
 
-- `references/install-and-auth.md`: install, upgrade, status, login, refresh, logout, state.
-- `references/commands-basic.md`: chat, search, model, usage.
-- `references/commands-media.md`: image, image-edit, video, video-edit, video-extend, tts, stt, stt-stream common use.
-- `references/commands-advanced.md`: advanced flags and combination rules.
-- `references/errors.md`: JSON errors, auth recovery, entitlement handling.
+Use this page for the usual knobs and a few representative values. If the user asks for a rare flag, an exact value range, or a long combination rule, stop here and open the matching reference file below instead of trying to squeeze everything into the main SKILL.
+
+- `login`: use `--no-browser`, `--manual-paste`, `--timeout 300`, and `--port 8787` when the machine cannot complete a normal browser callback.
+- `status`, `refresh`, `logout`, `state`: use `--auth-file <PATH>` when the user wants an alternate local OAuth state file.
+- `model`: use `--model grok-4.3` to set the shared default text model for `chat` and `search`.
+- `usage`: use `--session-db <PATH>` and `--session-id <ID>` for a specific local usage record.
+- `chat`: use `--prompt` or a positional prompt, `--system`, `--model`, `--no-web-search`, `--with-x-search`, `--allowed-domain example.com`, `--stream`, `--no-stream`, `--raw-stream`, and `--timeout 3600`.
+- `search`: use `--query` or a positional query, `--model`, `--allowed-x-handle xAI`, `--from-date 2026-05-01`, `--to-date 2026-05-21`, `--stream`, `--no-stream`, `--raw-stream`, and `--timeout 3600`.
+- `image`: use `--count 1-10`, `--response-format url|b64_json`, `--output-file <PATH>`, `--output-dir <PATH>`, `--aspect-ratio 1:1`, and `--resolution 1k`.
+- `image-edit`: use repeat `--image` up to 3 times, `--output-file <PATH>`, and `--response-format b64_json` when writing locally.
+- `video`: use `--image ./source.png`, `--reference-image ./a.png`, `--duration 8`, `--aspect-ratio 16:9`, and `--resolution 720p`.
+- `video-edit`: use `--video ./source.mp4` or `--video-url https://...`.
+- `video-extend`: use `--video-url https://...` and `--duration 6`.
+- `tts`: use `--list-voices`, `--text`, `--voice-id ara`, `--language en`, `--output ./out.mp3`, and `--output-format mp3`.
+- `stt`: use `--file ./sample.wav`, `--url`, `--language auto`, `--format true`, `--diarize`, `--keyterm Grok`, and `--filler-words`.
+- `stt-stream`: use `--file ./sample.wav`, `--interim-results`, `--language auto`, and `--sample-rate 16000`.
+
+## Reference Map
+
+Use the matching reference file when the user wants exact flag behavior, uncommon combinations, or the full parameter surface:
+
+- `references/install-and-auth.md`: install, status, login, refresh, logout, state, and auth-file handling.
+- `references/commands-basic.md`: chat, search, model, usage, and text-command filters.
+- `references/commands-media.md`: image, image-edit, video, video-edit, video-extend, TTS, and STT common use.
+- `references/commands-advanced.md`: exact values, rare flags, combination rules, and edge cases.
+- `references/errors.md`: JSON errors, auth recovery, and entitlement handling.
 - `references/outputs.md`: stable JSON fields to read.
+
+When the user gives a local media path:
+
+- `image-edit --image ./file.png`: supported
+- `video --image ./file.png`: supported
+- `video --reference-image ./file.png`: supported
+- `video-edit --video ./file.mp4`: supported
+- `video-extend --video ./file.mp4`: not supported in the current public skill surface; convert to a remote URL workflow instead
+
+## Skill Test Prompts
+
+Use these prompts to verify that Codex or Claude Code routes through this skill correctly and picks the expected `grok-cli` command shape. For the full matrix, including every public capability and local-file coverage, use:
+
+- `docs/project/skill-validation-cases.md`
+
+Minimum routing checks:
+
+- `用 Grok 总结一下最近关于 Rust CLI 设计的讨论，返回结构化结果`
+  Expected route: `grok-cli chat --json --prompt ...`
+- `搜索一下 X 上大家今天怎么评价 Grok CLI`
+  Expected route: `grok-cli search --json --query ...`
+- `生成一张 1:1 的极简终端图标，保存到本地`
+  Expected route: `grok-cli image --json --prompt ... --aspect-ratio 1:1 --output-file ...`
+- `把这张图片改得更像命令行工具封面：./source.png`
+  Expected route: `grok-cli image-edit --json --image ./source.png --prompt ...`
+- `用这张本地图片做一个短视频：./source.png`
+  Expected route: `grok-cli video --json --prompt ... --image ./source.png`
+- `编辑这个本地视频，让画面更有电影感：./source.mp4`
+  Expected route: `grok-cli video-edit --json --video ./source.mp4 --prompt ...`
+- `把这个视频再延长两秒：https://example.com/source.mp4`
+  Expected route: `grok-cli video-extend --json --video-url https://example.com/source.mp4 --duration 2 --prompt ...`
+- `把这段文字转成 ara 声音的 mp3 并保存`
+  Expected route: `grok-cli tts --json --text ... --voice-id ara --output ... --output-format mp3`
+- `转写这个音频，并保留关键词 Grok 和 CLI：./sample.wav`
+  Expected route: `grok-cli stt --json --file ./sample.wav --keyterm Grok --keyterm CLI ...`
+
+Negative routing checks:
+
+- If the user asks to extend a local video file directly, the skill must not invent `video-extend --video ./source.mp4`.
+- Instead, the skill should explain that `video-extend` currently requires a remote URL and ask for or help produce an upload URL workflow.
 
 ## Error Handling
 

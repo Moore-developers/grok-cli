@@ -1,26 +1,26 @@
 # `grok-cli image-edit`
 
-## 用途
+## Purpose
 
-使用 Grok Imagine 编辑一张或多张参考图片。
+Edit one or more reference images with Grok Imagine.
 
-该命令独立于 [`image`](./image.md) 生成主命令，避免把“纯生成”和“基于参考图编辑”混在同一个入口里。
+This command is separate from [`image`](./image.md) so that pure generation and reference-image editing do not share one entrypoint.
 
-## 常用方式
+## Common Usage
 
-编辑单张图片：
+Edit one image:
 
 ```bash
 grok-cli image-edit --image ./source.png --prompt "Make it cinematic"
 ```
 
-使用远程图片 URL：
+Use a remote image URL:
 
 ```bash
 grok-cli image-edit --image https://example.com/source.png --prompt "Change the background to sunset"
 ```
 
-多图编辑，最多 3 张：
+Edit multiple images, up to 3:
 
 ```bash
 grok-cli image-edit \
@@ -30,39 +30,39 @@ grok-cli image-edit \
   --prompt "Blend these references into one editorial image"
 ```
 
-保存 base64 编辑结果：
+Save a base64 edit result:
 
 ```bash
 grok-cli image-edit --image ./source.png --prompt "Make it cinematic" --output-file ./out/edited.png
 ```
 
-## 参数
+## Parameters
 
-- `PROMPT`：位置参数，编辑提示词。
-- `--prompt <PROMPT>`：脚本友好的显式提示词参数。
-- `--image <PATH_OR_URL>`：输入图片，可重复，最多 3 张；支持本地路径、`http(s)` URL 或 data URI。
-- `--json`：使用统一 JSON 信封输出。
-- `--auth-file <PATH>`：覆盖 OAuth 状态文件路径。
-- `--model <MODEL>`：仅覆盖本次图片编辑请求的模型。
-- `--aspect-ratio <RATIO>`：输出比例，例如 `16:9` 或 `1:1`。
-- `--resolution <VALUE>`：输出分辨率，例如 `1k`。
-- `--response-format <url|b64_json>`：显式控制图片返回 URL 或 base64。
-- `--output-file <PATH>`：要求上游返回 base64，并保存为本地文件。
-- `--timeout <SECONDS>`：请求超时，默认 `120` 秒。
+- `PROMPT`: positional edit prompt.
+- `--prompt <PROMPT>`: explicit script-friendly prompt.
+- `--image <PATH_OR_URL>`: reference image input, repeatable up to 3 times; supports local paths, `http(s)` URLs, or data URIs.
+- `--json`: use the standard JSON envelope.
+- `--auth-file <PATH>`: override the OAuth state file path.
+- `--model <MODEL>`: override the model for this image edit request only.
+- `--aspect-ratio <RATIO>`: output ratio, such as `16:9` or `1:1`.
+- `--resolution <VALUE>`: output resolution, such as `1k`.
+- `--response-format <url|b64_json>`: explicitly choose URL or base64 output.
+- `--output-file <PATH>`: require base64 output and save one local file.
+- `--timeout <SECONDS>`: request timeout, default `120`.
 
-## 行为规格
+## Behavior
 
-- 默认模型为 `grok-imagine-image`。
-- 单张图片请求发送官方字段 `image`，多张图片请求发送官方字段 `images`。
-- 本地图片会编码成 `data:image/<ext>;base64,...` 后作为 image URL 输入。
-- `--image` 超过 3 个会返回 `invalid_args`。
-- `--output-file` 会隐式使用 `response_format=b64_json`。
-- 如果显式传 `--response-format url`，不能同时使用 `--output-file`。
-- 成功后写入本地 usage SQLite 的 image 分类。
+- Default model is `grok-imagine-image`.
+- One image sends official field `image`; multiple images send official field `images`.
+- Local images are encoded as `data:image/<ext>;base64,...` before being sent as image URLs.
+- More than 3 images returns `invalid_args`.
+- `--output-file` implicitly uses `response_format=b64_json`.
+- If `--response-format url` is passed explicitly, it cannot be combined with `--output-file`.
+- Successful calls are written to the local usage SQLite database under image usage.
 
-## JSON 输出重点
+## JSON Fields
 
-`data` 中包含：
+`data` contains:
 
 - `provider`
 - `credential_source`
@@ -72,11 +72,12 @@ grok-cli image-edit --image ./source.png --prompt "Make it cinematic" --output-f
 - `aspect_ratio`
 - `extra`
 
-兼容性说明：
-- `image` 表示第一张编辑结果或本地落盘路径。
-- `images` 返回完整编辑结果列表；单图时也是只包含一个元素的数组。
+Compatibility note:
 
-## 相关文档
+- `image` is the first edit result or the local file path.
+- `images` returns the full edit result list; single-image calls still return a one-item array.
+
+## Related Docs
 
 - [image](./image.md)
 - [video](./video.md)

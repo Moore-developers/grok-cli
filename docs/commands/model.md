@@ -1,21 +1,21 @@
 # `grok-cli model`
 
-## 用途
+## Purpose
 
-查看并选择文本命令的共享默认模型。`chat` 和 `search` 使用同一个默认模型；切换一次会同时影响两者。
+Inspect and choose the shared default model for text commands. `chat` and `search` share the same default, so changing it once affects both.
 
-`grok-cli mode` 是 `grok-cli model` 的别名。
+`grok-cli mode` is an alias for `grok-cli model`.
 
-## 常用方式
+## Common Usage
 
-交互选择：
+Interactive selection:
 
 ```bash
 grok-cli model
 grok-cli mode
 ```
 
-在交互式终端中会显示以下列表，并支持方向键上下选择，回车确认：
+In an interactive terminal, the command shows the following list and supports arrow-key navigation:
 
 ```text
 grok-4.3
@@ -24,56 +24,56 @@ grok-4.20-0309-reasoning
 exit
 ```
 
-选中模型后会提示：
+After selection, it prints:
 
 ```text
 Model switched to <MODEL>.
 ```
 
-脚本或 SKILL 查看：
+Script or skill lookup:
 
 ```bash
 grok-cli model --json
 ```
 
-脚本或 SKILL 直接设置：
+Script or skill direct selection:
 
 ```bash
 grok-cli model --json --model grok-4.3
 ```
 
-## 参数
+## Parameters
 
-- `--json`：使用统一 JSON 信封输出；不会进入交互选择。
-- `--auth-file <PATH>`：覆盖 OAuth 状态文件路径。
-- `--model <MODEL>`：保存为 `chat` 和 `search` 的共享默认模型。
+- `--json`: use the standard JSON envelope; this skips interactive selection.
+- `--auth-file <PATH>`: override the OAuth state file path.
+- `--model <MODEL>`: save the shared default model for `chat` and `search`.
 
-## 行为规格
+## Behavior
 
-- `grok-cli model` 需要可读取的 auth state。
-- 不再提供 `show`、`list`、`set` 子命令。
-- 未传 `--model` 时，交互终端进入方向键选择；非交互环境输出当前选择和模型目录。
-- 传入 `--model` 时，将共享文本模型写入 `auth.json` 的 metadata。
-- `--command` / `--task` 仅作为隐藏兼容参数保留；公开行为永远是 chat/search 共用同一个模型。
-- 媒体命令如果要指定模型，请直接在 `image`、`image-edit`、`video`、`video-edit`、`video-extend`、`tts`、`stt`、`stt-stream` 上传 `--model`。
+- `grok-cli model` needs a readable auth state.
+- It no longer exposes `show`, `list`, or `set` subcommands.
+- Without `--model`, interactive terminals open the arrow-key selection UI; non-interactive environments print the current selection and model catalog.
+- With `--model`, the shared text model is written to `auth.json` metadata.
+- `--command` and `--task` are preserved only as hidden compatibility parameters. Public behavior always keeps `chat` and `search` on the same model.
+- Media commands should pass `--model` directly on their own command line if they need a model override.
 
-## JSON 输出重点
+## JSON Fields
 
-查看模式的 `data` 包含：
+Lookup mode `data` contains:
 
 - `provider`
 - `selected_model`
 - `selected`
 - `catalog`
 
-设置模式的 `data` 包含：
+Set mode `data` contains:
 
 - `provider`
 - `model`
 - `selected`
 - `catalog`
 
-## 相关文档
+## Related Docs
 
 - [chat](./chat.md)
 - [search](./search.md)

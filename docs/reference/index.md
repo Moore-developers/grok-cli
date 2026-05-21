@@ -1,63 +1,47 @@
 # Reference Index
 
-这个目录放稳定契约、样例输出和内部设计说明。它们偏“是什么”和“为什么这样设计”，不是新用户最短上手路径。
+This directory contains stable contracts, output samples, and internal design notes. These docs are more about what the system is and why it behaves this way than about the fastest way for a new user to get started.
 
-## 文档列表
+## Document List
 
-1. [示例状态与样例输出](./samples.md)
-2. [内部认证救援入口](./internal-auth.md)
-3. [`usage` 命令规格](./usage-command-spec.md)
-4. [SKILL 集成约定](./skill-integration.md)
-5. [后续能力扩展接口](./extension-points.md)
+1. [Sample state and outputs](./samples.md)
+2. [Internal auth recovery entrypoints](./internal-auth.md)
+3. [`usage` command spec](./usage-command-spec.md)
+4. [SKILL integration contract](./skill-integration.md)
+5. [Extension points](./extension-points.md)
 
-## 文档职责
+## Document Responsibilities
 
-### [示例状态与样例输出](./samples.md)
+### [Sample state and outputs](./samples.md)
 
-集中保存 JSON 和 human-readable 输出样例，方便上层脚本、SKILL 或文档读者对照字段。
+This file keeps JSON and human-readable output examples together so scripts, skills, and readers can compare fields directly.
 
-### [内部认证救援入口](./internal-auth.md)
+### [Internal auth recovery entrypoints](./internal-auth.md)
 
-记录不出现在公开 help / README 中的认证救援能力：
+This file records auth recovery capabilities that are not shown in public help or the README:
 
-- `print-authorize-url` 已移除公开入口
-- `exchange-code` 隐藏保留，用于异常授权救援
-- 普通用户应优先使用 `grok-cli login`
+- `print-authorize-url` was removed from the public surface.
+- `exchange-code` remains hidden for exceptional recovery flows.
+- Regular users should prefer `grok-cli login`.
 
-### [`usage` 命令规格](./usage-command-spec.md)
+### [`usage` command spec](./usage-command-spec.md)
 
-保存 `usage` 的深度设计：
+This file captures the deeper design for `usage`:
 
-- JSON 输出结构
-- SQLite session store
-- session events
-- rate-limit snapshots
-- 本地成本估算
+- local session accounting
+- recent rate-limit snapshots
+- text/image/video/audio breakdowns
+- why it is a top-level command
 
-日常使用请看 [commands/usage.md](../commands/usage.md)。
+### [SKILL integration contract](./skill-integration.md)
 
-### [SKILL 集成约定](./skill-integration.md)
+This file describes how the bundled skill should call `grok-cli`:
 
-给上层自动化和 SKILL 使用，重点是：
+- prefer `--json`
+- rely on stable output contracts
+- restore the original task after login or installation
+- do not guess at auth state
 
-- 什么时候用 `--json`
-- 统一成功 / 失败信封
-- 错误码处理建议
-- 认证后如何恢复原始任务
+### [Extension points](./extension-points.md)
 
-### [后续能力扩展接口](./extension-points.md)
-
-给后续开发使用，说明新增能力时应复用哪些稳定边界：
-
-- 命令分层
-- 统一输出契约
-- runtime credentials resolver
-- upstream 执行层
-- 回归测试要求
-
-## 相关入口
-
-- [CLI 命令索引](../commands/index.md)
-- [Guides Index](../guides/index.md)
-- [Project Index](../project/index.md)
-- [总索引](../index.md)
+This file records the stable boundaries that future features should reuse instead of reinventing.

@@ -1,46 +1,48 @@
 # `grok-cli state`
 
-## 用途
+## Purpose
 
-查看本地 OAuth 状态文件的脱敏摘要。`state` 不会调用 xAI 网络接口，只读取本地 `auth.json`。
+Inspect a redacted summary of the local OAuth state file. `state` does not call the xAI network; it only reads local `auth.json`.
 
-如果只想知道当前是否可用，优先使用 [`status`](./status.md)。`state` 主要用于排障时查看本地保存了什么。
+If you only want to know whether the session is currently usable, prefer [`status`](./status.md). `state` is mainly for troubleshooting what was saved locally.
 
-## 常用方式
+## Common Usage
 
 ```bash
 grok-cli state
 grok-cli state --json
 ```
 
-检查指定状态文件：
+Inspect a custom state file:
 
 ```bash
 grok-cli state --auth-file ./auth.json --json
 ```
 
-## 参数
+## Parameters
 
-- `--json`：使用统一 JSON 信封输出。
-- `--auth-file <PATH>`：覆盖 OAuth 状态文件路径。
+- `--json`: use the standard JSON envelope.
+- `--auth-file <PATH>`: override the OAuth state file path.
 
-## 行为规格
+## Behavior
 
-- `state` 直接等价于脱敏 show，不再提供 `path`、`show`、`validate` 子命令。
-- 不会打印完整 token，只显示 token 是否存在、过期状态、provider、auth mode、base URL、last refresh、last auth error 等安全摘要。
-- 状态文件缺失时，返回 `exists: false`，不会自动创建文件。
-- JSON 无法解析或 schema 不满足当前 CLI 需求时，返回 `state_file_invalid`。
+- `state` is a redacted show command. It no longer exposes `path`, `show`, or `validate` subcommands.
+- The command never prints full token values; it only shows whether tokens exist, whether they are expired, and safe summary fields such as provider, auth mode, base URL, last refresh, and last auth error.
 
-## JSON 输出重点
+## JSON Fields
 
-`data` 包含：
+`data` contains:
 
-- `exists`
-- `path`
-- `state`
+- `provider`
+- `auth_mode`
+- `auth_store_path`
+- `base_url`
+- `access_token_present`
+- `refresh_token_present`
+- `access_token_expiring`
+- `last_refresh`
+- `last_auth_error`
 
-## 相关文档
+## Related Docs
 
 - [status](./status.md)
-- [login](./login.md)
-- [样例输出](../reference/samples.md)

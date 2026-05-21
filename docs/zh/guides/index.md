@@ -1,0 +1,51 @@
+# Guides Index
+
+这个目录放用户和发布维护者最常用的操作指南。它们偏“怎么做”，不承担完整参数规格。
+
+## 阅读顺序
+
+1. [快速开始](./quickstart.md)：从安装、登录到第一次真实调用。
+2. [故障排查](./troubleshooting.md)：认证、权限、媒体、stream 等常见问题。
+3. [发布与安装指南](./release.md)：SKILL-first 发布、macOS Apple Silicon 本地构建上传、macOS Intel/Linux source-first、Windows GitHub Release binary、Cargo 安装、版本 tag 和后续分发路径。
+
+## 文档职责
+
+### [快速开始](./quickstart.md)
+
+适合第一次使用 `grok-cli` 的用户。它只保留最短上手路径：
+
+- 编译和测试
+- 查看认证状态
+- 发起浏览器登录
+- 执行 chat / search / media / usage
+- 跳转到更完整的命令参考
+
+### [故障排查](./troubleshooting.md)
+
+适合命令报错时快速定位问题。当前覆盖：
+
+- `state_file_missing`
+- `auth_relogin_required`
+- `xai_oauth_tier_denied`
+- 浏览器授权成功但 CLI 后续失败
+- `stt` 文件和参数问题
+- `chat --stream` 异常
+
+### [发布与安装指南](./release.md)
+
+适合准备把项目发布给其他用户时使用。当前覆盖：
+
+- macOS Apple Silicon 从 GitHub Release 下载维护者本地构建的 tarball，或从 GitHub source 安装
+- macOS Intel / Linux 从 GitHub source 安装
+- Windows 从 GitHub Release 下载 GitHub Actions 构建的预构建 binary
+- 通过仓库内置 `grok-cli` skill 自动安装和调用 CLI
+- 为什么只给当前可维护的平台发布预构建二进制
+- Homebrew / crates.io / winget / Scoop 的后续选择
+- 发布前检查清单
+
+## 相关入口
+
+- [CLI 命令索引](../commands/index.md)
+- [Reference Index](../reference/index.md)
+- [Project Index](../project/index.md)
+- [总索引](../index.md)

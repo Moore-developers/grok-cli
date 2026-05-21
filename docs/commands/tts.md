@@ -1,70 +1,70 @@
 # `grok-cli tts`
 
-## 用途
+## Purpose
 
-将文本转换为语音，并把音频保存为本地文件。
+Convert text to speech and save the audio locally.
 
-## 常用方式
+## Common Usage
 
 ```bash
 grok-cli tts "Hello from Grok"
 ```
 
-指定声音、语言和输出文件：
+Choose voice, language, and output file:
 
 ```bash
-grok-cli tts "你好，我是 Grok" --voice-id eve --language zh --output ./out/grok.mp3
+grok-cli tts "Hello, I am Grok" --voice-id eve --language zh --output ./out/grok.mp3
 ```
 
-脚本或 SKILL：
+Script or skill usage:
 
 ```bash
 grok-cli tts --json --text "Hello from Grok"
 ```
 
-列出可用声音：
+List available voices:
 
 ```bash
 grok-cli tts --list-voices --json
 ```
 
-显式控制输出格式：
+Control output format explicitly:
 
 ```bash
 grok-cli tts "Hello" --output-format mp3 --sample-rate 24000 --bit-rate 128000
 ```
 
-## 参数
+## Parameters
 
-- `TEXT`：位置参数，要合成的文本。
-- `--text <TEXT>`：脚本友好的显式文本参数。
-- `--list-voices`：列出可用 TTS voices，不执行语音合成。
-- `--json`：使用统一 JSON 信封输出。
-- `--auth-file <PATH>`：覆盖 OAuth 状态文件路径。
-- `--voice-id <VOICE>`：声音 id，默认 `eve`。
-- `--language <LANG>`：语言代码，默认 `en`；可传 `auto`。
-- `--output <PATH>`：输出音频路径。
-- `--output-format <FORMAT>`：输出格式，例如 `mp3` 或 `wav`。
-- `--sample-rate <HZ>`：输出采样率。
-- `--bit-rate <BPS>`：输出码率。
-- `--optimize-streaming-latency <MODE>`：透传 xAI TTS 流式延迟优化模式。
-- `--text-normalization <MODE>`：透传 xAI TTS 文本归一化模式。
-- `--model <MODEL>`：命令级模型覆盖参数，当前主要用于兼容和 usage 标记。
-- `--timeout <SECONDS>`：请求超时，默认 `120` 秒。
+- `TEXT`: positional input text.
+- `--text <TEXT>`: explicit script-friendly text.
+- `--list-voices`: list available TTS voices without synthesizing audio.
+- `--json`: use the standard JSON envelope.
+- `--auth-file <PATH>`: override the OAuth state file path.
+- `--voice-id <VOICE>`: voice id, default `eve`.
+- `--language <LANG>`: language code, default `en`; `auto` is allowed.
+- `--output <PATH>`: output audio path.
+- `--output-format <FORMAT>`: output format, such as `mp3` or `wav`.
+- `--sample-rate <HZ>`: output sample rate.
+- `--bit-rate <BPS>`: output bit rate.
+- `--optimize-streaming-latency <MODE>`: pass through xAI TTS streaming latency optimization mode.
+- `--text-normalization <MODE>`: pass through xAI TTS text normalization mode.
+- `--model <MODEL>`: command-level model override, mainly for compatibility and usage tagging.
+- `--timeout <SECONDS>`: request timeout, default `120`.
 
-## 行为规格
+## Behavior
 
-- 默认输出路径在 `~/.hermes/cache/audio/audio_cache/` 下。
-- 如果输出文件扩展名为 `.wav`，请求中会带 `output_format` 为 wav。
-- 如果显式传入 `--output-format`，它必须和 `--output` 文件扩展名一致。
-- xAI TTS 请求体发送 `text`、`voice_id`、`language`，并按参数补充 `output_format`、`optimize_streaming_latency`、`text_normalization`。
-- `--list-voices` 调用 `GET /v1/tts/voices`，返回 voices 列表，不要求提供文本。
-- 发请求前会检查 access token 是否临近过期，必要时先 refresh。
-- 成功后写入本地 usage SQLite 的 audio 分类。
+- Default output path lives under `~/.hermes/cache/audio/audio_cache/`.
+- If the output file extension is `.wav`, the request sends `output_format=wav`.
+- If `--output-format` is passed explicitly, it must match the output file extension.
+- The xAI TTS request body sends `text`, `voice_id`, `language`, and optionally `output_format`, `optimize_streaming_latency`, and `text_normalization`.
+- `--list-voices` calls `GET /v1/tts/voices` and returns a voice list without requiring text.
+- Access token expiry is checked before the request. If needed, the command refreshes first.
+- Successful calls are written to the local usage SQLite database under audio usage.
 
-## JSON 输出重点
+## JSON Fields
 
-`data` 中包含：
+`data` contains:
 
 - `success`
 - `provider`
@@ -74,14 +74,14 @@ grok-cli tts "Hello" --output-format mp3 --sample-rate 24000 --bit-rate 128000
 - `voice_compatible`
 - `output_format`
 
-使用 `--list-voices --json` 时，`data` 中包含：
+When `--list-voices --json` is used, `data` contains:
 
 - `success`
 - `provider`
 - `credential_source`
 - `voices`
 
-## 相关文档
+## Related Docs
 
 - [stt](./stt.md)
 - [usage](./usage.md)

@@ -1,43 +1,43 @@
 # `grok-cli status`
 
-## 用途
+## Purpose
 
-查看当前 OAuth 状态是否可用。它不会发起网络请求，只读取本地 `auth.json` 并判断 token、refresh token、过期状态和错误标记。
+Check whether the current OAuth state is usable. The command does not make network requests; it only reads the local `auth.json` file and inspects token state, refresh token state, expiry, and error flags.
 
-## 常用方式
+## Common Usage
 
 ```bash
 grok-cli status
 ```
 
-脚本或 SKILL：
+Script or skill usage:
 
 ```bash
 grok-cli status --json
 ```
 
-检查指定状态文件：
+Inspect a custom auth file:
 
 ```bash
 grok-cli status --auth-file ./auth.json --json
 ```
 
-## 参数
+## Parameters
 
-- `--json`：使用统一 JSON 信封输出。
-- `--auth-file <PATH>`：覆盖 OAuth 状态文件路径。
+- `--json`: use the standard JSON envelope.
+- `--auth-file <PATH>`: override the OAuth state file path.
 
-## 行为规格
+## Behavior
 
-- 读取并校验 OAuth 状态文件。
-- 非 JSON 输出使用三列表格：字段、当前值、英文说明。
-- 输出 `logged_in`、`access_token_present`、`refresh_token_present`、`access_token_expiring`。
-- 输出 `relogin_required` 和 `entitlement_denied`，便于上层判断是需要重登还是账号权限不足。
-- 不自动 refresh。需要刷新时请使用 [`refresh`](./refresh.md)。
+- Reads and validates the OAuth state file.
+- Non-JSON output uses a three-column table: field, current value, and English explanation.
+- Reports `logged_in`, `access_token_present`, `refresh_token_present`, and `access_token_expiring`.
+- Reports `relogin_required` and `entitlement_denied`, which help upstream callers decide whether to re-login or treat the issue as an entitlement problem.
+- Does not auto-refresh. Use [`refresh`](./refresh.md) when you need to refresh.
 
-## JSON 输出重点
+## JSON Fields
 
-`data` 中包含：
+`data` contains:
 
 - `logged_in`
 - `provider`
@@ -52,7 +52,7 @@ grok-cli status --auth-file ./auth.json --json
 - `last_refresh`
 - `last_auth_error`
 
-## 相关文档
+## Related Docs
 
 - [login](./login.md)
 - [refresh](./refresh.md)

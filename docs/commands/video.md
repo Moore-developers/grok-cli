@@ -1,79 +1,79 @@
 # `grok-cli video`
 
-## 用途
+## Purpose
 
-使用 Grok Imagine 生成视频，支持 text-to-video、image-to-video 和 reference image video。
+Generate video with Grok Imagine, including text-to-video, image-to-video, and reference-image video.
 
-## 常用方式
+## Common Usage
 
-文本生成视频：
+Text-to-video:
 
 ```bash
 grok-cli video "Animate a futuristic skyline" --duration 8
 ```
 
-图片转视频：
+Image-to-video from a URL:
 
 ```bash
 grok-cli video "Make the scene slowly move" --image-url "https://example.com/source.png"
 ```
 
-使用本地图片文件：
+Image-to-video from a local file:
 
 ```bash
 grok-cli video "Make the scene slowly move" --image ./source.png
 ```
 
-参考图视频：
+Reference-image video from a URL:
 
 ```bash
 grok-cli video "Create a product reveal" --reference-image-url "https://example.com/ref-1.png"
 ```
 
-使用本地参考图：
+Reference-image video from local files:
 
 ```bash
 grok-cli video "Create a product reveal" --reference-image ./ref-1.png --reference-image ./ref-2.png
 ```
 
-脚本或 SKILL：
+Script or skill usage:
 
 ```bash
 grok-cli video --json --prompt "Animate a futuristic skyline" --duration 8
 ```
 
-## 参数
+## Parameters
 
-- `PROMPT`：位置参数，视频提示词。
-- `--prompt <PROMPT>`：脚本友好的显式提示词参数。
-- `--json`：使用统一 JSON 信封输出。
-- `--auth-file <PATH>`：覆盖 OAuth 状态文件路径。
-- `--image-url <URL>`：image-to-video 的源图片 URL。
-- `--image <PATH>`：image-to-video 的本地源图片路径。
-- `--reference-image-url <URL>`：参考图 URL，可重复，最多 7 个。
-- `--reference-image <PATH>`：本地参考图路径，可重复，最多 7 个。
-- `--duration <SECONDS>`：视频时长，范围会被归一化。
-- `--aspect-ratio <RATIO>`：比例，支持 `1:1`、`16:9`、`9:16`、`4:3`、`3:4`、`3:2`、`2:3`。
-- `--resolution <VALUE>`：分辨率，支持 `480p`、`720p`。
-- `--model <MODEL>`：仅覆盖本次视频请求的模型。
-- `--timeout <SECONDS>`：整体轮询等待超时，默认 `600` 秒；单次 create / poll HTTP 请求仍固定按 `120` 秒上限处理。
+- `PROMPT`: positional video prompt.
+- `--prompt <PROMPT>`: explicit script-friendly prompt.
+- `--json`: use the standard JSON envelope.
+- `--auth-file <PATH>`: override the OAuth state file path.
+- `--image-url <URL>`: source image URL for image-to-video.
+- `--image <PATH>`: local source image path for image-to-video.
+- `--reference-image-url <URL>`: repeatable reference image URL, up to 7.
+- `--reference-image <PATH>`: repeatable local reference image path, up to 7.
+- `--duration <SECONDS>`: video duration, normalized by the command.
+- `--aspect-ratio <RATIO>`: aspect ratio, supports `1:1`, `16:9`, `9:16`, `4:3`, `3:4`, `3:2`, and `2:3`.
+- `--resolution <VALUE>`: resolution, supports `480p` and `720p`.
+- `--model <MODEL>`: override the model for this video request only.
+- `--timeout <SECONDS>`: total polling timeout, default `600`; individual create / poll requests still use a 120 second ceiling.
 
-## 行为规格
+## Behavior
 
-- 默认模型为 `grok-imagine-video`。
-- `grok-cli model` 不管理视频默认模型；如需切换，请直接传 `--model`。
-- `--image-url`、`--image`、`--reference-image-url`、`--reference-image` 只能选择一种输入模式。
-- `--reference-image-url` 和 `--reference-image` 合计最多 7 个。
-- 本地图片会编码成 data URI 后作为上游 `image.url` 或 `reference_images[].url` 输入。
-- 默认时长为 8 秒，普通视频最大 15 秒，reference image video 最大 10 秒。
-- 默认比例为 `16:9`，默认分辨率为 `720p`。
-- 先请求 `POST /videos/generations`，再轮询 `GET /videos/{request_id}`。
-- 发请求和轮询前都会检查 access token 是否临近过期，必要时先 refresh。
-- 成功后写入本地 usage SQLite 的 video 分类。
+- Default model is `grok-imagine-video`.
+- `grok-cli model` does not manage the video default model; pass `--model` directly when needed.
+- Only one input mode is allowed: `--image-url`, `--image`, `--reference-image-url`, or `--reference-image`.
+- `--reference-image-url` and `--reference-image` together accept up to 7 items.
+- Local images are encoded as data URIs before being sent as `image.url` or `reference_images[].url`.
+- Default duration is 8 seconds. Normal videos max out at 15 seconds. Reference-image videos max out at 10 seconds.
+- Default aspect ratio is `16:9` and default resolution is `720p`.
+- The command first calls `POST /videos/generations`, then polls `GET /videos/{request_id}`.
+- Access token expiry is checked before requests and polling. If needed, the command refreshes first.
+- Successful calls are written to the local usage SQLite database under video usage.
 
-## JSON 输出重点
+## JSON Fields
 
-`data` 中包含：
+`data` contains:
 
 - `provider`
 - `credential_source`
@@ -84,7 +84,7 @@ grok-cli video --json --prompt "Animate a futuristic skyline" --duration 8
 - `duration`
 - `extra.request_id`
 
-## 相关文档
+## Related Docs
 
 - [image](./image.md)
 - [usage](./usage.md)

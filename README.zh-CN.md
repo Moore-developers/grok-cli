@@ -241,12 +241,12 @@ cargo install --path . --force
 ## 文档
 
 - [English README](README.md)
-- [文档索引](docs/index.md)
-- [快速开始](docs/guides/quickstart.md)
-- [命令参考](docs/commands/index.md)
-- [`usage` 命令规格](docs/reference/usage-command-spec.md)
-- [发布与安装指南](docs/guides/release.md)
-- [故障排查](docs/guides/troubleshooting.md)
+- [文档索引](docs/zh/index.md)
+- [快速开始](docs/zh/guides/quickstart.md)
+- [命令参考](docs/zh/commands/index.md)
+- [`usage` 命令规格](docs/zh/reference/usage-command-spec.md)
+- [发布与安装指南](docs/zh/guides/release.md)
+- [故障排查](docs/zh/guides/troubleshooting.md)
 - [更新日志](CHANGELOG.md)
 - [贡献指南](CONTRIBUTING.md)
 - [安全策略](SECURITY.md)

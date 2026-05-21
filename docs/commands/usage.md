@@ -1,69 +1,69 @@
 # `grok-cli usage`
 
-## 用途
+## Purpose
 
-查看本地 session usage。它会从 SQLite session store 中统计文本、图片、视频、音频等使用记录，并格式化打印 token、成本估算和上下文长度。
+Inspect local session usage. The command reads the SQLite session store and summarizes text, image, video, and audio usage, along with token, cost estimate, and context-length information.
 
-默认数据库：
+Default database:
 
 ```text
 ~/.grok-cli/session.db
 ```
 
-## 常用方式
+## Common Usage
 
 ```bash
 grok-cli usage
 ```
 
-只读本地统计，不尝试 provider account lookup：
+Only read local stats and skip any provider account lookup:
 
 ```bash
 grok-cli usage --local-only
 ```
 
-说明：`usage` 现在默认就是本地统计，`--local-only` 只作为旧脚本兼容参数保留，不需要日常使用。
+Note: `usage` now defaults to local-only behavior. `--local-only` exists for compatibility and is not needed day to day.
 
-脚本或 SKILL：
+Script or skill usage:
 
 ```bash
 grok-cli usage --json
 ```
 
-指定 session：
+Inspect a specific session:
 
 ```bash
 grok-cli usage --session-id sess_01_example
 ```
 
-## 参数
+## Parameters
 
-- `--json`：使用统一 JSON 信封输出。
-- `--auth-file <PATH>`：覆盖 OAuth 状态文件路径。
-- `--session-db <PATH>`：覆盖 SQLite session 数据库路径。
-- `--session-id <ID>`：读取指定 session，而不是 active session。
-- `--timeout <SECONDS>`：隐藏兼容参数；当前不查询账号额度。
-- `--local-only`：兼容保留参数；当前只展示本地统计。
+- `--json`: use the standard JSON envelope.
+- `--auth-file <PATH>`: override the OAuth state file path.
+- `--session-db <PATH>`: override the SQLite session database path.
+- `--session-id <ID>`: inspect a specific session instead of the active session.
+- `--timeout <SECONDS>`: hidden compatibility parameter; the command no longer queries account limits.
+- `--local-only`: compatibility parameter; the command already shows local stats only.
 
-## 行为规格
+## Behavior
 
-- 本地统计成功时，命令整体成功。
-- 文本命令统计 token 和成本估算。
-- 图片、视频、音频命令统计请求次数、模型和 rate-limit 快照；没有 token 时显示为 0 或 `n/a`。
-- token 显示会按 K / M / B 压缩，例如 `124.8K`、`2.8M`。
-- 不查询、不展示、不返回 `Account limits`。
+- Successful local statistics still count as a successful command.
+- Text commands report token and cost estimates.
+- Image, video, and audio commands report request count, model, and rate-limit snapshots; when no token data exists, values show as `0` or `n/a`.
+- Token values are abbreviated with `K`, `M`, or `B`, such as `124.8K` or `2.8M`.
+- The command does not query, display, or return account limits.
 
-## 人类可读输出
+## Human-Readable Output
 
-默认输出包含：
+Default output includes:
 
 - `Session Usage`
 - `Usage Breakdown`
 - `Session metadata`
 
-## JSON 输出重点
+## JSON Fields
 
-`data` 中包含：
+`data` contains:
 
 - `provider`
 - `session`
@@ -71,7 +71,7 @@ grok-cli usage --session-id sess_01_example
 - `breakdown`
 - `recent_rate_limits`
 
-## 相关文档
+## Related Docs
 
-- [`usage` 深度规格](../reference/usage-command-spec.md)
-- [样例输出](../reference/samples.md)
+- [`usage` deep spec](../reference/usage-command-spec.md)
+- [Sample outputs](../reference/samples.md)

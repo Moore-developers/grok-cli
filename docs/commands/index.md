@@ -1,88 +1,64 @@
-# CLI 命令索引
+# CLI Command Index
 
-这个目录保存每个公开 CLI 命令的 spec 和使用说明。日常使用优先看这里；更深的输出样例和内部设计放在 [`../reference/`](../reference/)。
+This directory contains specs and usage notes for every public `grok-cli` command. Use this index for day-to-day command lookup. Deeper output examples and internal design notes live in [`../reference/`](../reference/).
 
-## 顶层命令
+## Top-Level Commands
 
 ```text
 grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-edit|video|video-edit|video-extend|tts|stt|stt-stream> ...
 ```
 
-## 认证命令
+## Authentication
 
-| 命令 | 文档 | 用途 |
+| Command | Doc | Purpose |
 | --- | --- | --- |
-| `login` | [`login.md`](./login.md) | 打开真实浏览器完成 xAI OAuth 登录，并保存 token。 |
-| `status` | [`status.md`](./status.md) | 读取本地 OAuth 状态，判断是否已登录、是否需要重登。 |
-| `refresh` | [`refresh.md`](./refresh.md) | 使用 refresh token 刷新 access token。 |
-| `logout` | [`logout.md`](./logout.md) | 删除本地 OAuth 状态。 |
+| `login` | [`login.md`](./login.md) | Open a real browser, complete xAI OAuth login, and save tokens. |
+| `status` | [`status.md`](./status.md) | Read local OAuth state and report whether login is usable. |
+| `refresh` | [`refresh.md`](./refresh.md) | Refresh the saved access token with the refresh token. |
+| `logout` | [`logout.md`](./logout.md) | Delete local OAuth state. |
 
-## 状态与模型
+## State And Models
 
-| 命令 | 文档 | 用途 |
+| Command | Doc | Purpose |
 | --- | --- | --- |
-| `state` | [`state.md`](./state.md) | 查看本地 OAuth 状态的脱敏摘要。 |
-| `model` | [`model.md`](./model.md) | 管理 `chat` / `search` 共享默认文本模型。 |
+| `state` | [`state.md`](./state.md) | Inspect a redacted local OAuth state summary. |
+| `model` | [`model.md`](./model.md) | Manage the shared default text model for `chat` and `search`. |
 
-## 文本能力
+## Text
 
-| 命令 | 文档 | 用途 |
+| Command | Doc | Purpose |
 | --- | --- | --- |
-| `chat` | [`chat.md`](./chat.md) | 执行 Grok 文本聊天，默认带通用 `web_search`。 |
-| `search` | [`search.md`](./search.md) | 使用 Grok `x_search` 搜索 X。 |
+| `chat` | [`chat.md`](./chat.md) | Run Grok text chat with web search enabled by default. |
+| `search` | [`search.md`](./search.md) | Search X through Grok `x_search`. |
 
-## 媒体能力
+## Media
 
-| 命令 | 文档 | 用途 |
+| Command | Doc | Purpose |
 | --- | --- | --- |
-| `image` | [`image.md`](./image.md) | 使用 Grok Imagine 生成图片。 |
-| `image-edit` | [`image-edit.md`](./image-edit.md) | 使用 Grok Imagine 编辑一张或多张参考图片。 |
-| `video` | [`video.md`](./video.md) | 使用 Grok Imagine 生成视频。 |
-| `video-edit` | [`video-edit.md`](./video-edit.md) | 使用 Grok Imagine 编辑已有视频。 |
-| `video-extend` | [`video-extend.md`](./video-extend.md) | 使用 Grok Imagine 扩展已有视频。 |
-| `tts` | [`tts.md`](./tts.md) | 文本转语音，并保存本地音频文件。 |
-| `stt` | [`stt.md`](./stt.md) | 将本地音频文件转写为文本。 |
-| `stt-stream` | [`stt-stream.md`](./stt-stream.md) | 通过 WebSocket 实验性实时转写本地音频。 |
+| `image` | [`image.md`](./image.md) | Generate images with Grok Imagine. |
+| `image-edit` | [`image-edit.md`](./image-edit.md) | Edit one or more reference images. |
+| `video` | [`video.md`](./video.md) | Generate text-to-video, image-to-video, or reference-image video. |
+| `video-edit` | [`video-edit.md`](./video-edit.md) | Edit an existing video from a URL or local file. |
+| `video-extend` | [`video-extend.md`](./video-extend.md) | Extend an existing remote video URL. |
 
-## 使用统计
+## Audio
 
-| 命令 | 文档 | 用途 |
+| Command | Doc | Purpose |
 | --- | --- | --- |
-| `usage` | [`usage.md`](./usage.md) | 查看本地 session usage、分类统计、成本估算和最近 rate-limit 快照。 |
+| `tts` | [`tts.md`](./tts.md) | Convert text to speech and save audio locally. |
+| `stt` | [`stt.md`](./stt.md) | Transcribe local audio files or remote audio URLs. |
+| `stt-stream` | [`stt-stream.md`](./stt-stream.md) | Experimental WebSocket speech-to-text. |
 
-## 通用约定
+## Usage
 
-- 人类使用优先位置参数，例如 `grok-cli chat "总结最近 AI 新闻"`。
-- `chat` / `search` 给人直接使用时默认流式打印可读正文；如果要单次结果可加 `--no-stream`，如果要原始事件流可加 `--raw-stream`。
-- 脚本、SKILL、自动化使用优先 `--json` 和显式参数，例如 `grok-cli chat --json --prompt "..."`。
-- 所有命令的 `--json` 成功输出使用 `{ ok, command, data }` 信封。
-- 所有命令的 `--json` 失败输出使用 `{ ok, command, error }` 信封。
-- 大多数需要 OAuth 的命令支持 `--auth-file <PATH>`，用于测试、隔离状态或多账号场景。
-- 内部授权救援入口不列入公开命令索引，详见 [`../reference/internal-auth.md`](../reference/internal-auth.md)。
+| Command | Doc | Purpose |
+| --- | --- | --- |
+| `usage` | [`usage.md`](./usage.md) | Inspect local session usage and recent rate-limit snapshots. |
 
-## 常用工作流
+## Notes
 
-```bash
-grok-cli login
-grok-cli status
-grok-cli chat "总结最近 AI 新闻"
-grok-cli search "What are builders saying about Grok today?"
-grok-cli image "A cinematic skyline at sunrise"
-grok-cli image-edit --image ./source.png --prompt "Make it cinematic"
-grok-cli video "Animate a futuristic skyline" --duration 8
-grok-cli video-edit --video-url https://example.com/source.mp4 --prompt "Make it cinematic"
-grok-cli video-extend --video-url https://example.com/source.mp4 --prompt "Continue the camera move" --duration 6
-grok-cli tts "Hello from Grok"
-grok-cli stt ./sample.wav
-grok-cli stt-stream ./sample.wav --interim-results
-grok-cli usage
-```
-
-脚本模式：
-
-```bash
-grok-cli status --json
-grok-cli chat --json --prompt "Summarize today's AI news"
-grok-cli search --json --query "Grok Hermes latest updates"
-grok-cli usage --json
-```
+- Public commands are intentionally flat. There is no public `auth`, `task`, `proxy`, or `debug` command group.
+- `chat` and `search` stream readable text by default for humans.
+- Use `--json` for skills, scripts, and automation.
+- Use `--raw-stream` only when the caller can consume normalized stream events.
+- Internal auth recovery entrypoints are not listed here; see [`../reference/internal-auth.md`](../reference/internal-auth.md).

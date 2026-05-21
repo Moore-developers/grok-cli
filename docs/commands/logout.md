@@ -1,41 +1,40 @@
 # `grok-cli logout`
 
-## 用途
+## Purpose
 
-删除本地 OAuth 状态文件，让 CLI 回到未登录状态。
+Delete the local OAuth state file so the CLI returns to an unauthenticated state.
 
-## 常用方式
+## Common Usage
 
 ```bash
 grok-cli logout
 ```
 
-脚本或 SKILL：
+Script or skill usage:
 
 ```bash
 grok-cli logout --json
 ```
 
-## 参数
+## Parameters
 
-- `--json`：使用统一 JSON 信封输出。
-- `--auth-file <PATH>`：覆盖 OAuth 状态文件路径。
+- `--json`: use the standard JSON envelope.
+- `--auth-file <PATH>`: override the OAuth state file path.
 
-## 行为规格
+## Behavior
 
-- 删除指定或默认的 `auth.json`。
-- 如果文件不存在，命令仍然成功，并返回 `removed: false`。
-- 不删除 session usage SQLite 数据库。
+- Deletes the specified or default `auth.json`.
+- Succeeds even if the file does not exist and returns `removed: false`.
+- Does not delete the session usage SQLite database.
 
-## JSON 输出重点
+## JSON Fields
 
-`data` 中包含：
+`data` contains:
 
 - `removed`
 - `auth_store_path`
 
-## 相关文档
+## Related Docs
 
 - [login](./login.md)
-- [state](./state.md)
-
+- [status](./status.md)

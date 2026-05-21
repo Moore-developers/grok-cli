@@ -1,52 +1,52 @@
 # `grok-cli video-edit`
 
-## 用途
+## Purpose
 
-使用 Grok Imagine 编辑已有视频。
+Edit an existing video with Grok Imagine.
 
-该命令独立于 [`video`](./video.md) 生成主命令。`video` 负责 text-to-video、image-to-video 和 reference image video；`video-edit` 负责基于已有 MP4 视频做编辑。
+This command is separate from [`video`](./video.md). `video` handles text-to-video, image-to-video, and reference-image video; `video-edit` handles editing an existing MP4 video.
 
-## 常用方式
+## Common Usage
 
 ```bash
 grok-cli video-edit --video-url https://example.com/source.mp4 --prompt "Give the woman a silver necklace"
 ```
 
-使用本地视频文件：
+Use a local video file:
 
 ```bash
 grok-cli video-edit --video ./source.mp4 --prompt "Give the woman a silver necklace"
 ```
 
-脚本或 SKILL：
+Script or skill usage:
 
 ```bash
 grok-cli video-edit --json --video-url https://example.com/source.mp4 --prompt "Make the scene more cinematic"
 ```
 
-## 参数
+## Parameters
 
-- `PROMPT`：位置参数，视频编辑提示词。
-- `--prompt <PROMPT>`：脚本友好的显式提示词参数。
-- `--video-url <URL>`：要编辑的源视频 URL。
-- `--video <PATH>`：要编辑的本地视频路径。
-- `--json`：使用统一 JSON 信封输出。
-- `--auth-file <PATH>`：覆盖 OAuth 状态文件路径。
-- `--model <MODEL>`：仅覆盖本次视频编辑请求的模型。
-- `--timeout <SECONDS>`：整体视频轮询等待上限，默认 `600` 秒；单次 HTTP 请求仍限制在媒体请求上限内。
+- `PROMPT`: positional edit prompt.
+- `--prompt <PROMPT>`: explicit script-friendly prompt.
+- `--video-url <URL>`: source video URL to edit.
+- `--video <PATH>`: local source video path to edit.
+- `--json`: use the standard JSON envelope.
+- `--auth-file <PATH>`: override the OAuth state file path.
+- `--model <MODEL>`: override the model for this video edit request only.
+- `--timeout <SECONDS>`: total video polling timeout, default `600`; individual HTTP requests still stay within the media request ceiling.
 
-## 行为规格
+## Behavior
 
-- 默认模型为 `grok-imagine-video`。
-- 请求 `POST /videos/edits`，请求体发送 `video: {"url": ...}`。
-- 本地视频会编码成 data URI 后作为 `video.url` 发送。
-- 不发送 `duration`、`aspect_ratio`、`resolution`；编辑输出继承输入视频属性。
-- 先读取创建响应中的 `request_id`，再轮询 `GET /videos/{request_id}` 到终态。
-- 成功后写入本地 usage SQLite 的 video 分类。
+- Default model is `grok-imagine-video`.
+- The command calls `POST /videos/edits` and sends `video: {"url": ...}`.
+- Local videos are encoded as data URIs before being sent as `video.url`.
+- The command does not send `duration`, `aspect_ratio`, or `resolution`; the edited output inherits the input video properties.
+- It reads `request_id` from the create response and then polls `GET /videos/{request_id}` until completion.
+- Successful calls are written to the local usage SQLite database under video usage.
 
-## JSON 输出重点
+## JSON Fields
 
-`data` 中包含：
+`data` contains:
 
 - `provider`
 - `credential_source`
@@ -56,9 +56,9 @@ grok-cli video-edit --json --video-url https://example.com/source.mp4 --prompt "
 - `duration`
 - `extra.request_id`
 
-`modality` 固定为 `edit`。
+`modality` is fixed to `edit`.
 
-## 相关文档
+## Related Docs
 
 - [video](./video.md)
 - [image-edit](./image-edit.md)

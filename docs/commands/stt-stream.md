@@ -1,74 +1,74 @@
 # `grok-cli stt-stream`
 
-## 用途
+## Purpose
 
-通过 xAI WebSocket STT 接口做实时语音转写。
+Run real-time transcription through the xAI WebSocket STT interface.
 
-这是实验入口，不替代批量转写命令 [`stt`](./stt.md)。第一版会把本地音频文件按二进制帧发送到 WebSocket，然后发送 `{"type":"audio.done"}` 结束信号，并持续读取转写事件。
+This is an experimental entrypoint and does not replace the batch transcription command [`stt`](./stt.md). The first version sends a local audio file as binary frames over WebSocket, then sends `{"type":"audio.done"}`, and keeps reading transcription events until the stream ends.
 
-## 常用方式
+## Common Usage
 
 ```bash
 grok-cli stt-stream --file ./sample.wav --language en --interim-results
 ```
 
-输出 JSON 事件汇总：
+Print JSON event summaries:
 
 ```bash
 grok-cli stt-stream --file ./sample.wav --json
 ```
 
-使用原始 PCM 参数：
+Use raw PCM parameters:
 
 ```bash
 grok-cli stt-stream --file ./sample.raw --encoding pcm_s16le --sample-rate 16000 --language en
 ```
 
-## 参数
+## Parameters
 
-- `PATH`：位置参数，待转写音频文件。
-- `--file <PATH>`：脚本友好的显式音频文件参数。
-- `--json`：使用统一 JSON 信封输出，`data.events` 包含收到的事件列表。
-- `--auth-file <PATH>`：覆盖 OAuth 状态文件路径。
-- `--model <MODEL>`：覆盖 streaming STT 模型，默认 `grok-transcribe`。
-- `--language <LANG>`：语言代码，默认 `en`。
-- `--interim-results`：请求中间转写结果。
-- `--endpointing <VALUE>`：透传官方 endpointing 参数。
-- `--encoding <ENCODING>`：原始音频编码，例如 `pcm_s16le`。
-- `--sample-rate <HZ>`：原始音频采样率。
-- `--diarize`：启用说话人分离。
-- `--filler-words`：保留 filler words。
-- `--multichannel`：按多声道处理。
-- `--channels <LIST>`：指定声道，例如 `0,1`。
-- `--keyterm <TERM>`：关键词增强，可重复。
-- `--timeout <SECONDS>`：预留的 WebSocket 会话超时参数；当前实验入口主要用于保持 CLI 参数兼容。
+- `PATH`: positional audio file to transcribe.
+- `--file <PATH>`: explicit script-friendly audio file input.
+- `--json`: use the standard JSON envelope. `data.events` contains the received event list.
+- `--auth-file <PATH>`: override the OAuth state file path.
+- `--model <MODEL>`: override the streaming STT model, default `grok-transcribe`.
+- `--language <LANG>`: language code, default `en`.
+- `--interim-results`: request interim transcription results.
+- `--endpointing <VALUE>`: pass through the official endpointing parameter.
+- `--encoding <ENCODING>`: raw audio encoding, such as `pcm_s16le`.
+- `--sample-rate <HZ>`: raw audio sample rate.
+- `--diarize`: enable speaker diarization.
+- `--filler-words`: keep filler words.
+- `--multichannel`: treat audio as multichannel.
+- `--channels <LIST>`: choose channels such as `0,1`.
+- `--keyterm <TERM>`: keyword boosting. Repeatable.
+- `--timeout <SECONDS>`: reserved WebSocket session timeout parameter. It is mainly retained for CLI compatibility.
 
-## 行为规格
+## Behavior
 
-- 真实连接地址由 OAuth 状态中的 `base_url` 转成 WebSocket URL，例如 `https://api.x.ai/v1` 会变成 `wss://api.x.ai/v1/stt`。
-- Streaming STT 的配置参数放在 URL query 中，`--count` 等图片参数不参与这里。
-- 发请求前会检查 access token 是否临近过期，必要时先 refresh。
-- 非 JSON 输出按事件打印 `interim: ...` 或 `final: ...`。
-- JSON 输出在连接结束后返回事件数组；每个事件保留标准化字段和原始事件。
-- 这是 streaming STT，不替代 batch [`stt`](./stt.md) 的文件/URL multipart 转写。
+- The real connection URL is derived from the OAuth state `base_url`, for example `https://api.x.ai/v1` becomes `wss://api.x.ai/v1/stt`.
+- Streaming STT configuration parameters go into the URL query string.
+- Access token expiry is checked before the request. If needed, the command refreshes first.
+- Non-JSON output prints `interim: ...` or `final: ...` events.
+- JSON output returns the event array after the connection ends. Each event preserves normalized fields and the raw event.
+- This is streaming STT; it does not replace the batch [`stt`](./stt.md) multipart file / URL transcription path.
 
-## JSON 输出重点
+## JSON Fields
 
-`data` 中包含：
+`data` contains:
 
 - `success`
 - `provider`
 - `credential_source`
 - `events`
 
-每个 `events[]` 中包含：
+Each `events[]` item contains:
 
 - `event_type`
 - `transcript`
 - `is_final`
 - `raw`
 
-## 相关文档
+## Related Docs
 
 - [stt](./stt.md)
 - [tts](./tts.md)

@@ -1,48 +1,48 @@
 # `grok-cli video-extend`
 
-## 用途
+## Purpose
 
-使用 Grok Imagine 扩展已有视频。
+Extend an existing video with Grok Imagine.
 
-该命令独立于 [`video`](./video.md) 和 [`video-edit`](./video-edit.md)。`video` 负责生成新视频，`video-edit` 负责编辑已有视频，`video-extend` 负责在已有 MP4 视频末尾追加新片段。
+This command is separate from [`video`](./video.md) and [`video-edit`](./video-edit.md). `video` generates new video, `video-edit` edits an existing video, and `video-extend` appends new footage to the end of an existing MP4 video.
 
-注意：`video-extend` 只支持远程视频 URL，不支持本地视频 path。真实补测中，本地 MP4 会被 CLI 转成 `data:video/mp4;base64,...` 并进入上游服务端，但 xAI 扩展任务最终返回 internal error；因此首版不提供 `--video <PATH>`，避免暴露实际不可用的入口。本地视频如需扩展，请先上传到可公开访问的 URL，再使用 `--video-url`。
+Note: `video-extend` only supports a remote video URL. It does not expose local video paths because real validation showed that local MP4 files were encoded and sent to the upstream service, but the final xAI extension job returned an internal error. To extend a local video, upload it first and then pass the remote URL with `--video-url`.
 
-## 常用方式
+## Common Usage
 
 ```bash
 grok-cli video-extend --video-url https://example.com/source.mp4 --prompt "The camera pans left" --duration 6
 ```
 
-脚本或 SKILL：
+Script or skill usage:
 
 ```bash
 grok-cli video-extend --json --video-url https://example.com/source.mp4 --prompt "Continue the camera move"
 ```
 
-## 参数
+## Parameters
 
-- `PROMPT`：位置参数，视频扩展提示词。
-- `--prompt <PROMPT>`：脚本友好的显式提示词参数。
-- `--video-url <URL>`：要扩展的源视频 URL。
-- `--duration <SECONDS>`：扩展片段时长，默认 `6` 秒，会被限制到 `2..=10`。
-- `--json`：使用统一 JSON 信封输出。
-- `--auth-file <PATH>`：覆盖 OAuth 状态文件路径。
-- `--model <MODEL>`：仅覆盖本次视频扩展请求的模型。
-- `--timeout <SECONDS>`：整体视频轮询等待上限，默认 `600` 秒；单次 HTTP 请求仍限制在媒体请求上限内。
+- `PROMPT`: positional extension prompt.
+- `--prompt <PROMPT>`: explicit script-friendly prompt.
+- `--video-url <URL>`: source video URL to extend.
+- `--duration <SECONDS>`: extension length, default `6`, clamped to `2..=10`.
+- `--json`: use the standard JSON envelope.
+- `--auth-file <PATH>`: override the OAuth state file path.
+- `--model <MODEL>`: override the model for this video extension request only.
+- `--timeout <SECONDS>`: total video polling timeout, default `600`; individual HTTP requests still stay within the media request ceiling.
 
-## 行为规格
+## Behavior
 
-- 默认模型为 `grok-imagine-video`。
-- 请求 `POST /videos/extensions`，请求体发送 `video: {"url": ...}` 和归一化后的 `duration`。
-- 必须提供 `--video-url`；本地视频 path 不在当前能力面中。
-- 不发送 `aspect_ratio`、`resolution`；扩展输出继承输入视频属性。
-- 先读取创建响应中的 `request_id`，再轮询 `GET /videos/{request_id}` 到终态。
-- 成功后写入本地 usage SQLite 的 video 分类。
+- Default model is `grok-imagine-video`.
+- The command calls `POST /videos/extensions` and sends `video: {"url": ...}` plus the normalized `duration`.
+- `--video-url` is required; local video paths are not part of the public capability surface.
+- `aspect_ratio` and `resolution` are not sent; the extension inherits the input video properties.
+- The command reads `request_id` from the create response and polls `GET /videos/{request_id}` until completion.
+- Successful calls are written to the local usage SQLite database under video usage.
 
-## JSON 输出重点
+## JSON Fields
 
-`data` 中包含：
+`data` contains:
 
 - `provider`
 - `credential_source`
@@ -52,9 +52,9 @@ grok-cli video-extend --json --video-url https://example.com/source.mp4 --prompt
 - `duration`
 - `extra.request_id`
 
-`modality` 固定为 `extension`。
+`modality` is fixed to `extension`.
 
-## 相关文档
+## Related Docs
 
 - [video](./video.md)
 - [video-edit](./video-edit.md)

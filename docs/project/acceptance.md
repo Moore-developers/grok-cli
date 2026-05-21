@@ -1,148 +1,168 @@
-# 验收样例
+# Acceptance Examples
 
-这份文档给出一组可复现的最小验收路径，便于在接入 SKILL、交付或回归时快速确认能力是否完整。
+This document gives a small set of reproducible acceptance paths so we can quickly confirm whether the feature set is still intact during integration, delivery, or regression checks.
 
-## 1. 状态与认证
+## 1. State And Authentication
 
-### 验收 1：状态摘要
+### Acceptance 1: State Summary
 
 ```bash
 cargo run -- state --json
 ```
 
-期望：
-- 返回 `ok: true`
-- 返回 `command: "state"`
-- 输出脱敏状态摘要或 `exists: false`
+Expected:
 
-### 验收 2：浏览器登录
+- `ok: true`
+- `command: "state"`
+- a redacted state summary or `exists: false`
+
+### Acceptance 2: Browser Login
 
 ```bash
 cargo run -- login --json
 ```
 
-期望：
-- 能拉起真实浏览器
-- 登录成功后状态可落盘
+Expected:
 
-### 验收 3：刷新
+- a real browser opens
+- the login result is written to disk on success
+
+### Acceptance 3: Refresh
 
 ```bash
 cargo run -- refresh --json
 ```
 
-期望：
-- 成功时刷新 `last_refresh`
+Expected:
 
-## 2. 任务能力
+- the access token is refreshed
+- `last_refresh` updates
 
-### 验收 4：文本默认模型切换
+## 2. Text Commands
+
+### Acceptance 4: Chat
 
 ```bash
-cargo run -- model --json
-cargo run -- model --json --model grok-4.3
+cargo run -- chat "Explain Grok CLI in one sentence" --json
 ```
 
-期望：
-- `model --json` 列出共享文本模型目录
-- `model --model ...` 能同时写入 `chat` 与 `search` 默认模型
-- `grok-cli mode` 作为 `model` 别名可用
+Expected:
 
-### 验收 5：聊天
+- `ok: true`
+- `command: "chat"`
+- text output is returned
+
+### Acceptance 5: X Search
 
 ```bash
-cargo run -- chat "用一句话介绍 Grok"
-cargo run -- chat "总结最近 AI 新闻" --with-x-search
+cargo run -- search "What are people saying about xAI on X today?" --json
 ```
 
-期望：
-- 返回 `protocol: "codex_responses"`
-- 返回 `output_text`
-- 默认以格式化流式正文输出
-- 默认请求体会附带通用 `web_search`
-- 指定 `--with-x-search` 时，请求体会同时附带 `web_search + x_search`
-- `--json` 时返回稳定的单次结构化结果
+Expected:
 
-### 验收 6：X 搜索
+- `ok: true`
+- `command: "search"`
+- X search output is returned
+
+## 3. Media And Audio
+
+### Acceptance 6: Image Generation
 
 ```bash
-cargo run -- search "What are people saying about xAI on X today?"
+cargo run -- image "A cinematic skyline at sunrise" --json
 ```
 
-期望：
-- 返回 `answer`
-- 返回 `citations`
-- 默认以格式化流式正文输出
-- `--json` 时返回稳定的单次结构化结果
+Expected:
 
-### 验收 7：媒体能力
+- a returned image URL or local file path
 
-分别执行：
+### Acceptance 7: Image Editing
 
 ```bash
-cargo run -- image "A cinematic skyline"
-cargo run -- image "A cinematic skyline" --count 2 --response-format url --json
-cargo run -- image "A logo mark" --count 2 --output-dir ./out/images --json
-cargo run -- image-edit --image ./source.png --prompt "Make it cinematic"
-cargo run -- image-edit --image ./a.png --image ./b.png --image ./c.png --prompt "Blend references" --json
-cargo run -- video "Animate a cinematic skyline" --duration 8
-cargo run -- video-edit --video-url https://example.com/source.mp4 --prompt "Make it cinematic"
-cargo run -- video-extend --video-url https://example.com/source.mp4 --prompt "Continue the camera move" --duration 6
-cargo run -- tts "Hello from Grok"
-cargo run -- tts "Hello from Grok" --output-format mp3 --sample-rate 24000 --bit-rate 128000
-cargo run -- tts --list-voices --json
-cargo run -- stt ./sample.wav
-cargo run -- stt ./sample.wav --diarize --keyterm Grok --filler-words --json
-cargo run -- stt-stream ./sample.wav --interim-results
+cargo run -- image-edit --image ./source.png --prompt "Make it cinematic" --json
 ```
 
-期望：
-- 图片返回 `image`
-- 图片多图请求返回 `image` 和 `images`
-- 图片多图 base64 落盘请求返回本地路径列表
-- 图片编辑请求返回 `image` 和 `images`
-- 视频返回 `video`
-- 视频编辑请求返回 `video`，`modality` 为 `edit`
-- 视频扩展请求返回 `video`，`modality` 为 `extension`
-- TTS 返回 `file_path`
-- TTS 显式输出格式请求成功时返回 `output_format`
-- `tts --list-voices --json` 返回 `voices`
-- STT 返回 `transcript`
-- STT 高级参数请求成功时仍保留 `transcript`，并在上游返回时保留 `language` / `duration` / `words` / `channels`
-- Streaming STT 输出 interim / final 事件；`--json` 时返回 `events`
-- 当 access token 接近过期时，媒体命令会先自动 refresh，再发起真实请求
+Expected:
 
-真实验收补充：
+- edited image output is returned
 
-- `2026-05-20` 已完成真实 `image`
-- `2026-05-20` 已完成真实 `tts -> stt` 串联验证
-- `2026-05-20` 已完成真实 `video` 三条分支验证：
-  - text-to-video
-  - image-to-video
-  - reference-image video
-- `2026-05-20` 已确认媒体命令在 access token 临近过期时会先自动 refresh，再继续真实请求，不再要求用户手动先执行 `refresh`
-
-### 验收 8：Usage
+### Acceptance 8: Video Generation
 
 ```bash
-cargo run -- usage
+cargo run -- video "Animate a futuristic skyline" --duration 8 --json
+```
+
+Expected:
+
+- a generated video URL is returned
+
+### Acceptance 9: Video Editing
+
+```bash
+cargo run -- video-edit --video-url https://example.com/source.mp4 --prompt "Make it cinematic" --json
+```
+
+Expected:
+
+- an edited video URL is returned
+
+### Acceptance 10: Video Extension
+
+```bash
+cargo run -- video-extend --video-url https://example.com/source.mp4 --prompt "Continue the camera move" --duration 6 --json
+```
+
+Expected:
+
+- an extended video URL is returned
+
+### Acceptance 11: TTS
+
+```bash
+cargo run -- tts "Hello from Grok" --json
+```
+
+Expected:
+
+- a local audio file path is returned
+
+### Acceptance 12: STT
+
+```bash
+cargo run -- stt ./sample.wav --json
+```
+
+Expected:
+
+- a transcript is returned
+
+### Acceptance 13: Streaming STT
+
+```bash
+cargo run -- stt-stream ./sample.wav --json
+```
+
+Expected:
+
+- a stream event list is returned
+
+## 4. Usage
+
+### Acceptance 14: Usage
+
+```bash
 cargo run -- usage --json
 ```
 
-期望：
-- `--json` 返回 `session` / `local_usage` / `breakdown` / `recent_rate_limits`
-- `breakdown` 至少覆盖 `text` / `image` / `video` / `audio`
-- 人类输出按 `Session Usage` / `Usage Breakdown` 分组展示
-- token 数字按 `K/M/B` 紧凑格式展示
-- 人类输出和 JSON 都不包含 Account limits
+Expected:
 
-## 3. 回归验收
+- local usage data is returned
+- account limits are not queried
 
-执行：
+## 5. Regression
 
-```bash
-cargo test
-```
+### Acceptance 15: Re-run the main flow after login
 
-期望：
-- 所有单元测试、命令级测试、契约回归测试通过
+Expected:
+
+- after login, the original task can continue without asking the user to repeat it

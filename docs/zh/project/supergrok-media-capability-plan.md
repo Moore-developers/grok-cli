@@ -1,0 +1,354 @@
+# SuperGrok Media Capability Completion Plan
+
+这份文档把 `grok-cli` 的 `image` / `tts` / `stt` 能力差异整理成可执行任务计划。目标是对齐 Hermes Agent 已经验证过的 xAI 调用形态，并继续补齐 xAI 官方文档中 SuperGrok 媒体能力暴露出来的参数、返回结构和后续扩展入口。
+
+## 来源
+
+本计划基于以下来源整理：
+
+- Hermes Agent xAI image provider: `/Users/seanmo/AI/packages/hermes-agent/plugins/image_gen/xai/__init__.py`
+- Hermes Agent TTS: `/Users/seanmo/AI/packages/hermes-agent/tools/tts_tool.py`
+- Hermes Agent STT: `/Users/seanmo/AI/packages/hermes-agent/tools/transcription_tools.py`
+- 当前 CLI image 实现: [`src/task/image.rs`](../../../src/task/image.rs)
+- 当前 CLI audio 实现: [`src/task/audio.rs`](../../../src/task/audio.rs)
+- 当前 CLI 参数定义: [`src/args.rs`](../../../src/args.rs)
+- xAI Imagine docs: <https://docs.x.ai/developers/model-capabilities/imagine>
+- xAI TTS docs: <https://docs.x.ai/developers/model-capabilities/audio/text-to-speech>
+- xAI STT docs: <https://docs.x.ai/developers/model-capabilities/audio/speech-to-text>
+
+## 测试门槛
+
+每补一个能力或参数，都必须同时补测试。未补测试的能力不能标记为完成。
+
+最低测试要求：
+
+- 模块级测试：覆盖参数校验、请求体构造、multipart form 构造、响应解析。
+- 命令级 stub 测试：覆盖 CLI 参数到上游请求的真实串联，优先使用现有 `tests/task_audio_commands.rs` 和 `tests/task_image_gen_commands.rs`。
+- 文档同步：用户可见参数变更必须同步对应 `docs/commands/*.md`。
+- 回归执行：单项开发时至少跑对应模块或命令测试；阶段完成前跑 `cargo test --quiet`。
+
+推荐测试分层：
+
+| 改动类型 | 必测位置 |
+|---|---|
+| 新 CLI 参数 | `src/task/*` 模块级构造测试 + `tests/task_*_commands.rs` 命令级参数测试 |
+| 新返回字段 | 响应解析单元测试 + JSON 输出命令级 stub 测试 |
+| 新校验规则 | 模块级 `validate_*` 测试 + 命令级失败输出测试 |
+| 新上游执行形态 | 请求构造测试 + stub server / mocked transport 测试 |
+| 新命令或新模式 | `--help` / contract 回归测试 + 命令级成功和失败路径测试 |
+
+## 当前缺口总览
+
+| 能力 | 当前状态 | 主要缺口 | 优先级 |
+|---|---|---|---|
+| `stt` batch transcription | 只支持本地 `file + language + format=true` | `url`、`audio_format`、`sample_rate`、`multichannel`、`channels`、`diarize`、`keyterm`、`filler_words`、结构化返回 | P0 |
+| `tts` synthesis | 支持 `text`、`voice_id`、`language`，仅 `.wav` 时隐式发送固定 `output_format` | 显式 output format、sample rate、bit rate、stream latency、text normalization、voice discovery | P0 |
+| `image` generation | 支持 `prompt`、`model`、`aspect_ratio`、`resolution`、单图输出 | `count`、显式 `response_format`、多图返回、批量落盘策略 | P1 |
+| `stt` streaming | 无 | WebSocket 实时转写 | P2 |
+| `image` editing | 无 | image edit 和 multi-image edit | P2 |
+| Imagine video follow-up | generation / image-to-video / reference image video / video editing / video extension 已覆盖 | 后续仅剩真实验收和 streaming STT 深水区回归 | P3 |
+
+## Phase 16.1: STT Batch Completion
+
+目标：先补齐官方 STT batch 接口的参数面和结构化输出。STT 当前缺口最大，而且大多数改动都能通过现有 multipart 上游执行层完成。
+
+### STT-1. 参数与校验
+
+- [x] 在 `SttOptions` 增加 `--url <URL>`，与位置 `PATH` / `--file` 互斥。
+- [x] 在 `SttOptions` 增加 `--format <true|false>`，默认保持 `true`，避免破坏现有行为。
+- [x] 增加 `--audio-format <FORMAT>`。
+- [x] 增加 `--sample-rate <HZ>`。
+- [x] 增加 `--multichannel`。
+- [x] 增加 `--channels <CHANNELS>`，先按逗号分隔字符串透传，例如 `0,1`。
+- [x] 增加 `--diarize`。
+- [x] 增加可重复 `--keyterm <TERM>`。
+- [x] 增加 `--filler-words`。
+
+测试要求：
+
+- [x] 模块级测试覆盖 `file`、`url` 二选一校验。
+- [x] 模块级测试覆盖 `file + url` 冲突。
+- [x] 模块级测试覆盖缺少输入时返回 `invalid_args`。
+- [x] 模块级测试覆盖所有新增字段进入 multipart form。
+- [x] 命令级 stub 测试验证新增参数会出现在发往 `/v1/stt` 的请求中。
+
+### STT-2. URL 转写
+
+- [x] `build_stt_form` 支持只发送 `url` 而不读取本地文件。
+- [x] 保持本地文件路径的现有行为不变。
+- [x] 错误信息区分“缺少输入”和“文件不存在”。
+
+测试要求：
+
+- [x] 模块级测试覆盖 URL 模式不访问本地文件。
+- [x] 命令级 stub 测试覆盖 `grok-cli stt --json --url https://...`。
+- [x] 命令级失败测试覆盖 `--url` 和 `--file` 同时传入。
+
+### STT-3. 结构化响应输出
+
+- [x] `SttData` 保留 `transcript`，继续兼容现有 SKILL 消费。
+- [x] 增加可选 `language`。
+- [x] 增加可选 `duration`。
+- [x] 增加可选 `words`。
+- [x] 增加可选 `channels`。
+- [x] 非 JSON 输出仍优先显示 `transcript`，只附加简短元信息。
+
+测试要求：
+
+- [x] 模块级测试覆盖只返回 `text` 的旧响应。
+- [x] 模块级测试覆盖含 `language` / `duration` / `words` / `channels` 的新响应。
+- [x] 命令级 stub 测试确认 `--json` 输出包含新增字段。
+- [x] contract 回归确认 `data.transcript` 仍存在。
+
+### STT-4. 文档同步
+
+- [x] 更新 [`docs/commands/stt.md`](../commands/stt.md)。
+- [x] 更新 [`docs/project/acceptance.md`](./acceptance.md) 的媒体验收样例。
+- [x] 需要时更新 [`docs/reference/samples.md`](../reference/samples.md) 的 JSON 样例。
+
+完成标准：
+
+- [x] `cargo test --quiet task_audio_commands` 通过。
+- [x] `cargo test --quiet` 通过。
+- [x] STT 新增参数和结构化输出都有文档说明。
+
+## Phase 16.2: TTS Parameter Completion
+
+目标：补齐官方 TTS 参数面，同时保持当前“生成音频并写入本地文件”的主路径简单稳定。
+
+### TTS-1. 显式 output format
+
+- [x] 在 `TtsOptions` 增加 `--output-format <FORMAT>`，建议枚举先支持 `mp3`、`wav`，后续按官方能力扩展。
+- [x] 增加 `--sample-rate <HZ>`。
+- [x] 增加 `--bit-rate <BPS>`。
+- [x] 明确 `--output` 扩展名与 `--output-format` 不一致时的行为，建议先返回 `invalid_args`。
+- [x] 默认行为保持 `mp3`。
+
+测试要求：
+
+- [x] 模块级测试覆盖默认不发送冗余 `output_format` 或保持现有最小 payload。
+- [x] 模块级测试覆盖显式 `mp3` / `wav` output format。
+- [x] 模块级测试覆盖 sample rate 和 bit rate 进入 payload。
+- [x] 模块级测试覆盖输出扩展名与显式格式冲突。
+- [x] 命令级 stub 测试验证请求 JSON 包含 `output_format`。
+
+### TTS-2. 官方高级参数
+
+- [x] 增加 `--optimize-streaming-latency <MODE>` 并按官方字段透传。
+- [x] 增加 `--text-normalization <MODE>` 并按官方字段透传。
+- [x] 允许 `--language auto`。
+- [x] 继续允许自定义 `--voice-id`。
+
+测试要求：
+
+- [x] 模块级测试覆盖两个高级参数进入 payload。
+- [x] 模块级测试覆盖 `language=auto`。
+- [x] 命令级 stub 测试覆盖完整高级参数组合。
+
+### TTS-3. Voice discovery
+
+由于现有 `grok-cli tts "..."` 使用位置文本，`grok-cli tts voices` 会和普通文本合成有歧义。第一版采用模式参数：
+
+- [x] 增加 `grok-cli tts --list-voices`。
+- [x] 调用 `GET /v1/tts/voices`。
+- [x] `--json` 输出 voice 列表原始结构或稳定包装结构。
+- [x] 人类输出显示 voice id、名称、类型等关键字段。
+
+测试要求：
+
+- [x] 命令级 stub 测试覆盖 `tts --list-voices --json`。
+- [x] 响应解析测试覆盖空列表和多个 voice。
+- [x] help / contract 测试确认新参数可见。
+
+### TTS-4. 文档同步
+
+- [x] 更新 [`docs/commands/tts.md`](../commands/tts.md)。
+- [x] 更新 [`docs/project/acceptance.md`](./acceptance.md)。
+- [x] 需要时更新 [`docs/reference/samples.md`](../reference/samples.md)。
+
+完成标准：
+
+- [x] `cargo test --quiet task_audio_commands` 通过。
+- [x] `cargo test --quiet` 通过。
+- [x] 默认 `grok-cli tts "hello"` 行为不变。
+
+## Phase 16.3: Image Generation Completion
+
+目标：补齐 Imagine image generation 的多图和响应格式控制，同时保留当前 `image` 主字段，避免破坏已有集成。
+
+### IMG-1. Count 与 response format
+
+- [x] 增加 `--count <N>`，默认 `1`，校验范围 `1..=10`。
+- [x] 增加 `--response-format <url|b64_json>`。
+- [x] `--output-file` 继续隐式要求 `b64_json`。
+- [x] 当 `--output-file` 与 `--count > 1` 同时出现时返回 `invalid_args`。
+- [x] 评估并实现 `--output-dir <PATH>`，用于多图 b64 落盘。
+
+测试要求：
+
+- [x] 模块级测试覆盖 `count` 和 `response_format` 进入请求体。
+- [x] 模块级测试覆盖 `count=0` / `count=11` 校验失败。
+- [x] 模块级测试覆盖 `--output-file + --count > 1` 失败。
+- [x] 命令级 stub 测试验证多图请求。
+
+### IMG-2. 多图响应
+
+- [x] `ImageGenData` 保留 `image`，继续表示第一张图。
+- [x] 增加 `images: Vec<String>`，用于返回完整图片列表。
+- [x] `--json` 输出 `image` 和 `images`。
+- [x] 非 JSON 输出显示第一张图和总数；必要时逐行列出全部图片。
+- [x] b64 多图落盘时返回本地路径列表。
+
+测试要求：
+
+- [x] 模块级测试覆盖多个 `url`。
+- [x] 模块级测试覆盖多个 `b64_json`。
+- [x] 命令级 stub 测试确认 JSON 输出包含 `images`。
+- [x] contract 回归确认 `data.image` 仍存在。
+
+### IMG-3. 文档同步
+
+- [x] 更新 [`docs/commands/image.md`](../commands/image.md)。
+- [x] 更新 [`docs/project/acceptance.md`](./acceptance.md)。
+- [x] 需要时更新 [`docs/reference/samples.md`](../reference/samples.md)。
+
+完成标准：
+
+- [x] `cargo test --quiet --test task_image_gen_commands` 通过。
+- [x] `cargo test --quiet` 通过。
+- [x] 单图旧用法仍返回 `data.image`。
+
+## Phase 16.4: Streaming STT
+
+目标：新增实时语音转写入口。这个能力协议形态不同，不和 batch `stt` 混在一个实现里。
+
+建议 CLI：
+
+```bash
+grok-cli stt-stream --file ./sample.wav --language en --interim-results
+```
+
+任务：
+
+- [x] 确认 WebSocket 依赖选择和当前 `Cargo.toml` 影响。
+- [x] 新增 `stt-stream` 顶层命令或隐藏实验入口。
+- [x] 支持官方 WebSocket 参数：`interim_results`、`endpointing`、`encoding`、`sample_rate`、`language`、`diarize`、`filler_words`、`multichannel`、`channels`、`keyterm`。
+- [x] 定义 JSON event 输出格式。
+- [x] 定义人类输出格式，区分 interim 和 final。
+
+测试要求：
+
+- [x] 单元测试覆盖 WebSocket URL / query / init payload 构造。
+- [x] 单元测试覆盖 event parser。
+- [x] 命令级测试覆盖参数校验。
+- [~] 暂缓握手流程测试：连接后先等待 `transcript.created`，再开始发送音频。
+- [~] 暂缓实时发送策略测试：按 chunk 发送 raw binary frames，避免一次性把大文件塞入 WebSocket。
+- [~] 暂缓 WAV / raw 输入边界任务：明确是否跳过 WAV header，或在文档中标记 raw PCM 为推荐输入。
+- [~] 暂缓事件处理任务：覆盖 `transcript.partial`、多个 `transcript.done`、`error` 和服务端 close。
+- [~] 暂缓 mock WebSocket 成功事件流测试。
+
+暂缓说明：`stt-stream` 当前仍是实验入口，深层 WebSocket mock / 分块发送测试暂不作为发布阻塞项；后续等真实使用收益更明确后再投入。
+
+完成标准：
+
+- [x] 先以实验入口落地，测试覆盖协议构造和事件解析。
+- [x] 文档明确这是 streaming STT，不替代 batch `stt`。
+
+## Phase 16.5: Image Editing
+
+目标：把 Imagine image edit / multi-image edit 做成独立能力，不污染 `image` 生成主命令。
+
+建议 CLI：
+
+```bash
+grok-cli image-edit --image ./source.png --prompt "Make it cinematic"
+grok-cli image-edit --image ./a.png --image ./b.png --image ./c.png --prompt "Blend these references"
+```
+
+任务：
+
+- [x] 再次核对官方 image edit endpoint 和 multipart / JSON payload 形态。
+- [x] 新增 `image-edit` 顶层命令。
+- [x] 支持最多 3 张输入图。
+- [x] 支持本地路径和 URL，必要时分两期实现。
+- [x] 复用 `image` 的输出解析和落盘策略。
+
+测试要求：
+
+- [x] 模块级测试覆盖 1 张和 3 张输入图。
+- [x] 模块级测试覆盖超过 3 张失败。
+- [x] 命令级 stub 测试覆盖成功请求。
+- [x] contract 回归确认新命令出现在 help。
+
+完成标准：
+
+- [x] `image` 旧命令行为不变。
+- [x] `image-edit` 有独立文档和测试。
+
+## Phase 16.6: Imagine Video Follow-up
+
+现有 `video` 已覆盖 text-to-video、image-to-video、reference image video 主路径。Imagine overview 还提到 video editing 和 video extension，这两项先作为后续确认任务。
+
+任务：
+
+- [x] 核对官方 video editing / extension endpoint。
+- [x] 对比当前 [`src/task/video.rs`](../../../src/task/video.rs) 参数面。
+- [x] 决定是扩展 `video` 还是新增 `video-edit` / `video-extend`。
+- [x] 每个新增能力按相同测试门槛补测试。
+
+完成标准：
+
+- [x] 形成单独 video follow-up 计划或直接拆进下一阶段任务。
+
+官方核对结论：
+
+- Video editing 使用 `POST /v1/videos/edits`，REST 请求体包含 `model`、`prompt`、`video: { url }`。SDK 可能暴露 `video_url` 参数，但 CLI 的 REST 请求应发送官方 JSON 字段 `video`。不支持 `duration`、`aspect_ratio`、`resolution`；输出继承输入视频，最高 720p。输入视频要求 `.mp4`，最大约 8.7 秒。
+- Video extension 使用 `POST /v1/videos/extensions`，请求体包含 `model`、`prompt`、`duration`、`video: { url }`。不支持 `aspect_ratio`、`resolution`；输出继承输入视频，最高 720p。输入视频要求 `.mp4` 且 2 到 15 秒；扩展片段 `duration` 为 2 到 10 秒，默认 6。
+- 两者都沿用异步视频流程：创建请求后读取 `request_id`，再轮询 `GET /v1/videos/{request_id}` 到终态。
+
+推荐 CLI 设计：
+
+```bash
+grok-cli video-edit --video-url https://example.com/source.mp4 --prompt "Give the woman a silver necklace"
+grok-cli video-extend --video-url https://example.com/source.mp4 --prompt "The camera pans left" --duration 6
+```
+
+可执行任务计划：
+
+- [x] 在 `src/args.rs` 新增 `VideoEditOptions`，顶层命令 `video-edit`，参数：`PROMPT` / `--prompt`、`--video-url`、`--model`、`--timeout`、通用 `--json` / `--auth-file`。
+- [x] 在 `src/args.rs` 新增 `VideoExtendOptions`，顶层命令 `video-extend`，参数：`PROMPT` / `--prompt`、`--video-url`、`--duration`、`--model`、`--timeout`、通用 `--json` / `--auth-file`。
+- [x] 在 `src/task/video.rs` 抽取共享异步视频执行路径，支持不同 create endpoint、request builder、modality。
+- [x] `video-edit` 请求 `POST /videos/edits`，发送 `video: {"url": ...}`。
+- [x] `video-extend` 请求 `POST /videos/extensions`，发送 `video: {"url": ...}` 和 clamp 后的 `duration`。
+- [x] 输出沿用 `VideoGenData` 的稳定字段：`video`、`modality`、`duration`、`extra.request_id`。
+- [x] 文档新增 `docs/commands/video-edit.md` 和 `docs/commands/video-extend.md`，并更新命令索引、验收文档、samples。
+
+测试要求：
+
+- [x] 模块级测试覆盖 `video-edit` 缺 prompt / 缺 video URL 校验。
+- [x] 模块级测试覆盖 `video-edit` 请求体使用 `video: {"url": ...}`，且不包含 `duration` / `aspect_ratio` / `resolution`。
+- [x] 模块级测试覆盖 `video-extend` duration clamp 到 `2..=10`，默认 6。
+- [x] 模块级测试覆盖 `video-extend` 请求体为 `video: {"url": ...}`。
+- [x] 命令级 stub 测试覆盖 `video-edit` create + poll 成功流。
+- [x] 命令级 stub 测试覆盖 `video-extend` create + poll 成功流。
+- [x] contract 回归确认 `video-edit` / `video-extend` 出现在 help。
+
+## 执行顺序
+
+推荐顺序：
+
+1. Phase 16.1 STT batch completion。
+2. Phase 16.2 TTS parameter completion。
+3. Phase 16.3 Image generation completion。
+4. Phase 16.4 Streaming STT。
+5. Phase 16.5 Image editing。
+6. Phase 16.6 Imagine video follow-up。
+
+每个 phase 完成时都必须满足：
+
+- [x] 代码实现完成。
+- [x] 模块级测试完成。
+- [x] 命令级 stub 测试完成。
+- [x] 用户文档更新完成。
+- [x] 对应 targeted tests 通过。
+- [x] `cargo test --quiet` 通过。

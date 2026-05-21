@@ -1,148 +1,148 @@
 # Skill Validation Cases
 
-这份文档用于验证 `skills/grok-cli` 在 Codex 和 Claude Code 中是否能覆盖 `grok-cli` 的全部公开能力。验证重点不是上游回答质量，而是：
+This document checks whether `skills/grok-cli` can cover every public `grok-cli` capability from both Codex and Claude Code. The focus is not answer quality from the upstream service; the focus is:
 
-- skill 是否能选对命令
-- 参数是否成形
-- 本地文件是否会被正确带入
-- 不支持的能力是否会被明确拦住
+- whether the skill chooses the right command
+- whether the parameters are shaped correctly
+- whether local files are brought in correctly
+- whether unsupported capabilities are blocked clearly
 
-## 使用方式
+## How To Use
 
-在 Codex 或 Claude Code 中：
+In Codex or Claude Code:
 
-1. 安装或加载 `skills/grok-cli`
-2. 直接输入下面的自然语言请求
-3. 检查代理是否选择了预期的 `grok-cli` 命令
-4. 对需要本地文件的用例，直接在提示词里给出路径，或明确说“处理这个文件”
+1. Install or load `skills/grok-cli`
+2. Enter one of the natural-language prompts below
+3. Check whether the agent routes to the expected `grok-cli` command
+4. For local-file cases, either provide a path directly in the prompt or explicitly say to process the file
 
-## 全能力验证矩阵
+## Full Coverage Matrix
 
-| 编号 | 能力 | 用户在 Codex / Claude Code 中可直接说的话 | 预期 skill 路由 |
+| ID | Capability | Prompt a user could actually say | Expected route |
 | --- | --- | --- | --- |
-| A1 | `login` | 帮我登录 Grok | `grok-cli login` |
-| A2 | `status` | 看一下我现在的 Grok 登录状态 | `grok-cli status --json` |
-| A3 | `refresh` | 刷新一下 Grok 的登录状态 | `grok-cli refresh --json` |
-| A4 | `logout` | 把本地 Grok 登录退出掉 | `grok-cli logout --json` |
-| A5 | `state` | 读取一下本地认证状态摘要 | `grok-cli state --json` |
-| A6 | `model` | 看一下现在默认文本模型是什么 | `grok-cli model --json` |
-| A7 | `usage` | 看一下本地 usage 统计 | `grok-cli usage --json` |
-| A8 | `chat` | 用 Grok 总结一下最近关于 Rust CLI 设计的讨论，返回结构化结果 | `grok-cli chat --json --prompt "..."` |
-| A9 | `search` | 搜索一下 X 上大家今天怎么评价 Grok CLI | `grok-cli search --json --query "..."` |
-| A10 | `image` | 生成一张 1:1 的极简终端图标，保存到本地 | `grok-cli image --json --prompt "..." --aspect-ratio 1:1 --output-file ...` |
-| A11 | `image` 多图 | 生成 3 张不同风格的终端吉祥物并保存到目录 | `grok-cli image --json --prompt "..." --count 3 --output-dir ...` |
-| A12 | `image-edit` 本地图 | 把这张图片改得更像命令行工具封面：`./source.png` | `grok-cli image-edit --json --image ./source.png --prompt "..."` |
-| A13 | `image-edit` 多图 | 用这两张图融合成一个验证徽章：`./a.png ./b.png` | `grok-cli image-edit --json --image ./a.png --image ./b.png --prompt "..."` |
-| A14 | `image-edit` 远程图 | 编辑这个远程图片并保存到本地：`https://...` | `grok-cli image-edit --json --image https://... --output-file ... --prompt "..."` |
-| A15 | `video` text-to-video | 生成一个 8 秒的终端风格短视频 | `grok-cli video --json --prompt "..." --duration 8` |
-| A16 | `video` 本地图转视频 | 用这张本地图片做一个短视频：`./source.png` | `grok-cli video --json --prompt "..." --image ./source.png` |
-| A17 | `video` 远程图转视频 | 用这个远程图片做一个短视频：`https://...` | `grok-cli video --json --prompt "..." --image-url https://...` |
-| A18 | `video` 本地参考图 | 用这两个本地参考图做一个产品揭示视频：`./a.png ./b.png` | `grok-cli video --json --prompt "..." --reference-image ./a.png --reference-image ./b.png` |
-| A19 | `video` 远程参考图 | 参考这两个远程图生成一个短视频：`https://... https://...` | `grok-cli video --json --prompt "..." --reference-image-url https://... --reference-image-url https://...` |
-| A20 | `video-edit` 本地视频 | 编辑这个本地视频，让画面更有电影感：`./source.mp4` | `grok-cli video-edit --json --video ./source.mp4 --prompt "..."` |
-| A21 | `video-edit` 远程视频 | 编辑这个远程视频，让颜色更冷一点：`https://...` | `grok-cli video-edit --json --video-url https://... --prompt "..."` |
-| A22 | `video-extend` 远程视频 | 把这个视频再延长两秒：`https://example.com/source.mp4` | `grok-cli video-extend --json --video-url https://example.com/source.mp4 --duration 2 --prompt "..."` |
-| A23 | `tts` 列表 | 列出当前可用的 TTS 声音 | `grok-cli tts --json --list-voices` |
-| A24 | `tts` 合成 | 把这段文字转成 ara 声音的 mp3 并保存 | `grok-cli tts --json --text "..." --voice-id ara --output ... --output-format mp3` |
-| A25 | `stt` 本地音频 | 转写这个音频，并保留关键词 Grok 和 CLI：`./sample.wav` | `grok-cli stt --json --file ./sample.wav --keyterm Grok --keyterm CLI` |
-| A26 | `stt` 远程音频 | 转写这个远程音频：`https://example.com/sample.wav` | `grok-cli stt --json --url https://example.com/sample.wav` |
-| A27 | `stt-stream` | 用实时方式转写这个音频：`./sample.wav` | `grok-cli stt-stream --json --file ./sample.wav ...` |
+| A1 | `login` | Help me log in to Grok | `grok-cli login` |
+| A2 | `status` | Check my current Grok login status | `grok-cli status --json` |
+| A3 | `refresh` | Refresh my Grok login state | `grok-cli refresh --json` |
+| A4 | `logout` | Log out my local Grok session | `grok-cli logout --json` |
+| A5 | `state` | Show me a summary of the local auth state | `grok-cli state --json` |
+| A6 | `model` | Show me the current default text model | `grok-cli model --json` |
+| A7 | `usage` | Show me the local usage stats | `grok-cli usage --json` |
+| A8 | `chat` | Use Grok to summarize the recent discussion about Rust CLI design and return structured results | `grok-cli chat --json --prompt "..."` |
+| A9 | `search` | Search X and summarize what people are saying today | `grok-cli search --json --query "..."` |
+| A10 | `image` | Generate a 1:1 minimal terminal icon and save it locally | `grok-cli image --json --prompt "..." --aspect-ratio 1:1 --output-file ...` |
+| A11 | `image` multi | Generate three different terminal mascots and save them to a directory | `grok-cli image --json --prompt "..." --count 3 --output-dir ...` |
+| A12 | `image-edit` local | Edit this image to look more like a CLI cover: `./source.png` | `grok-cli image-edit --json --image ./source.png --prompt "..."` |
+| A13 | `image-edit` multi | Blend these two images into one validation badge: `./a.png ./b.png` | `grok-cli image-edit --json --image ./a.png --image ./b.png --prompt "..."` |
+| A14 | `image-edit` remote | Edit this remote image and save it locally: `https://...` | `grok-cli image-edit --json --image https://... --output-file ... --prompt "..."` |
+| A15 | `video` text-to-video | Generate an 8-second terminal-style short video | `grok-cli video --json --prompt "..." --duration 8` |
+| A16 | `video` local image to video | Use this local image to make a short video: `./source.png` | `grok-cli video --json --prompt "..." --image ./source.png` |
+| A17 | `video` remote image to video | Use this remote image to make a short video: `https://...` | `grok-cli video --json --prompt "..." --image-url https://...` |
+| A18 | `video` local reference images | Use these two local reference images to make a product reveal video: `./a.png ./b.png` | `grok-cli video --json --prompt "..." --reference-image ./a.png --reference-image ./b.png` |
+| A19 | `video` remote reference images | Use these two remote images to generate a short video: `https://... https://...` | `grok-cli video --json --prompt "..." --reference-image-url https://... --reference-image-url https://...` |
+| A20 | `video-edit` local video | Edit this local video to look more cinematic: `./source.mp4` | `grok-cli video-edit --json --video ./source.mp4 --prompt "..."` |
+| A21 | `video-edit` remote video | Edit this remote video and make the colors cooler: `https://...` | `grok-cli video-edit --json --video-url https://... --prompt "..."` |
+| A22 | `video-extend` remote video | Extend this video by two seconds: `https://example.com/source.mp4` | `grok-cli video-extend --json --video-url https://example.com/source.mp4 --duration 2 --prompt "..."` |
+| A23 | `tts` list | List the available TTS voices | `grok-cli tts --json --list-voices` |
+| A24 | `tts` synth | Turn this text into an ara-voice MP3 and save it | `grok-cli tts --json --text "..." --voice-id ara --output ... --output-format mp3` |
+| A25 | `stt` local audio | Transcribe this audio and keep the keywords Grok and CLI: `./sample.wav` | `grok-cli stt --json --file ./sample.wav --keyterm Grok --keyterm CLI` |
+| A26 | `stt` remote audio | Transcribe this remote audio: `https://example.com/sample.wav` | `grok-cli stt --json --url https://example.com/sample.wav` |
+| A27 | `stt-stream` | Transcribe this audio in real time: `./sample.wav` | `grok-cli stt-stream --json --file ./sample.wav ...` |
 
-## 本地文件场景
+## Local File Scenarios
 
-这些是 skill 必须正确处理的本地文件输入方式。用户不需要懂 CLI 参数名，只需要把文件路径告诉 skill：
+These are the local-file forms the skill must handle correctly. Users do not need to know the CLI flag names; they only need to tell the skill what file to process.
 
-| 输入类型 | 用户说法示例 | 预期命令 |
+| Input type | Example user phrasing | Expected command |
 | --- | --- | --- |
-| 本地单图编辑 | 处理这张图：`./source.png` | `image-edit --image ./source.png` |
-| 本地多图编辑 | 处理这两张图：`./a.png ./b.png` | `image-edit --image ./a.png --image ./b.png` |
-| 本地图转视频 | 用这张图做视频：`./source.png` | `video --image ./source.png` |
-| 本地参考图视频 | 用这两张图当参考：`./a.png ./b.png` | `video --reference-image ./a.png --reference-image ./b.png` |
-| 本地视频编辑 | 处理这个视频：`./source.mp4` | `video-edit --video ./source.mp4` |
-| 本地音频转写 | 转写这个音频：`./sample.wav` | `stt --file ./sample.wav` |
-| 本地音频流式转写 | 实时转写这个音频：`./sample.wav` | `stt-stream --file ./sample.wav` |
+| Local single image edit | Process this image: `./source.png` | `image-edit --image ./source.png` |
+| Local multi-image edit | Process these two images: `./a.png ./b.png` | `image-edit --image ./a.png --image ./b.png` |
+| Local image-to-video | Turn this image into a video: `./source.png` | `video --image ./source.png` |
+| Local reference-image video | Use these two images as references: `./a.png ./b.png` | `video --reference-image ./a.png --reference-image ./b.png` |
+| Local video edit | Process this video: `./source.mp4` | `video-edit --video ./source.mp4` |
+| Local audio transcription | Transcribe this audio: `./sample.wav` | `stt --file ./sample.wav` |
+| Local streaming transcription | Transcribe this audio in real time: `./sample.wav` | `stt-stream --file ./sample.wav` |
 
-## 不支持与负向用例
+## Negative Cases
 
-### N1. 不应编造本地视频扩展命令
+### N1. Do not invent a local video extension command
 
-用户提示词：
-
-```text
-把这个本地视频延长两秒：./source.mp4
-```
-
-预期行为：
-
-- 不应生成 `grok-cli video-extend --video ./source.mp4`
-- 应明确说明 `video-extend` 当前只支持 `--video-url`
-- 应引导先把本地视频上传到可公开访问的 URL，再继续扩展
-
-### N2. 不应把图片编辑误路由到图片生成
-
-用户提示词：
+User prompt:
 
 ```text
-用这张图做一点改动：./source.png
+Extend this local video by two seconds: ./source.mp4
 ```
 
-预期行为：
+Expected behavior:
 
-- 应选择 `image-edit`
-- 不应选择 `image`
+- Do not generate `grok-cli video-extend --video ./source.mp4`
+- Explain clearly that `video-extend` currently only supports `--video-url`
+- Ask the user to upload the local video to a public URL first, then continue with extension
 
-### N3. 不应把视频编辑误路由到视频生成
+### N2. Do not route image editing to image generation
 
-用户提示词：
+User prompt:
 
 ```text
-修改这个已有视频的颜色：./source.mp4
+Make a small change to this image: ./source.png
 ```
 
-预期行为：
+Expected behavior:
 
-- 应选择 `video-edit`
-- 不应选择 `video`
+- Choose `image-edit`
+- Do not choose `image`
 
-### N4. 不应把普通转写误路由到流式转写
+### N3. Do not route video editing to video generation
 
-用户提示词：
+User prompt:
 
 ```text
-转写这个音频文件：./sample.wav
+Adjust the color of this existing video: ./source.mp4
 ```
 
-预期行为：
+Expected behavior:
 
-- 默认应选择 `stt`
-- 只有用户明确要求实时 / streaming / interim results 时才选择 `stt-stream`
+- Choose `video-edit`
+- Do not choose `video`
 
-## 参数级补测矩阵
+### N4. Do not route normal transcription to streaming transcription
 
-这组用例用于确认 `SKILL.md` 只保留常用参数，而 `references` 接住完整参数细节。默认都按 `--json` 理解；认证类命令如果用户显式给了本地文件，就应补上 `--auth-file`。
+User prompt:
 
-| 编号 | 命令 | 重点参数 | 用户在 Codex / Claude Code 中可直接说的话 | 预期 skill 路由 |
+```text
+Transcribe this audio file: ./sample.wav
+```
+
+Expected behavior:
+
+- Default to `stt`
+- Only choose `stt-stream` when the user explicitly asks for real time, streaming, or interim results
+
+## Parameter Cross-Check Matrix
+
+This matrix verifies that the main `SKILL.md` keeps only common parameters and the `references/` files retain the full parameter detail. Unless noted otherwise, the prompts below are intended as `--json` calls. If the user explicitly gives a local auth file, the skill should add `--auth-file`.
+
+| ID | Command | Focus parameters | Example user phrasing | Expected route |
 | --- | --- | --- | --- | --- |
-| P1 | `login` | `--no-browser` `--manual-paste` `--timeout` `--port` | 这台机器不能自动开浏览器，帮我手动粘贴方式登录 Grok，超时 300 秒，端口 8787 | `grok-cli login --no-browser --manual-paste --timeout 300 --port 8787` |
-| P2 | `status` / `state` | `--auth-file` | 用这个 auth 文件看一下登录状态：`./tmp/auth.json` | `grok-cli status --json --auth-file ./tmp/auth.json` |
-| P3 | `model` | `--model` | 把默认文本模型切到 `grok-4.3` | `grok-cli model --json --model grok-4.3` |
-| P4 | `usage` | `--session-db` `--session-id` | 从这个 session 数据库里看一下 `abc123` 这条会话的 usage：`./session.db` | `grok-cli usage --json --session-db ./session.db --session-id abc123` |
-| P5 | `chat` | `--system` `--model` `--no-web-search` `--with-x-search` `--allowed-domain` `--excluded-domain` `--allowed-x-handle` `--excluded-x-handle` `--from-date` `--to-date` `--enable-image-understanding` `--enable-video-understanding` `--timeout` | 用 Grok 只看 X 和指定域名的资料，限制到 `example.com`，排除 `blocked.example.com`，并只看 `@xAI` 和 `@grok`，时间范围是 2026-05-01 到 2026-05-21，并打开图片和视频理解，返回结构化结果 | `grok-cli chat --json --system "..." --model ... --no-web-search --with-x-search --allowed-domain example.com --excluded-domain blocked.example.com --allowed-x-handle xAI --allowed-x-handle grok --from-date 2026-05-01 --to-date 2026-05-21 --enable-image-understanding --enable-video-understanding --timeout ... --prompt "..."` |
-| P6 | `chat` | `--stream` `--no-stream` `--raw-stream` | 我要边生成边看，但不要最终再汇总一次 | `grok-cli chat --stream ...` 或 `grok-cli chat --no-stream ...` 或 `grok-cli chat --raw-stream ...` |
-| P7 | `search` | `--query` `--model` `--allowed-x-handle` `--excluded-x-handle` `--from-date` `--to-date` `--enable-image-understanding` `--enable-video-understanding` `--timeout` | 搜索 X 上 `@xAI` 和 `@grok` 相关的讨论，只看最近一周，并打开视频理解 | `grok-cli search --json --query "..." --allowed-x-handle xAI --allowed-x-handle grok --from-date ... --to-date ... --enable-video-understanding --timeout ...` |
-| P8 | `image` | `--count` `--response-format` `--output-file` `--output-dir` `--aspect-ratio` `--resolution` `--model` `--timeout` | 生成 3 张 1:1 的终端风格图，输出到目录，并用 base64 保存到本地 | `grok-cli image --json --prompt "..." --count 3 --output-dir ./out --aspect-ratio 1:1 --resolution 1k --response-format b64_json --model ... --timeout ...` |
-| P9 | `image-edit` | repeat `--image` `--response-format` `--output-file` `--aspect-ratio` `--resolution` `--model` `--timeout` | 把这两张图融合成一个更像 CLI 封面的图：`./a.png ./b.png` | `grok-cli image-edit --json --image ./a.png --image ./b.png --prompt "..." --response-format b64_json --output-file ./out.png --aspect-ratio 16:9 --resolution 1k --model ... --timeout ...` |
-| P10 | `video` | `--image-url` `--image` `--reference-image-url` `--reference-image` `--duration` `--aspect-ratio` `--resolution` `--model` `--timeout` | 用这张本地图片做一个 8 秒视频，再试一个用两张参考图生成的版本 | `grok-cli video --json --prompt "..." --image ./source.png --duration 8 --aspect-ratio 16:9 --resolution 720p --model ... --timeout ...` |
-| P11 | `video-edit` | `--video-url` `--video` `--model` `--timeout` | 直接编辑这个本地视频，让画面更有电影感：`./source.mp4` | `grok-cli video-edit --json --video ./source.mp4 --prompt "..." --model ... --timeout ...` |
-| P12 | `video-extend` | `--video-url` `--duration` `--model` `--timeout` | 把这个远程视频延长两秒：`https://example.com/source.mp4` | `grok-cli video-extend --json --video-url https://example.com/source.mp4 --duration 2 --prompt "..." --model ... --timeout ...` |
-| P13 | `tts` | `--list-voices` `--text` `--voice-id` `--language` `--output` `--output-format` `--sample-rate` `--bit-rate` `--optimize-streaming-latency` `--text-normalization` `--model` `--timeout` | 先列出可用声音，再把这段文字转成 ara 声音的 mp3 并保存 | `grok-cli tts --json --list-voices` 和 `grok-cli tts --json --text "..." --voice-id ara --language en --output ./out.mp3 --output-format mp3 --sample-rate ... --bit-rate ... --optimize-streaming-latency ... --text-normalization ... --model ... --timeout ...` |
-| P14 | `stt` | `--file` `--url` `--model` `--language` `--format` `--audio-format` `--sample-rate` `--multichannel` `--channels` `--diarize` `--keyterm` `--filler-words` `--timeout` | 转写这个本地音频，并保留关键词 Grok 和 CLI：`./sample.wav` | `grok-cli stt --json --file ./sample.wav --keyterm Grok --keyterm CLI --language auto --format true --audio-format wav --sample-rate 16000 --multichannel --channels 0,1 --diarize --filler-words --model ... --timeout ...` |
-| P15 | `stt-stream` | `--file` `--model` `--language` `--interim-results` `--endpointing` `--encoding` `--sample-rate` `--diarize` `--filler-words` `--multichannel` `--channels` `--keyterm` `--timeout` | 用实时方式转写这个音频，并打开 interim results：`./sample.wav` | `grok-cli stt-stream --json --file ./sample.wav --interim-results --endpointing ... --encoding pcm_s16le --sample-rate 16000 --diarize --filler-words --multichannel --channels 0,1 --keyterm Grok --model ... --language auto --timeout ...` |
+| P1 | `login` | `--no-browser` `--manual-paste` `--timeout` `--port` | This machine cannot open a browser automatically, help me log in to Grok with manual paste, 300 second timeout, port 8787 | `grok-cli login --no-browser --manual-paste --timeout 300 --port 8787` |
+| P2 | `status` / `state` | `--auth-file` | Check the login state using this auth file: `./tmp/auth.json` | `grok-cli status --json --auth-file ./tmp/auth.json` |
+| P3 | `model` | `--model` | Switch the default text model to `grok-4.3` | `grok-cli model --json --model grok-4.3` |
+| P4 | `usage` | `--session-db` `--session-id` | Look up the usage for session `abc123` from this session database: `./session.db` | `grok-cli usage --json --session-db ./session.db --session-id abc123` |
+| P5 | `chat` | `--system` `--model` `--no-web-search` `--with-x-search` `--allowed-domain` `--excluded-domain` `--allowed-x-handle` `--excluded-x-handle` `--from-date` `--to-date` `--enable-image-understanding` `--enable-video-understanding` `--timeout` | Use Grok to look only at X and the allowed domains, restrict to `example.com`, exclude `blocked.example.com`, include only `@xAI` and `@grok`, use the date range 2026-05-01 to 2026-05-21, enable image and video understanding, and return structured results | `grok-cli chat --json --system "..." --model ... --no-web-search --with-x-search --allowed-domain example.com --excluded-domain blocked.example.com --allowed-x-handle xAI --allowed-x-handle grok --from-date 2026-05-01 --to-date 2026-05-21 --enable-image-understanding --enable-video-understanding --timeout ... --prompt "..."` |
+| P6 | `chat` | `--stream` `--no-stream` `--raw-stream` | I want to watch the generation live, but I do not want a second final summary | `grok-cli chat --stream ...` or `grok-cli chat --no-stream ...` or `grok-cli chat --raw-stream ...` |
+| P7 | `search` | `--query` `--model` `--allowed-x-handle` `--excluded-x-handle` `--from-date` `--to-date` `--enable-image-understanding` `--enable-video-understanding` `--timeout` | Search X for discussion about `@xAI` and `@grok`, look only at the last week, and enable video understanding | `grok-cli search --json --query "..." --allowed-x-handle xAI --allowed-x-handle grok --from-date ... --to-date ... --enable-video-understanding --timeout ...` |
+| P8 | `image` | `--count` `--response-format` `--output-file` `--output-dir` `--aspect-ratio` `--resolution` `--model` `--timeout` | Generate three 1:1 terminal-style images, save them to a directory, and also keep the base64 output locally | `grok-cli image --json --prompt "..." --count 3 --output-dir ./out --aspect-ratio 1:1 --resolution 1k --response-format b64_json --model ... --timeout ...` |
+| P9 | `image-edit` | repeat `--image` `--response-format` `--output-file` `--aspect-ratio` `--resolution` `--model` `--timeout` | Blend these two images into a more CLI-like cover: `./a.png ./b.png` | `grok-cli image-edit --json --image ./a.png --image ./b.png --prompt "..." --response-format b64_json --output-file ./out.png --aspect-ratio 16:9 --resolution 1k --model ... --timeout ...` |
+| P10 | `video` | `--image-url` `--image` `--reference-image-url` `--reference-image` `--duration` `--aspect-ratio` `--resolution` `--model` `--timeout` | Turn this local image into an 8-second video, then try a second version using two reference images | `grok-cli video --json --prompt "..." --image ./source.png --duration 8 --aspect-ratio 16:9 --resolution 720p --model ... --timeout ...` |
+| P11 | `video-edit` | `--video-url` `--video` `--model` `--timeout` | Edit this local video and make it more cinematic: `./source.mp4` | `grok-cli video-edit --json --video ./source.mp4 --prompt "..." --model ... --timeout ...` |
+| P12 | `video-extend` | `--video-url` `--duration` `--model` `--timeout` | Extend this remote video by two seconds: `https://example.com/source.mp4` | `grok-cli video-extend --json --video-url https://example.com/source.mp4 --duration 2 --prompt "..." --model ... --timeout ...` |
+| P13 | `tts` | `--list-voices` `--text` `--voice-id` `--language` `--output` `--output-format` `--sample-rate` `--bit-rate` `--optimize-streaming-latency` `--text-normalization` `--model` `--timeout` | First list the available voices, then turn this text into an ara-voice MP3 and save it | `grok-cli tts --json --list-voices` and `grok-cli tts --json --text "..." --voice-id ara --language en --output ./out.mp3 --output-format mp3 --sample-rate ... --bit-rate ... --optimize-streaming-latency ... --text-normalization ... --model ... --timeout ...` |
+| P14 | `stt` | `--file` `--url` `--model` `--language` `--format` `--audio-format` `--sample-rate` `--multichannel` `--channels` `--diarize` `--keyterm` `--filler-words` `--timeout` | Transcribe this local audio and keep the keywords Grok and CLI: `./sample.wav` | `grok-cli stt --json --file ./sample.wav --keyterm Grok --keyterm CLI --language auto --format true --audio-format wav --sample-rate 16000 --multichannel --channels 0,1 --diarize --filler-words --model ... --timeout ...` |
+| P15 | `stt-stream` | `--file` `--model` `--language` `--interim-results` `--endpointing` `--encoding` `--sample-rate` `--diarize` `--filler-words` `--multichannel` `--channels` `--keyterm` `--timeout` | Transcribe this audio in real time and turn on interim results: `./sample.wav` | `grok-cli stt-stream --json --file ./sample.wav --interim-results --endpointing ... --encoding pcm_s16le --sample-rate 16000 --diarize --filler-words --multichannel --channels 0,1 --keyterm Grok --model ... --language auto --timeout ...` |
 
-## 验收标准
+## Acceptance Criteria
 
-- 所有公开能力至少各有 1 条可执行的 skill 用例。
-- 需要本地文件的能力都能通过“直接给路径”的方式触发正确命令。
-- `video-extend` 的本地 path 限制会被 skill 明确说明。
-- 参数级补测矩阵覆盖 `login`、`chat`、`search`、`image`、`image-edit`、`video`、`video-edit`、`video-extend`、`tts`、`stt`、`stt-stream` 的全部公开参数。
-- Codex 和 Claude Code 都可以只依据 `SKILL.md` 与这份用例文档完成验证。
+- Every public capability has at least one executable skill test case.
+- Every capability that accepts local files can be triggered correctly just by giving the path.
+- `video-extend`'s local path restriction is clearly explained by the skill.
+- The parameter cross-check matrix covers the public parameters for `login`, `chat`, `search`, `image`, `image-edit`, `video`, `video-edit`, `video-extend`, `tts`, `stt`, and `stt-stream`.
+- Codex and Claude Code can complete validation using only `SKILL.md` and this test case document.

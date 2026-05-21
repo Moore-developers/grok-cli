@@ -1,22 +1,44 @@
-# 快速开始
+# Quickstart
 
-## 1. 编译与检查
+## 1. Install Or Build
 
-在项目根目录运行：
+If you are using an agent runtime such as Codex, Claude Code, Cursor, or another skill-aware workflow, start with the bundled skill:
+
+```bash
+npx --yes skills add https://github.com/Moore-developers/grok-cli --skill grok-cli --global --yes
+```
+
+The skill can check whether `grok-cli` is installed, install it when possible, handle OAuth login, and then resume the original Grok task.
+
+For source installs:
+
+```bash
+cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
+```
+
+For local development from a checkout:
 
 ```bash
 cargo test
 ```
 
-如果测试全绿，说明本地构建、认证状态处理、任务执行和 usage 主路径都已经可用。
+If the tests pass, the local build, auth state handling, task execution, and usage paths are ready for development.
 
-## 2. 查看当前认证状态
+## 2. Check Auth Status
+
+Installed binary:
+
+```bash
+grok-cli status --json
+```
+
+Local development checkout:
 
 ```bash
 cargo run -- status --json
 ```
 
-如果还没有认证状态文件，典型返回会包含：
+If no auth state exists yet, a typical response contains:
 
 ```json
 {
@@ -31,126 +53,129 @@ cargo run -- status --json
 }
 ```
 
-## 3. 发起浏览器登录
+## 3. Start Browser Login
 
 ```bash
-cargo run -- login --json
+grok-cli login
 ```
 
-如果你在无浏览器环境中执行，或者要用手工回贴模式，可用：
+For scripts, skills, or validation:
 
 ```bash
-cargo run -- login --json --manual-paste
+grok-cli login --json
 ```
 
-说明：
-- 给人使用时可以不加 `--json`
-- 给脚本、SKILL 或测试使用时建议加 `--json`
-
-## 4. 执行第一个真实任务
-
-### 可选：先设置文本默认模型
+If the environment cannot open a browser or receive a callback, use manual paste mode:
 
 ```bash
-cargo run -- model --json
-cargo run -- model --json --model grok-4.3
+grok-cli login --json --manual-paste
 ```
 
-说明：
-- `model` 当前只管理共享文本默认模型：`chat` 和 `search` 使用同一个选择
-- 交互式终端中也可以运行 `cargo run -- model`，用方向键选择模型
-- 图片、视频、TTS、STT 如需切模型，继续直接在命令上显式传 `--model`
+## 4. Run The First Real Tasks
 
-### 聊天
+### Optional: choose the shared text model
 
 ```bash
-cargo run -- chat "用一句话介绍 Grok"
-cargo run -- chat "总结最近 AI 新闻" --with-x-search
+grok-cli model --json
+grok-cli model --json --model grok-4.3
 ```
 
-说明：
-- `chat` 默认会自动带通用 `web_search`
-- `chat` 默认会流式打印可读正文
-- 如果你只想要纯聊天，可加 `--no-web-search`
-- 如果你想关闭默认流式，可加 `--no-stream`
-- 如果既要通用网页搜索，又要 X 动态搜索，可加 `--with-x-search`
+Notes:
 
-### X 搜索
+- `model` manages the shared default text model for `chat` and `search`.
+- In an interactive terminal, `grok-cli model` opens a keyboard selection prompt.
+- Image, video, TTS, STT, and streaming STT models are set directly on their commands with `--model`.
+
+### Chat
 
 ```bash
-cargo run -- search "What are people saying about xAI on X today?"
+grok-cli chat "Introduce Grok in one sentence"
+grok-cli chat "Summarize recent AI news" --with-x-search
 ```
 
-说明：
-- `search` 默认也会流式打印可读正文
-- 如果你想拿单次最终文本，可加 `--no-stream`
+Notes:
 
-### 图片生成
+- `chat` enables general `web_search` by default.
+- `chat` streams readable text by default for humans.
+- Use `--no-web-search` for pure chat.
+- Use `--no-stream` for a single final text response.
+- Use `--with-x-search` to add X search alongside web search.
+
+### X Search
 
 ```bash
-cargo run -- image "A cinematic skyline at sunrise"
+grok-cli search "What are people saying about xAI on X today?"
 ```
 
-### 图片编辑
+Use `--no-stream` when you want one final text response instead of readable streaming.
+
+### Image Generation
 
 ```bash
-cargo run -- image-edit --image ./source.png --prompt "Make it cinematic"
+grok-cli image "A cinematic skyline at sunrise"
 ```
 
-### 视频生成
+### Image Editing
 
 ```bash
-cargo run -- video "Animate a futuristic skyline" --duration 8
+grok-cli image-edit --image ./source.png --prompt "Make it cinematic"
 ```
 
-### 视频编辑
+### Video Generation
 
 ```bash
-cargo run -- video-edit --video-url https://example.com/source.mp4 --prompt "Make it cinematic"
+grok-cli video "Animate a futuristic skyline" --duration 8
 ```
 
-### 视频扩展
+### Video Editing
 
 ```bash
-cargo run -- video-extend --video-url https://example.com/source.mp4 --prompt "Continue the camera move" --duration 6
+grok-cli video-edit --video-url https://example.com/source.mp4 --prompt "Make it cinematic"
 ```
 
-### 文本转语音
+### Video Extension
 
 ```bash
-cargo run -- tts "Hello from Grok"
+grok-cli video-extend --video-url https://example.com/source.mp4 --prompt "Continue the camera move" --duration 6
 ```
 
-### 语音转文字
+`video-extend` currently requires a remote video URL. Local video paths are intentionally not exposed for this command because real validation reached the upstream service but ended in an xAI internal error.
+
+### Text-To-Speech
 
 ```bash
-cargo run -- stt ./sample.wav
+grok-cli tts "Hello from Grok"
 ```
 
-### 实时语音转文字
+### Speech-To-Text
 
 ```bash
-cargo run -- stt-stream ./sample.wav --interim-results
+grok-cli stt ./sample.wav
 ```
 
-说明：
-- 图片、图片编辑、视频、视频编辑、视频扩展、TTS、STT 现在都会在发请求前检查 access token 是否即将过期
-- 如果已接近过期，命令会先自动 refresh，再继续真实请求
-- `stt-stream` 是实验入口，适合继续验证 WebSocket 实时转写协议
-
-## 5. 查看会话使用量
+### Streaming Speech-To-Text
 
 ```bash
-cargo run -- usage
+grok-cli stt-stream ./sample.wav --interim-results
 ```
 
-说明：
-- `usage` 会先输出本地 session usage
-- `usage` 不查询、不展示、不返回 Account limits
+Notes:
 
-## 6. 继续阅读
+- Media and audio commands check whether the access token is close to expiry before sending requests.
+- If needed, commands refresh first and then continue the real request.
+- `stt-stream` is experimental and exists for WebSocket STT validation.
 
-- 命令细节见 [命令参考](../commands/index.md)
-- 自动化调用约定见 [SKILL 集成约定](../reference/skill-integration.md)
-- 样例 JSON 见 [示例状态与样例输出](../reference/samples.md)
-- 常见错误看 [故障排查](./troubleshooting.md)
+## 5. Inspect Usage
+
+```bash
+grok-cli usage
+```
+
+`usage` reports local session usage. It does not query or display account limits.
+
+## 6. Continue Reading
+
+- Command details: [CLI Command Index](../commands/index.md)
+- Automation contract: [SKILL integration contract](../reference/skill-integration.md)
+- JSON examples: [Sample state and outputs](../reference/samples.md)
+- Common errors: [Troubleshooting](./troubleshooting.md)

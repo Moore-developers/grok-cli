@@ -1,51 +1,51 @@
 # Guides Index
 
-这个目录放用户和发布维护者最常用的操作指南。它们偏“怎么做”，不承担完整参数规格。
+This directory contains the most common how-to guides for users and release maintainers. These docs focus on workflows rather than exhaustive parameter specs.
 
-## 阅读顺序
+## Reading Order
 
-1. [快速开始](./quickstart.md)：从安装、登录到第一次真实调用。
-2. [故障排查](./troubleshooting.md)：认证、权限、媒体、stream 等常见问题。
-3. [发布与安装指南](./release.md)：SKILL-first 发布、macOS Apple Silicon 本地构建上传、macOS Intel/Linux source-first、Windows GitHub Release binary、Cargo 安装、版本 tag 和后续分发路径。
+1. [Quickstart](./quickstart.md): install, log in, and run the first real commands.
+2. [Troubleshooting](./troubleshooting.md): diagnose auth, entitlement, media, and streaming issues.
+3. [Release and Installation Guide](./release.md): SKILL-first distribution, macOS Apple Silicon local release uploads, macOS Intel/Linux source-first installs, Windows GitHub Release binaries, Cargo installs, tags, and future distribution options.
 
-## 文档职责
+## Doc Responsibilities
 
-### [快速开始](./quickstart.md)
+### [Quickstart](./quickstart.md)
 
-适合第一次使用 `grok-cli` 的用户。它只保留最短上手路径：
+For first-time `grok-cli` users. It keeps the shortest useful path:
 
-- 编译和测试
-- 查看认证状态
-- 发起浏览器登录
-- 执行 chat / search / media / usage
-- 跳转到更完整的命令参考
+- Install or build the CLI.
+- Check auth status.
+- Start browser login.
+- Run chat, search, media, audio, and usage commands.
+- Jump to the full command reference.
 
-### [故障排查](./troubleshooting.md)
+### [Troubleshooting](./troubleshooting.md)
 
-适合命令报错时快速定位问题。当前覆盖：
+For quick diagnosis when a command fails. It currently covers:
 
 - `state_file_missing`
 - `auth_relogin_required`
 - `xai_oauth_tier_denied`
-- 浏览器授权成功但 CLI 后续失败
-- `stt` 文件和参数问题
-- `chat --stream` 异常
+- Browser authorization succeeds but the CLI later fails.
+- `stt` file and parameter issues.
+- `chat` / `search` streaming issues.
 
-### [发布与安装指南](./release.md)
+### [Release and Installation Guide](./release.md)
 
-适合准备把项目发布给其他用户时使用。当前覆盖：
+For publishing the project or helping users install it. It covers:
 
-- macOS Apple Silicon 从 GitHub Release 下载维护者本地构建的 tarball，或从 GitHub source 安装
-- macOS Intel / Linux 从 GitHub source 安装
-- Windows 从 GitHub Release 下载 GitHub Actions 构建的预构建 binary
-- 通过仓库内置 `grok-cli` skill 自动安装和调用 CLI
-- 为什么只给当前可维护的平台发布预构建二进制
-- Homebrew / crates.io / winget / Scoop 的后续选择
-- 发布前检查清单
+- macOS Apple Silicon release tarballs or source installs.
+- macOS Intel and Linux source installs.
+- Windows GitHub Release binaries built by GitHub Actions.
+- The bundled `grok-cli` skill as the preferred agent-facing entry point.
+- Why prebuilt binaries are limited to platforms the maintainer can own.
+- Deferred channels such as Homebrew, crates.io, winget, and Scoop.
+- Pre-release checklists.
 
-## 相关入口
+## Related Entrypoints
 
-- [CLI 命令索引](../commands/index.md)
+- [CLI Command Index](../commands/index.md)
 - [Reference Index](../reference/index.md)
 - [Project Index](../project/index.md)
-- [总索引](../index.md)
+- [Documentation Index](../index.md)

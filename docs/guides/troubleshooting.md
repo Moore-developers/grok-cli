@@ -1,79 +1,94 @@
-# 故障排查
+# Troubleshooting
 
 ## 1. `state_file_missing`
 
-含义：
-- 当前没有可用状态文件
+Meaning:
 
-处理：
-- 先执行 `login --json`
+- No usable local auth state file exists.
+
+Fix:
+
+- Run `grok-cli login`.
+- For scripts or skills, run `grok-cli login --json`.
 
 ## 2. `auth_relogin_required`
 
-含义：
-- 当前 refresh 已无法恢复，必须重新登录
+Meaning:
 
-处理：
-- 执行 `login --json`
+- Refresh can no longer recover the current session.
+- A fresh browser login is required.
+
+Fix:
+
+- Run `grok-cli login`.
 
 ## 3. `xai_oauth_tier_denied`
 
-含义：
-- 当前 OAuth 账号没有对应 API / 能力权限
+Meaning:
 
-处理：
-- 不要重复刷新
-- 不要只做重登重试
-- 先确认账号订阅、权限和能力开通状态
+- The OAuth account does not have permission for the requested API or capability.
 
-补充说明：
+Fix:
 
-- 如果错误正文包含 `The OAuth2 access token could not be validated`，它未必真的是订阅层级不足
-- `2026-05-20` 的真实媒体验证中，这类错误曾由“access token 已接近过期”触发，`refresh` 后恢复正常
-- 当前媒体请求入口已增加“即将过期先 refresh”的自动编排，用来降低这类误判
-- 如果你是在旧二进制上复现到这个错误，先升级到包含该自动编排的版本，再重新跑媒体命令
+- Do not keep refreshing in a loop.
+- Do not assume reinstalling will help.
+- Check the account subscription, entitlement, and capability availability.
 
-## 4. 浏览器登录页成功，但 CLI 后续失败
+Additional note:
 
-常见现象：
-- 浏览器已显示连接成功
-- 但 CLI 在 token exchange 或 refresh 阶段失败
+- If the upstream body says `The OAuth2 access token could not be validated`, it is not always a true subscription-tier failure.
+- During real media validation on 2026-05-20, this text was also seen when the access token was close to expiry; refresh recovered the request.
+- Current media commands refresh before requests when the token is close to expiry.
+- If you see this on an old binary, upgrade first and retry.
 
-当前项目中的已知真实根因：
-- 浏览器与 `curl` 可以成功访问 `auth.x.ai`
-- Rust `reqwest` 在当前环境下可能先走异常的 IPv6 路径
+## 4. Browser Login Succeeds But The CLI Fails Later
 
-当前实现中的处理：
-- 共享 HTTP client 已改为优先绑定 IPv4 出站
+Common symptoms:
 
-## 5. `stt` 报文件不存在
+- The browser reports that authorization succeeded.
+- The CLI then fails during token exchange or refresh.
 
-含义：
-- `--file` 指向的本地音频文件不存在
+Known root cause observed in this project:
 
-处理：
-- 确认路径是绝对路径或当前目录下真实存在的文件
+- Browser and `curl` access to `auth.x.ai` worked.
+- Rust `reqwest` could still pick a problematic IPv6 route in the local environment.
 
-## 6. `chat` 或 `search` 的流式输出返回异常
+Current handling:
 
-处理顺序建议：
+- The shared HTTP client prefers IPv4 outbound binding.
 
-1. 先用非流式 `chat --json` 验证主路径
-2. 如果 `chat` 有问题，再测 `chat --stream`、`chat --no-stream` 或 `chat --raw-stream`
-3. 如果 `search` 有问题，再测 `search --json`、`search --no-stream` 或 `search --raw-stream`
+## 5. `stt` Reports A Missing File
 
-这样更容易区分：
-- 是认证问题
-- 是 Responses API 问题
-- 还是 SSE 事件本身的兼容问题
+Meaning:
 
-## 7. `stt` 返回 `Field 'language' is required when 'format' is true`
+- `--file` points to a local audio path that does not exist.
 
-含义：
-- 当前 STT 请求启用了格式化输出，xAI 要求同时提供 `language`
+Fix:
 
-当前实现中的处理：
-- `stt` 已在 multipart 请求里默认补 `language=en`
+- Use an absolute path or a path that exists relative to the current working directory.
 
-如果还要显式指定：
-- 直接传 `--language <code>`
+## 6. `chat` Or `search` Streaming Fails
+
+Suggested isolation order:
+
+1. Run non-streaming JSON first, such as `grok-cli chat --json --prompt "..."`.
+2. If `chat` fails, compare `chat --stream`, `chat --no-stream`, and `chat --raw-stream`.
+3. If `search` fails, compare `search --json`, `search --no-stream`, and `search --raw-stream`.
+
+This helps separate auth issues, Responses API issues, and SSE event compatibility issues.
+
+## 7. `stt` Returns `Field 'language' is required when 'format' is true`
+
+Meaning:
+
+- The STT request asked for formatted transcription, and xAI requires `language`.
+
+Current handling:
+
+- `stt` sends `language=en` by default in multipart requests.
+
+If you want another language:
+
+```bash
+grok-cli stt ./sample.wav --language zh
+```

@@ -1,18 +1,20 @@
-# 示例状态与样例输出
+# Sample State And Outputs
 
-## 1. 示例状态文件
+## 1. Sample State File
 
-示例文件位置：
+Sample file:
 
 [`./.sample/auth.json`](../../.sample/auth.json)
 
-用途：
-- 说明状态文件 schema 的基本形状
-- 说明 `provider`、`auth_mode`、`discovery`、`redirect_uri`、`metadata` 的位置
+Purpose:
 
-注意：
-- 这是示例值
-- 不能直接用于真实认证
+- Show the basic shape of the state file schema.
+- Show the placement of `provider`, `auth_mode`, `discovery`, `redirect_uri`, and `metadata`.
+
+Note:
+
+- This file uses sample values.
+- It cannot be used for real authentication.
 
 ## 2. `status --json`
 
@@ -29,66 +31,45 @@
     "access_token_expiring": false,
     "relogin_required": false,
     "entitlement_denied": false,
-    "last_refresh": "2026-05-19T17:00:00Z",
-    "auth_store_path": "/abs/path/auth.json",
+    "auth_store_path": "~/.grok-cli/auth.json",
     "base_url": "https://api.x.ai/v1"
   }
 }
 ```
 
-## 3. `chat --json`
+## 3. `login --json`
+
+```json
+{
+  "ok": true,
+  "command": "login",
+  "data": {
+    "provider": "xai-oauth",
+    "auth_mode": "oauth_pkce",
+    "saved": true,
+    "auth_store_path": "~/.grok-cli/auth.json",
+    "redirect_uri": "http://127.0.0.1:56121/callback",
+    "base_url": "https://api.x.ai/v1"
+  }
+}
+```
+
+## 4. `chat --json`
 
 ```json
 {
   "ok": true,
   "command": "chat",
   "data": {
-    "provider": "xai-oauth",
-    "model": "grok-4.3",
-    "protocol": "codex_responses",
-    "output_text": "hello",
-    "finish_reason": "stop",
-    "tool_calls": []
+    "provider": "xai",
+    "model": "grok-4.20-reasoning",
+    "protocol": "responses",
+    "output_text": "..."
   }
 }
 ```
 
-默认行为说明：
-- `chat` 默认会挂载 `web_search`
-- `chat` 非 `--json` 时默认流式打印可读正文
-- `chat --json` 默认返回单次结构化结果
-- `chat --no-web-search` 会退回纯聊天
-- `chat --with-x-search` 会同时挂载 `web_search + x_search`
-
-## 3.1 `model --json`
-
-```json
-{
-  "ok": true,
-  "command": "model",
-  "data": {
-    "provider": "xai-oauth",
-    "selected_model": "grok-4.3",
-    "selected": {
-      "text": "grok-4.3",
-      "chat": "grok-4.3",
-      "search": "grok-4.3"
-    },
-    "catalog": [
-      "grok-4.3",
-      "grok-4.20-reasoning",
-      "grok-4.20-0309-reasoning"
-    ]
-  }
-}
-```
-
-补充说明：
-
-- `selected` 展示共享文本模型，以及兼容用的 `chat` / `search` 展开值
-- `image`、`video`、`tts`、`stt` 不在这里持久化默认值
-
-## 4. `search --json`
+## 5. `search --json`
 
 ```json
 {
@@ -97,385 +78,25 @@
   "data": {
     "success": true,
     "provider": "xai",
-    "credential_source": "xai-oauth",
     "tool": "x_search",
     "model": "grok-4.20-reasoning",
-    "query": "AI infra discourse",
-    "answer": "...",
-    "citations": [],
-    "inline_citations": []
+    "query": "..."
   }
 }
 ```
 
-默认行为说明：
-- `search` 非 `--json` 时默认流式打印可读正文
-- `search --json` 默认返回单次结构化结果
-
-## 5. `image --json`
-
-```json
-{
-  "ok": true,
-  "command": "image",
-  "data": {
-    "provider": "xai",
-    "credential_source": "xai-oauth",
-    "model": "grok-imagine-image",
-    "image": "https://cdn.x.ai/image-1.png",
-    "images": [
-      "https://cdn.x.ai/image-1.png",
-      "https://cdn.x.ai/image-2.png"
-    ],
-    "aspect_ratio": "16:9",
-    "extra": {
-      "resolution": "1k",
-      "count": 2,
-      "response_format": "url"
-    }
-  }
-}
-```
-
-兼容性说明：
-- `image` 始终是第一张图片，旧脚本可以继续读取它。
-- `images` 是完整图片列表，单图时也会返回一个元素。
-- 使用 `--output-dir` 时，`image` 和 `images` 返回本地落盘路径。
-
-## 6. `image-edit --json`
-
-```json
-{
-  "ok": true,
-  "command": "image-edit",
-  "data": {
-    "provider": "xai",
-    "credential_source": "xai-oauth",
-    "model": "grok-imagine-image",
-    "image": "https://cdn.x.ai/edited-image.png",
-    "images": [
-      "https://cdn.x.ai/edited-image.png"
-    ],
-    "aspect_ratio": "16:9",
-    "extra": {
-      "resolution": "1k",
-      "input_count": 1,
-      "response_format": "url"
-    }
-  }
-}
-```
-
-默认行为说明：
-- `image-edit` 支持 1 到 3 张输入图。
-- 本地输入图会编码成 data URI 后发送到 xAI。
-- `image` 是第一张编辑结果，`images` 是完整编辑结果列表。
-
-## 7. `video-edit --json`
-
-```json
-{
-  "ok": true,
-  "command": "video-edit",
-  "data": {
-    "provider": "xai",
-    "credential_source": "xai-oauth",
-    "model": "grok-imagine-video",
-    "video": "https://cdn.x.ai/edited-video.mp4",
-    "modality": "edit",
-    "duration": 8,
-    "extra": {
-      "request_id": "edit_123",
-      "resolution": null
-    }
-  }
-}
-```
-
-默认行为说明：
-- `video-edit` 请求 `POST /videos/edits`。
-- 请求体使用 `video: {"url": ...}`，不发送 `duration`、`aspect_ratio`、`resolution`。
-- 创建请求后会轮询 `GET /videos/{request_id}` 到终态。
-
-## 8. `video-extend --json`
-
-```json
-{
-  "ok": true,
-  "command": "video-extend",
-  "data": {
-    "provider": "xai",
-    "credential_source": "xai-oauth",
-    "model": "grok-imagine-video",
-    "video": "https://cdn.x.ai/extended-video.mp4",
-    "modality": "extension",
-    "duration": 15,
-    "extra": {
-      "request_id": "ext_123",
-      "resolution": null
-    }
-  }
-}
-```
-
-默认行为说明：
-- `video-extend` 请求 `POST /videos/extensions`。
-- 请求体使用 `video: {"url": ...}` 和 `duration`，不发送 `aspect_ratio`、`resolution`。
-- `duration` 默认 `6`，请求前会限制到 `2..=10`。
-- 创建请求后会轮询 `GET /videos/{request_id}` 到终态。
-
-## 9. `tts --json`
-
-```json
-{
-  "ok": true,
-  "command": "tts",
-  "data": {
-    "success": true,
-    "provider": "xai",
-    "credential_source": "xai-oauth",
-    "file_path": "/abs/path/audio.mp3",
-    "media_tag": "MEDIA:/abs/path/audio.mp3",
-    "voice_compatible": false,
-    "output_format": {
-      "codec": "mp3",
-      "sample_rate": 24000,
-      "bit_rate": 128000
-    }
-  }
-}
-```
-
-## 9.1 `tts --list-voices --json`
-
-```json
-{
-  "ok": true,
-  "command": "tts",
-  "data": {
-    "success": true,
-    "provider": "xai",
-    "credential_source": "xai-oauth",
-    "voices": [
-      {
-        "voice_id": "eve",
-        "name": "Eve",
-        "type": "official"
-      }
-    ]
-  }
-}
-```
-
-## 10. `stt --json`
-
-```json
-{
-  "ok": true,
-  "command": "stt",
-  "data": {
-    "success": true,
-    "provider": "xai",
-    "credential_source": "xai-oauth",
-    "transcript": "hello transcript",
-    "language": "en",
-    "duration": 1.5,
-    "words": [
-      {
-        "word": "hello",
-        "start": 0.0,
-        "end": 0.5
-      }
-    ],
-    "channels": [
-      {
-        "channel": 0,
-        "text": "hello transcript"
-      }
-    ]
-  }
-}
-```
-
-兼容性说明：
-- `transcript` 始终保留，旧脚本可以继续读取它。
-- `language`、`duration`、`words`、`channels` 只有上游返回时才出现。
-
-## 10.1 媒体能力真实验证补充
-
-`2026-05-20` 真实验证结果：
-
-- `image --json` 已成功返回真实 xAI CDN 图片链接
-- `tts --json` 已成功生成真实 MP3 文件
-- `stt --json` 已成功转写上一条真实 TTS 生成的 MP3 文件
-- `video --json` 已成功完成以下三条真实分支：
-  - text-to-video
-  - image-to-video（`--image-url`）
-  - reference-image video（`--reference-image-url`）
-
-真实验证期间发现并已吸收的接口约束：
-
-- `stt` 当请求里带 `format=true` 时，xAI 要求必须同时提供 `language`
-- `video` 在 access token 接近过期时，视频接口比聊天接口更容易直接返回 token validation failure
-- 当前媒体请求入口已接入“access token 即将过期则先 refresh”的自动编排
-
-这轮真实问题定位结论：
-
-- 首次失败报文为 `The OAuth2 access token could not be validated. [WKE=unauthenticated:bad-credentials]`
-- 随后检查 `status`，可见当前状态已处于 `access_token_expiring: true`
-- 手动执行一次 `refresh` 后，`video` 的三条真实分支全部恢复成功
-- 现已把这一步前置为媒体命令内建编排，不再要求用户自己先发现再刷新
-
-## 11. 典型错误信封
-
-```json
-{
-  "ok": false,
-  "command": "status",
-  "error": {
-    "code": "state_file_missing",
-    "message": "state file not found: /abs/path/auth.json",
-    "relogin_required": false,
-    "entitlement_denied": false
-  }
-}
-```
-
-## 12. `usage`
-
-人类可读输出示例：
-
-```text
-Session Usage
-├─ Input tokens:     125K
-├─ Output tokens:    45.3K
-├─ Total tokens:     170K
-├─ Estimated cost:   $0.27 (this session)
-├─ Duration:         47m 12s
-└─ Context:          170K / 2.00M tokens (8.5%)
-
-Usage Breakdown
-├─ Text
-│   ├─ Requests:       5
-│   ├─ Commands:       chat, search
-│   ├─ Input tokens:   125K
-│   ├─ Output tokens:  45.3K
-│   ├─ Total tokens:   170K
-│   ├─ Reasoning:      3.00K
-│   └─ Estimated cost: $0.27
-├─ Image
-│   ├─ Requests:       1
-│   ├─ Commands:       image
-│   ├─ Input tokens:   0
-│   ├─ Output tokens:  0
-│   ├─ Total tokens:   0
-│   ├─ Reasoning:      0
-│   └─ Estimated cost: n/a
-├─ Video
-│   ├─ Requests:       1
-│   ├─ Commands:       video
-│   ├─ Input tokens:   0
-│   ├─ Output tokens:  0
-│   ├─ Total tokens:   0
-│   ├─ Reasoning:      0
-│   └─ Estimated cost: n/a
-├─ Audio
-│   ├─ Requests:       2
-│   ├─ Commands:       tts, stt
-│   ├─ Input tokens:   3.20K
-│   ├─ Output tokens:  600
-│   ├─ Total tokens:   3.80K
-│   ├─ Reasoning:      0
-│   └─ Estimated cost: $0.00
-
-```
-
-`--json` 输出示例：
+## 6. `usage --json`
 
 ```json
 {
   "ok": true,
   "command": "usage",
   "data": {
-    "provider": "xai-oauth",
-    "session": {
-      "session_id": "sess_01_example",
-      "started_at": "2026-05-20T10:00:00Z",
-      "last_activity_at": "2026-05-20T10:47:12Z",
-      "duration_seconds": 2832,
-      "request_count": 7,
-      "tracked_command_count": 7,
-      "models": ["grok-4.20-reasoning"],
-      "session_store_path": "/abs/path/session.db"
-    },
-    "local_usage": {
-      "input_tokens": 124837,
-      "output_tokens": 45291,
-      "cache_read_tokens": 0,
-      "cache_write_tokens": 0,
-      "reasoning_tokens": 0,
-      "total_tokens": 170128,
-      "estimated_cost_usd": 0.269193,
-      "pricing_status": "estimated",
-      "pricing_source": "bundled_xai_table",
-      "last_model": "grok-4.20-reasoning",
-      "context_window_tokens": 2000000,
-      "history_turns": 7,
-      "compression_count": 0,
-      "has_unflushed_tracker_data": false
-    },
-    "breakdown": {
-      "text": {
-        "request_count": 5,
-        "commands": ["chat", "search"],
-        "input_tokens": 124837,
-        "output_tokens": 45291,
-        "cache_read_tokens": 0,
-        "cache_write_tokens": 0,
-        "reasoning_tokens": 3000,
-        "estimated_cost_usd": 0.269193
-      },
-      "image": {
-        "request_count": 1,
-        "commands": ["image"],
-        "input_tokens": 0,
-        "output_tokens": 0,
-        "cache_read_tokens": 0,
-        "cache_write_tokens": 0,
-        "reasoning_tokens": 0,
-        "estimated_cost_usd": 0.0
-      },
-      "video": {
-        "request_count": 1,
-        "commands": ["video"],
-        "input_tokens": 0,
-        "output_tokens": 0,
-        "cache_read_tokens": 0,
-        "cache_write_tokens": 0,
-        "reasoning_tokens": 0,
-        "estimated_cost_usd": 0.0
-      },
-      "audio": {
-        "request_count": 2,
-        "commands": ["tts", "stt"],
-        "input_tokens": 3200,
-        "output_tokens": 600,
-        "cache_read_tokens": 0,
-        "cache_write_tokens": 0,
-        "reasoning_tokens": 0,
-        "estimated_cost_usd": 0.0
-      }
-    },
-    "recent_rate_limits": {
-      "available": true
-    }
+    "provider": "local",
+    "session": {},
+    "local_usage": {},
+    "breakdown": {},
+    "recent_rate_limits": []
   }
 }
 ```
-
-补充说明：
-
-- `usage` 人类可读输出只展示本地 Session Usage 和 Usage Breakdown
-- `usage` 现已按 `text` / `image` / `video` / `audio` 四类输出 breakdown
-- 非 `--json` 输出中的 token 数字统一按 `K/M/B` 紧凑格式展示
-- `usage` 不查询、不展示、不返回 Account limits

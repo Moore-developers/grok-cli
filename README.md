@@ -1,5 +1,7 @@
 # grok-cli
 
+[中文说明](README.zh-CN.md)
+
 > Grok / xAI in a terminal-first, scriptable, and agent-ready CLI.
 
 ## Overview
@@ -260,7 +262,6 @@ cargo install --path . --force
 
 ## Documentation
 
-- [中文说明](README.zh-CN.md)
 - [Documentation index](docs/index.md)
 - [Quickstart](docs/guides/quickstart.md)
 - [Command reference](docs/commands/index.md)

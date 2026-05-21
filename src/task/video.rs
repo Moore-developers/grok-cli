@@ -1,3 +1,8 @@
+use std::fs;
+use std::path::Path;
+
+use base64::Engine;
+use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use serde::Serialize;
 use serde_json::{Value, json};
 
@@ -41,7 +46,7 @@ struct VideoTaskRequest {
     common: TaskCommonOptions,
     model: Option<String>,
     create_path: &'static str,
-    build_request: Box<dyn Fn(&str) -> Value>,
+    build_request: Box<dyn Fn(&str) -> Result<Value, AppError>>,
     timeout: Option<u64>,
     modality: String,
     aspect_ratio: Option<String>,
@@ -83,7 +88,8 @@ fn execute_video_task(ctx: &AppContext, task: VideoTaskRequest) -> CommandResult
     let model = task.model.clone().unwrap_or_else(|| {
         model::default_model_for_task(state.as_ref(), "video", DEFAULT_VIDEO_MODEL)
     });
-    let request = (task.build_request)(&model);
+    let request =
+        (task.build_request)(&model).map_err(|error| CommandError::new(command, json_output, error))?;
     let created = upstream::post_json_api_with_options(
         ctx,
         task.common.auth_file.as_deref(),
@@ -145,18 +151,29 @@ fn validate_options(opts: &VideoGenOptions) -> Result<(), AppError> {
         ));
     }
 
-    if opts.reference_image_urls.len() > 7 {
+    let reference_count = opts.reference_image_urls.len() + opts.reference_images.len();
+    if reference_count > 7 {
         return Err(AppError::new(
             ErrorCode::InvalidArgs,
-            "--reference-image-url supports at most 7 values",
+            "--reference-image-url and --reference-image support at most 7 values total",
         ));
     }
 
-    if opts.image_url.is_some() && !opts.reference_image_urls.is_empty() {
+    let image_mode_count = usize::from(opts.image_url.is_some())
+        + usize::from(opts.image.is_some())
+        + usize::from(!opts.reference_image_urls.is_empty() || !opts.reference_images.is_empty());
+    if image_mode_count > 1 {
         return Err(AppError::new(
             ErrorCode::InvalidArgs,
-            "--image-url cannot be combined with --reference-image-url for xAI video generation",
+            "--image-url, --image, --reference-image-url, and --reference-image are mutually exclusive input modes for xAI video generation",
         ));
+    }
+
+    if let Some(path) = opts.image.as_deref() {
+        validate_local_file_exists(path)?;
+    }
+    for path in &opts.reference_images {
+        validate_local_file_exists(path)?;
     }
 
     Ok(())
@@ -170,11 +187,20 @@ fn validate_edit_options(opts: &VideoEditOptions) -> Result<(), AppError> {
         ));
     }
 
-    if non_empty_string(opts.video_url.as_deref()).is_none() {
+    if non_empty_string(opts.video_url.as_deref()).is_none() && opts.video.is_none() {
         return Err(AppError::new(
             ErrorCode::InvalidArgs,
-            "--video-url is required",
+            "--video-url or --video is required",
         ));
+    }
+    if opts.video_url.is_some() && opts.video.is_some() {
+        return Err(AppError::new(
+            ErrorCode::InvalidArgs,
+            "--video-url cannot be combined with --video",
+        ));
+    }
+    if let Some(path) = opts.video.as_deref() {
+        validate_local_file_exists(path)?;
     }
 
     Ok(())
@@ -188,11 +214,20 @@ fn validate_extend_options(opts: &VideoExtendOptions) -> Result<(), AppError> {
         ));
     }
 
-    if non_empty_string(opts.video_url.as_deref()).is_none() {
+    if non_empty_string(opts.video_url.as_deref()).is_none() && opts.video.is_none() {
         return Err(AppError::new(
             ErrorCode::InvalidArgs,
-            "--video-url is required",
+            "--video-url or --video is required",
         ));
+    }
+    if opts.video_url.is_some() && opts.video.is_some() {
+        return Err(AppError::new(
+            ErrorCode::InvalidArgs,
+            "--video-url cannot be combined with --video",
+        ));
+    }
+    if let Some(path) = opts.video.as_deref() {
+        validate_local_file_exists(path)?;
     }
 
     Ok(())
@@ -263,7 +298,7 @@ fn video_extend_task(opts: VideoExtendOptions, command: &'static str) -> VideoTa
     }
 }
 
-fn build_request(opts: &VideoGenOptions, model: &str) -> Value {
+fn build_request(opts: &VideoGenOptions, model: &str) -> Result<Value, AppError> {
     let mut body = serde_json::Map::new();
     body.insert("model".to_string(), json!(model));
     body.insert("prompt".to_string(), json!(prompt_text(opts)));
@@ -271,7 +306,7 @@ fn build_request(opts: &VideoGenOptions, model: &str) -> Value {
         "duration".to_string(),
         json!(clamp_duration(
             opts.duration,
-            !opts.reference_image_urls.is_empty()
+            !opts.reference_image_urls.is_empty() || !opts.reference_images.is_empty()
         )),
     );
     body.insert(
@@ -286,29 +321,46 @@ fn build_request(opts: &VideoGenOptions, model: &str) -> Value {
     if let Some(image_url) = opts.image_url.as_deref() {
         body.insert("image".to_string(), json!({ "url": image_url }));
     }
-    if !opts.reference_image_urls.is_empty() {
-        let refs: Vec<Value> = opts
+    if let Some(image_path) = opts.image.as_deref() {
+        body.insert(
+            "image".to_string(),
+            json!({ "url": local_file_data_uri(image_path, MediaKind::Image)? }),
+        );
+    }
+    if !opts.reference_image_urls.is_empty() || !opts.reference_images.is_empty() {
+        let mut refs: Vec<Value> = opts
             .reference_image_urls
             .iter()
             .map(|url| json!({ "url": url }))
             .collect();
+        for path in &opts.reference_images {
+            refs.push(json!({
+                "url": local_file_data_uri(path, MediaKind::Image)?
+            }));
+        }
         body.insert("reference_images".to_string(), Value::Array(refs));
     }
 
-    Value::Object(body)
+    Ok(Value::Object(body))
 }
 
-fn build_edit_request(opts: &VideoEditOptions, model: &str) -> Value {
+fn build_edit_request(opts: &VideoEditOptions, model: &str) -> Result<Value, AppError> {
     let mut body = serde_json::Map::new();
     body.insert("model".to_string(), json!(model));
     body.insert("prompt".to_string(), json!(edit_prompt_text(opts)));
     if let Some(video_url) = non_empty_string(opts.video_url.as_deref()) {
         body.insert("video".to_string(), json!({ "url": video_url }));
     }
-    Value::Object(body)
+    if let Some(video_path) = opts.video.as_deref() {
+        body.insert(
+            "video".to_string(),
+            json!({ "url": local_file_data_uri(video_path, MediaKind::Video)? }),
+        );
+    }
+    Ok(Value::Object(body))
 }
 
-fn build_extend_request(opts: &VideoExtendOptions, model: &str) -> Value {
+fn build_extend_request(opts: &VideoExtendOptions, model: &str) -> Result<Value, AppError> {
     let mut body = serde_json::Map::new();
     body.insert("model".to_string(), json!(model));
     body.insert("prompt".to_string(), json!(extend_prompt_text(opts)));
@@ -319,7 +371,13 @@ fn build_extend_request(opts: &VideoExtendOptions, model: &str) -> Value {
     if let Some(video_url) = non_empty_string(opts.video_url.as_deref()) {
         body.insert("video".to_string(), json!({ "url": video_url }));
     }
-    Value::Object(body)
+    if let Some(video_path) = opts.video.as_deref() {
+        body.insert(
+            "video".to_string(),
+            json!({ "url": local_file_data_uri(video_path, MediaKind::Video)? }),
+        );
+    }
+    Ok(Value::Object(body))
 }
 
 fn prompt_text(opts: &VideoGenOptions) -> &str {
@@ -348,6 +406,68 @@ fn non_empty_string(value: Option<&str>) -> Option<String> {
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .map(ToOwned::to_owned)
+}
+
+#[derive(Clone, Copy)]
+enum MediaKind {
+    Image,
+    Video,
+}
+
+fn validate_local_file_exists(path: &Path) -> Result<(), AppError> {
+    if path.exists() {
+        Ok(())
+    } else {
+        Err(AppError::new(
+            ErrorCode::InvalidArgs,
+            format!("file does not exist: {}", path.display()),
+        ))
+    }
+}
+
+fn local_file_data_uri(path: &Path, media_kind: MediaKind) -> Result<String, AppError> {
+    let bytes = fs::read(path).map_err(|error| {
+        AppError::new(
+            ErrorCode::InvalidArgs,
+            format!("failed to read file {}: {error}", path.display()),
+        )
+    })?;
+    let mime = match media_kind {
+        MediaKind::Image => image_mime_type(path),
+        MediaKind::Video => video_mime_type(path),
+    };
+    Ok(format!(
+        "data:{mime};base64,{}",
+        BASE64_STANDARD.encode(bytes)
+    ))
+}
+
+fn image_mime_type(path: &Path) -> &'static str {
+    match path
+        .extension()
+        .and_then(|value| value.to_str())
+        .map(|value| value.to_ascii_lowercase())
+        .as_deref()
+    {
+        Some("jpg" | "jpeg") => "image/jpeg",
+        Some("webp") => "image/webp",
+        Some("gif") => "image/gif",
+        _ => "image/png",
+    }
+}
+
+fn video_mime_type(path: &Path) -> &'static str {
+    match path
+        .extension()
+        .and_then(|value| value.to_str())
+        .map(|value| value.to_ascii_lowercase())
+        .as_deref()
+    {
+        Some("mov") => "video/quicktime",
+        Some("webm") => "video/webm",
+        Some("mkv") => "video/x-matroska",
+        _ => "video/mp4",
+    }
 }
 
 fn extract_request_id(response: &Value) -> Result<String, AppError> {
@@ -507,7 +627,11 @@ fn parse_video_response(
 }
 
 fn video_generation_modality(opts: &VideoGenOptions) -> String {
-    if opts.image_url.is_some() || !opts.reference_image_urls.is_empty() {
+    if opts.image_url.is_some()
+        || opts.image.is_some()
+        || !opts.reference_image_urls.is_empty()
+        || !opts.reference_images.is_empty()
+    {
         "image".to_string()
     } else {
         "text".to_string()
@@ -585,6 +709,8 @@ mod tests {
     use crate::args::{TaskCommonOptions, VideoEditOptions, VideoExtendOptions, VideoGenOptions};
     use crate::upstream::UpstreamJsonEnvelope;
     use serde_json::json;
+    use std::fs;
+    use tempfile::tempdir;
 
     fn sample_opts() -> VideoGenOptions {
         VideoGenOptions {
@@ -595,7 +721,9 @@ mod tests {
             prompt: Some("Animate a futuristic skyline".to_string()),
             prompt_flag: None,
             image_url: None,
+            image: None,
             reference_image_urls: vec![],
+            reference_images: vec![],
             duration: Some(8),
             aspect_ratio: Some("16:9".to_string()),
             resolution: Some("720p".to_string()),
@@ -613,6 +741,7 @@ mod tests {
             prompt: Some("Give the woman a silver necklace".to_string()),
             prompt_flag: None,
             video_url: Some("https://cdn.x.ai/source.mp4".to_string()),
+            video: None,
             model: Some("grok-imagine-video".to_string()),
             timeout: Some(60),
         }
@@ -627,6 +756,7 @@ mod tests {
             prompt: Some("The camera pans left".to_string()),
             prompt_flag: None,
             video_url: Some("https://cdn.x.ai/source.mp4".to_string()),
+            video: None,
             duration: Some(6),
             model: Some("grok-imagine-video".to_string()),
             timeout: Some(60),
@@ -665,7 +795,7 @@ mod tests {
         opts.video_url = None;
         let error = validate_edit_options(&opts).unwrap_err();
         assert_eq!(error.code.as_str(), "invalid_args");
-        assert!(error.message.contains("--video-url is required"));
+        assert!(error.message.contains("--video-url or --video is required"));
     }
 
     #[test]
@@ -683,14 +813,14 @@ mod tests {
         opts.video_url = None;
         let error = validate_extend_options(&opts).unwrap_err();
         assert_eq!(error.code.as_str(), "invalid_args");
-        assert!(error.message.contains("--video-url is required"));
+        assert!(error.message.contains("--video-url or --video is required"));
     }
 
     #[test]
     fn build_request_includes_video_fields() {
         let mut opts = sample_opts();
         opts.image_url = Some("https://cdn.x.ai/source.png".to_string());
-        let request = build_request(&opts, "grok-imagine-video");
+        let request = build_request(&opts, "grok-imagine-video").unwrap();
         assert_eq!(request["image"]["url"], "https://cdn.x.ai/source.png");
         assert_eq!(request["duration"], 8);
         assert_eq!(request["aspect_ratio"], "16:9");
@@ -704,7 +834,7 @@ mod tests {
             "https://cdn.x.ai/ref-1.png".to_string(),
             "https://cdn.x.ai/ref-2.png".to_string(),
         ];
-        let request = build_request(&opts, "grok-imagine-video");
+        let request = build_request(&opts, "grok-imagine-video").unwrap();
         assert_eq!(
             request["reference_images"][0]["url"],
             "https://cdn.x.ai/ref-1.png"
@@ -713,9 +843,21 @@ mod tests {
     }
 
     #[test]
+    fn build_request_wraps_local_image_as_data_uri() {
+        let temp = tempdir().unwrap();
+        let image = temp.path().join("source.png");
+        fs::write(&image, b"hello").unwrap();
+
+        let mut opts = sample_opts();
+        opts.image = Some(image);
+        let request = build_request(&opts, "grok-imagine-video").unwrap();
+        assert_eq!(request["image"]["url"], "data:image/png;base64,aGVsbG8=");
+    }
+
+    #[test]
     fn build_edit_request_wraps_video_url_without_generation_fields() {
         let opts = sample_edit_opts();
-        let request = build_edit_request(&opts, "grok-imagine-video");
+        let request = build_edit_request(&opts, "grok-imagine-video").unwrap();
         assert_eq!(request["model"], "grok-imagine-video");
         assert_eq!(request["prompt"], "Give the woman a silver necklace");
         assert_eq!(request["video"]["url"], "https://cdn.x.ai/source.mp4");
@@ -726,9 +868,22 @@ mod tests {
     }
 
     #[test]
+    fn build_edit_request_wraps_local_video_as_data_uri() {
+        let temp = tempdir().unwrap();
+        let video = temp.path().join("source.mp4");
+        fs::write(&video, b"fake-mp4").unwrap();
+
+        let mut opts = sample_edit_opts();
+        opts.video_url = None;
+        opts.video = Some(video);
+        let request = build_edit_request(&opts, "grok-imagine-video").unwrap();
+        assert_eq!(request["video"]["url"], "data:video/mp4;base64,ZmFrZS1tcDQ=");
+    }
+
+    #[test]
     fn build_extend_request_wraps_video_url_and_duration_without_generation_fields() {
         let opts = sample_extend_opts();
-        let request = build_extend_request(&opts, "grok-imagine-video");
+        let request = build_extend_request(&opts, "grok-imagine-video").unwrap();
         assert_eq!(request["model"], "grok-imagine-video");
         assert_eq!(request["prompt"], "The camera pans left");
         assert_eq!(request["video"]["url"], "https://cdn.x.ai/source.mp4");
@@ -743,19 +898,19 @@ mod tests {
         let mut opts = sample_extend_opts();
         opts.duration = None;
         assert_eq!(
-            build_extend_request(&opts, "grok-imagine-video")["duration"],
+            build_extend_request(&opts, "grok-imagine-video").unwrap()["duration"],
             6
         );
 
         opts.duration = Some(1);
         assert_eq!(
-            build_extend_request(&opts, "grok-imagine-video")["duration"],
+            build_extend_request(&opts, "grok-imagine-video").unwrap()["duration"],
             2
         );
 
         opts.duration = Some(11);
         assert_eq!(
-            build_extend_request(&opts, "grok-imagine-video")["duration"],
+            build_extend_request(&opts, "grok-imagine-video").unwrap()["duration"],
             10
         );
         assert_eq!(clamp_extension_duration(None), 6);

@@ -5,6 +5,7 @@ use tempfile::tempdir;
 use std::fs;
 use std::io::{Read, Write};
 use std::net::TcpListener;
+use std::path::Path;
 use std::thread;
 
 #[test]
@@ -32,7 +33,7 @@ fn task_video_gen_rejects_too_many_reference_images() {
         .code(2)
         .stdout(predicate::str::contains("\"code\":\"invalid_args\""))
         .stdout(predicate::str::contains(
-            "--reference-image-url supports at most 7 values",
+            "--reference-image-url and --reference-image support at most 7 values total",
         ));
 }
 
@@ -148,8 +149,110 @@ fn task_video_gen_rejects_combined_image_and_reference_inputs() {
         .code(2)
         .stdout(predicate::str::contains("\"code\":\"invalid_args\""))
         .stdout(predicate::str::contains(
-            "--image-url cannot be combined with --reference-image-url",
+            "--image-url, --image, --reference-image-url, and --reference-image are mutually exclusive input modes",
         ));
+}
+
+#[test]
+fn task_video_gen_accepts_local_image_file() {
+    let temp = tempdir().unwrap();
+    let auth_file = temp.path().join("auth.json");
+    let image_file = temp.path().join("source.png");
+    fs::write(&image_file, b"hello").unwrap();
+
+    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    write_auth_state(&auth_file, &format!("http://127.0.0.1:{port}/v1"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let create_request = read_request(&mut stream);
+        assert!(create_request.contains("POST /v1/videos/generations"));
+        assert!(create_request.contains("\"image\":{\"url\":\"data:image/png;base64,aGVsbG8=\"}"));
+        write_response(&mut stream, "200 OK", r#"{"request_id":"vid_local"}"#);
+
+        let (mut stream, _) = listener.accept().unwrap();
+        let _ = read_request(&mut stream);
+        write_response(
+            &mut stream,
+            "200 OK",
+            r#"{"status":"done","video":{"url":"https://cdn.x.ai/generated-video.mp4","duration":8}}"#,
+        );
+    });
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "video",
+            "--json",
+            "--auth-file",
+            auth_file.to_str().unwrap(),
+            "--prompt",
+            "Animate a local image",
+            "--image",
+            image_file.to_str().unwrap(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "\"video\":\"https://cdn.x.ai/generated-video.mp4\"",
+        ));
+
+    server.join().unwrap();
+}
+
+#[test]
+fn task_video_gen_accepts_local_reference_images() {
+    let temp = tempdir().unwrap();
+    let auth_file = temp.path().join("auth.json");
+    let image_a = temp.path().join("a.png");
+    let image_b = temp.path().join("b.jpg");
+    fs::write(&image_a, b"hello").unwrap();
+    fs::write(&image_b, b"world").unwrap();
+
+    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    write_auth_state(&auth_file, &format!("http://127.0.0.1:{port}/v1"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let create_request = read_request(&mut stream);
+        assert!(create_request.contains("POST /v1/videos/generations"));
+        assert!(create_request.contains("\"reference_images\""));
+        assert!(create_request.contains("data:image/png;base64,aGVsbG8="));
+        assert!(create_request.contains("data:image/jpeg;base64,d29ybGQ="));
+        write_response(&mut stream, "200 OK", r#"{"request_id":"vid_refs"}"#);
+
+        let (mut stream, _) = listener.accept().unwrap();
+        let _ = read_request(&mut stream);
+        write_response(
+            &mut stream,
+            "200 OK",
+            r#"{"status":"done","video":{"url":"https://cdn.x.ai/generated-video.mp4","duration":8}}"#,
+        );
+    });
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "video",
+            "--json",
+            "--auth-file",
+            auth_file.to_str().unwrap(),
+            "--prompt",
+            "Animate local reference images",
+            "--reference-image",
+            image_a.to_str().unwrap(),
+            "--reference-image",
+            image_b.to_str().unwrap(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "\"video\":\"https://cdn.x.ai/generated-video.mp4\"",
+        ));
+
+    server.join().unwrap();
 }
 
 #[test]
@@ -165,7 +268,55 @@ fn task_video_edit_rejects_missing_video_url() {
         .assert()
         .code(2)
         .stdout(predicate::str::contains("\"code\":\"invalid_args\""))
-        .stdout(predicate::str::contains("--video-url is required"));
+        .stdout(predicate::str::contains("--video-url or --video is required"));
+}
+
+#[test]
+fn task_video_edit_accepts_local_video_file() {
+    let temp = tempdir().unwrap();
+    let auth_file = temp.path().join("auth.json");
+    let video_file = temp.path().join("source.mp4");
+    fs::write(&video_file, b"fake-mp4").unwrap();
+
+    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    write_auth_state(&auth_file, &format!("http://127.0.0.1:{port}/v1"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let create_request = read_request(&mut stream);
+        assert!(create_request.contains("POST /v1/videos/edits"));
+        assert!(create_request.contains("\"video\":{\"url\":\"data:video/mp4;base64,ZmFrZS1tcDQ=\"}"));
+        write_response(&mut stream, "200 OK", r#"{"request_id":"edit_local"}"#);
+
+        let (mut stream, _) = listener.accept().unwrap();
+        let _ = read_request(&mut stream);
+        write_response(
+            &mut stream,
+            "200 OK",
+            r#"{"status":"done","video":{"url":"https://cdn.x.ai/edited-video.mp4","duration":8}}"#,
+        );
+    });
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "video-edit",
+            "--json",
+            "--auth-file",
+            auth_file.to_str().unwrap(),
+            "--prompt",
+            "Edit a local video",
+            "--video",
+            video_file.to_str().unwrap(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "\"video\":\"https://cdn.x.ai/edited-video.mp4\"",
+        ));
+
+    server.join().unwrap();
 }
 
 #[test]
@@ -230,7 +381,91 @@ fn task_video_extend_rejects_missing_video_url() {
         .assert()
         .code(2)
         .stdout(predicate::str::contains("\"code\":\"invalid_args\""))
-        .stdout(predicate::str::contains("--video-url is required"));
+        .stdout(predicate::str::contains("--video-url or --video is required"));
+}
+
+#[test]
+fn task_video_extend_accepts_local_video_file() {
+    let temp = tempdir().unwrap();
+    let auth_file = temp.path().join("auth.json");
+    let video_file = temp.path().join("source.mp4");
+    fs::write(&video_file, b"fake-mp4").unwrap();
+
+    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    write_auth_state(&auth_file, &format!("http://127.0.0.1:{port}/v1"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let create_request = read_request(&mut stream);
+        assert!(create_request.contains("POST /v1/videos/extensions"));
+        assert!(create_request.contains("\"video\":{\"url\":\"data:video/mp4;base64,ZmFrZS1tcDQ=\"}"));
+        write_response(&mut stream, "200 OK", r#"{"request_id":"ext_local"}"#);
+
+        let (mut stream, _) = listener.accept().unwrap();
+        let _ = read_request(&mut stream);
+        write_response(
+            &mut stream,
+            "200 OK",
+            r#"{"status":"done","video":{"url":"https://cdn.x.ai/extended-video.mp4","duration":12}}"#,
+        );
+    });
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "video-extend",
+            "--json",
+            "--auth-file",
+            auth_file.to_str().unwrap(),
+            "--prompt",
+            "Extend a local video",
+            "--video",
+            video_file.to_str().unwrap(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "\"video\":\"https://cdn.x.ai/extended-video.mp4\"",
+        ));
+
+    server.join().unwrap();
+}
+
+#[test]
+fn task_video_commands_reject_missing_local_files() {
+    let missing_image = "/tmp/grok-cli-missing-image.png";
+    let missing_video = "/tmp/grok-cli-missing-video.mp4";
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "video",
+            "--json",
+            "--prompt",
+            "Animate local image",
+            "--image",
+            missing_image,
+        ])
+        .assert()
+        .code(2)
+        .stdout(predicate::str::contains("\"code\":\"invalid_args\""))
+        .stdout(predicate::str::contains("file does not exist"));
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "video-edit",
+            "--json",
+            "--prompt",
+            "Edit local video",
+            "--video",
+            missing_video,
+        ])
+        .assert()
+        .code(2)
+        .stdout(predicate::str::contains("\"code\":\"invalid_args\""))
+        .stdout(predicate::str::contains("file does not exist"));
 }
 
 #[test]
@@ -324,6 +559,10 @@ fn write_auth_state(path: &std::path::Path, base_url: &str) {
         ),
     )
     .unwrap();
+}
+
+fn _assert_exists(path: &Path) {
+    assert!(path.exists());
 }
 
 fn read_request(stream: &mut std::net::TcpStream) -> String {

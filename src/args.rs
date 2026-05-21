@@ -316,9 +316,15 @@ pub struct VideoGenOptions {
     /// Source image URL for image-to-video.
     #[arg(long = "image-url")]
     pub image_url: Option<String>,
+    /// Source image path for image-to-video.
+    #[arg(long = "image", value_name = "PATH")]
+    pub image: Option<PathBuf>,
     /// Reference image URL. Repeatable.
     #[arg(long = "reference-image-url")]
     pub reference_image_urls: Vec<String>,
+    /// Reference image path. Repeatable.
+    #[arg(long = "reference-image", value_name = "PATH")]
+    pub reference_images: Vec<PathBuf>,
     /// Requested duration in seconds.
     #[arg(long)]
     pub duration: Option<u64>,
@@ -350,6 +356,9 @@ pub struct VideoEditOptions {
     /// Source video URL to edit.
     #[arg(long = "video-url")]
     pub video_url: Option<String>,
+    /// Source local video path to edit.
+    #[arg(long = "video", value_name = "PATH")]
+    pub video: Option<PathBuf>,
     /// Override the video edit model for this request.
     #[arg(long)]
     pub model: Option<String>,
@@ -372,6 +381,9 @@ pub struct VideoExtendOptions {
     /// Source video URL to extend.
     #[arg(long = "video-url")]
     pub video_url: Option<String>,
+    /// Source local video path to extend.
+    #[arg(long = "video", value_name = "PATH")]
+    pub video: Option<PathBuf>,
     /// Requested extension duration in seconds. Defaults to 6 and is clamped to 2..=10.
     #[arg(long)]
     pub duration: Option<u64>,

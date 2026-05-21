@@ -102,6 +102,24 @@
 - `video-extend --json`：通过，返回 `video` 和 `modality=extension`。
 - `usage --json`：通过，真实请求后 image/audio/video 分类计数均可读。
 
+### 本次真实引用输入
+
+- `image-edit` 单图：真实引用本地文件 [image-001.png](/Users/seanmo/ai/develop/Grok/grok-cli/.tmp/media-real-validation/images/image-001.png)。
+- `image-edit` 多图：真实引用本地文件 [image-001.png](/Users/seanmo/ai/develop/Grok/grok-cli/.tmp/media-real-validation/images/image-001.png) 和 [image-002.png](/Users/seanmo/ai/develop/Grok/grok-cli/.tmp/media-real-validation/images/image-002.png)。
+- `video --image-url ...`：真实引用远程图片 URL `https://imgen.x.ai/xai-imgen/xai-tmp-imgen-ddebf8f7-1ffc-44b4-82bb-a4bc209a520c.jpeg`。
+- `video --reference-image-url ...`：真实引用 2 个远程图片 URL：
+  - `https://imgen.x.ai/xai-imgen/xai-tmp-imgen-128f4cbe-67a5-4e5a-8014-021a827781c7.jpeg`
+  - `https://imgen.x.ai/xai-imgen/xai-tmp-imgen-153c638c-3599-4cbe-9763-8c3a54bb4e3b.jpeg`
+- `video-edit --video-url ...`：真实引用 text-to-video 生成出的远程 MP4 URL `https://vidgen.x.ai/xai-vidgen-bucket/xai-video-e16c4b37-d3a7-4dc0-932f-c62610ed5b3e.mp4`。
+- `video-extend --video-url ...`：真实引用同一条远程 MP4 URL `https://vidgen.x.ai/xai-vidgen-bucket/xai-video-e16c4b37-d3a7-4dc0-932f-c62610ed5b3e.mp4`。
+
+说明：
+- 这次 `video-extend` 请求中显式传入了 `--duration 2`，源视频本身来自前一条 text-to-video，返回结果里 `duration=2`。
+- 当前 CLI 和本次上游返回都没有给出“扩展前总时长”和“扩展后总时长”的稳定字段，所以这次我们只能确认：
+  - 扩展输入视频是 2 秒样例视频
+  - 扩展请求片段时长是 2 秒
+  - 不能仅凭当前返回严格断言“总时长从 2 秒扩展到了 4 秒”
+
 ### 体积摘要
 
 - TTS MP3：约 `50K`。

@@ -18,10 +18,22 @@ grok-cli video "Animate a futuristic skyline" --duration 8
 grok-cli video "Make the scene slowly move" --image-url "https://example.com/source.png"
 ```
 
+使用本地图片文件：
+
+```bash
+grok-cli video "Make the scene slowly move" --image ./source.png
+```
+
 参考图视频：
 
 ```bash
 grok-cli video "Create a product reveal" --reference-image-url "https://example.com/ref-1.png"
+```
+
+使用本地参考图：
+
+```bash
+grok-cli video "Create a product reveal" --reference-image ./ref-1.png --reference-image ./ref-2.png
 ```
 
 脚本或 SKILL：
@@ -37,7 +49,9 @@ grok-cli video --json --prompt "Animate a futuristic skyline" --duration 8
 - `--json`：使用统一 JSON 信封输出。
 - `--auth-file <PATH>`：覆盖 OAuth 状态文件路径。
 - `--image-url <URL>`：image-to-video 的源图片 URL。
+- `--image <PATH>`：image-to-video 的本地源图片路径。
 - `--reference-image-url <URL>`：参考图 URL，可重复，最多 7 个。
+- `--reference-image <PATH>`：本地参考图路径，可重复，最多 7 个。
 - `--duration <SECONDS>`：视频时长，范围会被归一化。
 - `--aspect-ratio <RATIO>`：比例，支持 `1:1`、`16:9`、`9:16`、`4:3`、`3:4`、`3:2`、`2:3`。
 - `--resolution <VALUE>`：分辨率，支持 `480p`、`720p`。
@@ -48,8 +62,9 @@ grok-cli video --json --prompt "Animate a futuristic skyline" --duration 8
 
 - 默认模型为 `grok-imagine-video`。
 - `grok-cli model` 不管理视频默认模型；如需切换，请直接传 `--model`。
-- `--image-url` 不能和 `--reference-image-url` 同时使用。
-- `--reference-image-url` 最多 7 个。
+- `--image-url`、`--image`、`--reference-image-url`、`--reference-image` 只能选择一种输入模式。
+- `--reference-image-url` 和 `--reference-image` 合计最多 7 个。
+- 本地图片会编码成 data URI 后作为上游 `image.url` 或 `reference_images[].url` 输入。
 - 默认时长为 8 秒，普通视频最大 15 秒，reference image video 最大 10 秒。
 - 默认比例为 `16:9`，默认分辨率为 `720p`。
 - 先请求 `POST /videos/generations`，再轮询 `GET /videos/{request_id}`。

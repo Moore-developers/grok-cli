@@ -12,7 +12,7 @@ This document describes the current public release strategy for `grok-cli`.
 
 Recommended user paths:
 
-1. Use the bundled [`grok-cli` skill](../../../skills/grok-cli/SKILL.md). Install it with `npx --yes skills add https://github.com/Moore-developers/grok-cli --skill grok-cli --global --yes`. See [skills README](../../../skills/README.md) for setup notes. The skill checks whether the CLI is installed, installs it from GitHub with Cargo when needed, runs OAuth login, and resumes the user's original Grok task.
+1. Use the bundled [`grok-cli` skill](../../../skills/grok-cli/SKILL.md). Install it with `npx --yes skills add Moore-developers/grok-cli --skill grok-cli --global --yes`. See [skills README](../../../skills/README.md) for setup notes. The skill checks whether the CLI is installed, installs it from GitHub with Cargo when needed, runs OAuth login, and resumes the user's original Grok task.
 2. Install directly with Cargo on macOS, Linux, or Windows:
 
 ```bash

@@ -1,5 +1,7 @@
 # grok-cli
 
+> Grok / xAI in a terminal-first, scriptable, and agent-ready CLI.
+
 ## Overview
 
 `grok-cli` brings Grok / xAI into terminal-first, scriptable, and agent-driven workflows. It supports SuperGrok or X Premium+ through direct OAuth login, so you do not need a separate API key or standalone billing setup.
@@ -8,31 +10,24 @@ It gives you one CLI for login, chat, search, media, audio, and usage tracking. 
 
 OpenClaw and Hermes Agent cover the officially supported integration paths; `grok-cli` is for Codex, Claude Code, Cursor, custom automation, agent runtimes, skills, scripts, CI jobs, and validation flows.
 
-## Features
+## Highlights
 
-- Text: Grok chat with built-in web search, plus X search.
-- Media: image generation and editing, plus video generation, editing, and extension.
-- Audio: text-to-speech and speech-to-text.
+- Direct OAuth login with SuperGrok or X Premium+.
+- Flat command surface for login, chat, search, media, audio, state, model, and usage.
+- Human-readable streaming by default, with `--json` and `--raw-stream` for automation.
+- Local file inputs and remote URLs for image, video, and audio workflows.
+- Skill-ready for Codex, Claude Code, Cursor, and other agent runtimes.
+- Release builds for macOS Apple Silicon and Windows x64.
 
 ## Quick Install
 
 Pick the path that matches how you want to use `grok-cli`:
 
-- **Skill**: best for Codex, Claude Code, Cursor, and other agent runtimes. Use it when you want the assistant to manage install checks, OAuth login, and command routing for you.
-
-  ```bash
-  npx --yes skills add https://github.com/Moore-developers/grok-cli --skill grok-cli --global --yes
-  ```
-
-- **Cargo**: best if you want to build from source, or if you are on macOS Intel or Linux. This path keeps the workflow fully source-based and installs the CLI directly from the repository.
-
-  ```bash
-  cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
-  ```
-
-- **Release binary**: best if you are on macOS Apple Silicon or Windows and want to skip Rust installation. Download the matching asset from GitHub Releases and extract it locally.
-
-  Download from [GitHub Releases](https://github.com/Moore-developers/grok-cli/releases/latest).
+| Need | Best path | Example |
+| --- | --- | --- |
+| Use it in Codex, Claude Code, Cursor, or another agent runtime | Skill | `npx --yes skills add Moore-developers/grok-cli --skill grok-cli --global --yes` |
+| Build from source | Cargo | `cargo install --git https://github.com/Moore-developers/grok-cli.git --locked` |
+| Skip Rust and use a prebuilt binary | Release binary | Download from [GitHub Releases](https://github.com/Moore-developers/grok-cli/releases/latest) |
 
 If you are not sure, start with Skill for agent workflows or Cargo for source builds.
 
@@ -49,7 +44,9 @@ The public command surface is intentionally flat:
 grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-edit|video|video-edit|video-extend|tts|stt|stt-stream> ...
 ```
 
-## Quick Start
+## For Humans
+
+Use `grok-cli` directly when you want a reliable command instead of a live browser session.
 
 Log in with the browser:
 
@@ -94,7 +91,7 @@ Show local usage:
 grok-cli usage
 ```
 
-## Script Mode
+## For Scripts
 
 Human-friendly commands use positional arguments by default. Scripts can keep using explicit flags and JSON output:
 
@@ -140,6 +137,28 @@ Failed JSON output uses the same shape:
   }
 }
 ```
+
+## For AI Agents
+
+`grok-cli` is designed for Codex, Claude Code, Cursor, custom automation, agent runtimes, skills, scripts, CI jobs, and validation flows. OpenClaw and Hermes Agent cover the officially supported integration paths.
+
+Install the bundled skill:
+
+```bash
+npx --yes skills add Moore-developers/grok-cli --skill grok-cli --global --yes
+```
+
+Use the skill when you want the assistant to handle install checks, OAuth login, and command routing for you.
+
+## Core Concepts
+
+| Concept | What it means |
+| --- | --- |
+| Flat command surface | One CLI entrypoint covers login, chat, search, media, audio, model, state, and usage. |
+| Streaming defaults | `chat` and `search` stream readable text by default for humans. |
+| Script mode | `--json` keeps output stable for automation; `--no-stream` and `--raw-stream` refine the output mode. |
+| Local files | Image, video, and audio commands accept local paths where the upstream flow supports them. |
+| Local state | OAuth tokens live in `auth.json`; usage history lives in SQLite. |
 
 ## Commands
 

@@ -1,5 +1,7 @@
 # grok-cli
 
+> 把 Grok / xAI 带进终端、脚本和 agent 工作流的一把 CLI。
+
 ## 概览
 
 `grok-cli` 把 Grok / xAI 带进终端优先、脚本优先和 agent 驱动的工作流。它支持通过 SuperGrok 或 X Premium+ 订阅直接 OAuth 登录，不需要额外 API Key 或单独付费体系。
@@ -8,33 +10,28 @@
 
 OpenClaw 和 Hermes Agent 覆盖官方支持的集成路径；`grok-cli` 适合 Codex、Claude Code、Cursor、自定义自动化、agent runtime、skill、脚本、CI 和验证流程。
 
-## 功能介绍
+## 亮点
 
-- 文本：带网络搜索的 Grok 聊天，以及 X 搜索。
-- 媒体：图片生成和编辑，以及视频生成、编辑和扩展。
-- 音频：文本转语音和语音转文字。
+- 直接 OAuth 登录，支持 SuperGrok 或 X Premium+。
+- 扁平的命令面，覆盖登录、聊天、搜索、媒体、音频、状态、模型和 usage。
+- 面向人类默认流式输出，面向自动化提供 `--json` 和 `--raw-stream`。
+- 支持本地文件和远程 URL 的图片、视频、音频工作流。
+- 适合 Codex、Claude Code、Cursor 和其他 agent runtime。
+- 提供 macOS Apple Silicon 和 Windows x64 的预构建产物。
 
 ## 快速安装
 
 先选一种最适合你的方式：
 
-- **Skill**：适合 Codex、Claude Code、Cursor 和其他 agent runtime。它会把内置 skill 安装到你的 agent 环境里，让助手自己处理安装检查、OAuth 登录和命令路由。
-
-  ```bash
-  npx --yes skills add https://github.com/Moore-developers/grok-cli --skill grok-cli --global --yes
-  ```
-
-- **Cargo**：适合从源码构建，或者你在 macOS Intel 和 Linux 上使用。这条路径会直接从仓库安装 CLI，适合保留完整源码工作流。
-
-  ```bash
-  cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
-  ```
-
-- **Release binary**：适合 macOS Apple Silicon 或 Windows，想跳过 Rust 安装时使用。从 GitHub Releases 下载对应产物后解压即可。
-
-  从 [GitHub Releases](https://github.com/Moore-developers/grok-cli/releases/latest) 下载。
+| 需求 | 推荐方式 | 示例 |
+| --- | --- | --- |
+| 在 Codex、Claude Code、Cursor 或其他 agent runtime 里使用 | Skill | `npx --yes skills add Moore-developers/grok-cli --skill grok-cli --global --yes` |
+| 从源码安装 | Cargo | `cargo install --git https://github.com/Moore-developers/grok-cli.git --locked` |
+| 跳过 Rust，直接用预编译产物 | Release binary | 从 [GitHub Releases](https://github.com/Moore-developers/grok-cli/releases/latest) 下载 |
 
 如果你不确定，agent 工作流优先选 Skill，源码构建优先选 Cargo。
+
+## 给人用
 
 文本命令同时照顾“给人直接用”和“给脚本稳定接入”两种场景：
 
@@ -49,7 +46,7 @@ OpenClaw 和 Hermes Agent 覆盖官方支持的集成路径；`grok-cli` 适合 
 grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-edit|video|video-edit|video-extend|tts|stt|stt-stream> ...
 ```
 
-## 快速开始
+浏览器登录：
 
 浏览器登录：
 
@@ -94,7 +91,7 @@ grok-cli stt-stream ./sample.wav --interim-results
 grok-cli usage
 ```
 
-## 脚本模式
+## 给脚本用
 
 给人用时，推荐直接写位置参数。给脚本、SKILL 或自动化用时，可以继续使用显式参数和 JSON：
 
@@ -140,6 +137,28 @@ grok-cli search "今天大家怎么评价 Grok?" --no-stream
   }
 }
 ```
+
+## 给 AI agent 用
+
+`grok-cli` 适合 Codex、Claude Code、Cursor、自定义自动化、agent runtime、skill、脚本、CI 和验证流程。OpenClaw 和 Hermes Agent 覆盖官方支持的集成路径。
+
+安装内置 skill：
+
+```bash
+npx --yes skills add Moore-developers/grok-cli --skill grok-cli --global --yes
+```
+
+当你希望助手帮你处理安装检查、OAuth 登录和命令路由时，就用这个 skill。
+
+## 核心概念
+
+| 概念 | 含义 |
+| --- | --- |
+| 扁平命令面 | 一个 CLI 入口覆盖登录、聊天、搜索、媒体、音频、模型、状态和 usage。 |
+| 默认流式 | `chat` 和 `search` 默认给人类输出可读正文。 |
+| 脚本模式 | `--json` 提供稳定输出；`--no-stream` 和 `--raw-stream` 用来微调输出模式。 |
+| 本地文件 | 图片、视频和音频命令在上游支持的地方接受本地路径。 |
+| 本地状态 | OAuth token 存在 `auth.json`，usage 历史存在 SQLite。 |
 
 ## 命令说明
 

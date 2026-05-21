@@ -6,7 +6,7 @@
 
 1. 新用户先看 [Guides Index](./guides/index.md) 或直接看 [快速开始](./guides/quickstart.md)。
 2. 日常查命令看 [CLI 命令索引](./commands/index.md)。
-3. 自动化 / SKILL 接入看 [Reference Index](./reference/index.md)、[SKILL 集成约定](./reference/skill-integration.md)，或直接看仓库内置 [`grok-cli` skill](../../skills/grok-cli/SKILL.md) 与 [Skill 安装说明](../../skills/README.md)。安装 skill 时使用 `npx --yes skills add https://github.com/Moore-developers/grok-cli --skill grok-cli --global --yes`。
+3. 自动化 / SKILL 接入看 [Reference Index](./reference/index.md)、[SKILL 集成约定](./reference/skill-integration.md)，或直接看仓库内置 [`grok-cli` skill](../../skills/grok-cli/SKILL.md) 与 [Skill 安装说明](../../skills/README.md)。安装 skill 时使用 `npx --yes skills add Moore-developers/grok-cli --skill grok-cli --global --yes`。
 4. 发布到 GitHub 或给用户安装看 [发布与安装指南](./guides/release.md)，当前采用 SKILL-first；macOS Apple Silicon 可上传本地构建 tarball，macOS Intel 和 Linux 走 source-first，Windows 走 GitHub Release binary。
 5. 开发推进和验收看 [Project Index](./project/index.md)，媒体能力补齐看 [SuperGrok 媒体能力补齐计划](./project/supergrok-media-capability-plan.md)。
 6. 需要追溯历史设计时再看 [归档文档](./archive/index.md)。

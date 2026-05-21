@@ -18,7 +18,7 @@ The [`grok-cli`](./grok-cli/SKILL.md) skill is the recommended user-facing entry
 Install the skill with `npx skills`:
 
 ```bash
-npx --yes skills add https://github.com/Moore-developers/grok-cli --skill grok-cli --global --yes
+npx --yes skills add Moore-developers/grok-cli --skill grok-cli --global --yes
 ```
 
 If you want to inspect or manage the installed skill later:

@@ -8,7 +8,7 @@ Default documentation is in English. The preserved Chinese version is available 
 
 1. New users should start with the [Guides Index](./guides/index.md) or go directly to the [Quickstart](./guides/quickstart.md).
 2. Daily command lookup belongs in the [CLI Command Index](./commands/index.md).
-3. Automation and SKILL integration details live in the [Reference Index](./reference/index.md), [SKILL integration contract](./reference/skill-integration.md), bundled [`grok-cli` skill](../skills/grok-cli/SKILL.md), and [skills README](../skills/README.md). Install the skill with `npx --yes skills add https://github.com/Moore-developers/grok-cli --skill grok-cli --global --yes`.
+3. Automation and SKILL integration details live in the [Reference Index](./reference/index.md), [SKILL integration contract](./reference/skill-integration.md), bundled [`grok-cli` skill](../skills/grok-cli/SKILL.md), and [skills README](../skills/README.md). Install the skill with `npx --yes skills add Moore-developers/grok-cli --skill grok-cli --global --yes`.
 4. Release and installation ownership is documented in the [Release and Installation Guide](./guides/release.md). The current strategy is SKILL-first; macOS Apple Silicon can use a maintainer-uploaded tarball, macOS Intel and Linux are source-first, and Windows uses a GitHub Release binary.
 5. Development planning and validation live in the [Project Index](./project/index.md). Media capability work is tracked in the [SuperGrok media capability plan](./project/supergrok-media-capability-plan.md).
 6. Historical design material lives in the [Archive](./archive/index.md).

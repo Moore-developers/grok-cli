@@ -21,6 +21,7 @@
 - `auth_missing`: credentials are unavailable; login or refresh before retrying.
 - `auth_relogin_required`: refresh cannot recover the session; run `grok-cli login`.
 - `xai_oauth_tier_denied`: account/tier permission issue; do not promise reinstall or relogin will fix it.
+- Credential validation messages such as `bad-credentials`: run `grok-cli refresh --json`, then `grok-cli status --json`, and retry the original command once before asking the user to log in again.
 
 ## Invalid Arguments
 
@@ -32,6 +33,17 @@ If the CLI returns `invalid_args`, fix the command shape:
 - Use the correct media command for the task.
 
 Do not ask the user to debug CLI syntax unless essential information is missing.
+
+## Sparse Search Results
+
+When `search --json` succeeds but does not provide enough social discussion to answer the user's question, say so directly. Include the query and date range used, then name the likely cause:
+
+- no visible public discussion in that window
+- query mismatch or overly broad wording
+- auth or entitlement failure
+- upstream search did not return enough grounded evidence
+
+Do not turn a generic model explanation into a claim about X sentiment.
 
 ## Missing Commands
 

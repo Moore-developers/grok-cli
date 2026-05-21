@@ -74,7 +74,9 @@ Release binary install flow:
 4. Extract the binary.
 5. Put `grok-cli` or `grok-cli.exe` in a directory already on `PATH`; if none is suitable, use `~/.local/bin` and tell the user to add it to `PATH`.
 6. Run `grok-cli --version` and `grok-cli --help`.
-7. Continue the original Grok task.
+7. Run `grok-cli status --json`.
+8. If status is not usable, complete OAuth handling before any real capability call.
+9. Continue the original Grok task.
 
 Pinned public install:
 
@@ -93,6 +95,7 @@ After install, rerun:
 ```bash
 grok-cli --version
 grok-cli --help
+grok-cli status --json
 ```
 
 Then resume the user's original Grok task.
@@ -119,6 +122,15 @@ If auth is missing, expired, invalid, or `relogin_required` is true:
 grok-cli login
 grok-cli status --json
 ```
+
+If a real command fails with a credential validation message such as `bad-credentials`, do not treat installation as broken. Refresh once, verify status, then retry the original command:
+
+```bash
+grok-cli refresh --json
+grok-cli status --json
+```
+
+If the retry still fails, explain the returned auth or entitlement code. Ask for login only when the status or error says relogin is required.
 
 Use manual login options when the environment cannot open or receive a browser callback:
 

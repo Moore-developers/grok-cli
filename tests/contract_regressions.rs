@@ -141,6 +141,7 @@ fn bundled_skill_requires_command_surface_check() {
     let readme_zh = fs::read_to_string(root.join("README.zh-CN.md")).unwrap();
     let advanced_ref =
         fs::read_to_string(root.join("skills/grok-cli/references/commands-advanced.md")).unwrap();
+    let errors_ref = fs::read_to_string(root.join("skills/grok-cli/references/errors.md")).unwrap();
     let media_ref =
         fs::read_to_string(root.join("skills/grok-cli/references/commands-media.md")).unwrap();
     let skill_validation =
@@ -172,6 +173,9 @@ fn bundled_skill_requires_command_surface_check() {
     }
 
     assert!(install_ref.contains("grok-cli --help"));
+    assert!(install_ref.contains("grok-cli status --json"));
+    assert!(install_ref.contains("bad-credentials"));
+    assert!(install_ref.contains("grok-cli refresh --json"));
     assert!(install_ref.contains("rustc --version"));
     assert!(install_ref.contains("Rust 1.88 or newer"));
     assert!(install_ref.contains("Rust 1.92.0"));
@@ -201,6 +205,10 @@ fn bundled_skill_requires_command_surface_check() {
     assert!(readme_zh.contains("grok-cli-macos-aarch64-apple-darwin.tar.gz"));
     assert!(readme_zh.contains("grok-cli-windows-x86_64-pc-windows-msvc.zip"));
     assert!(skill.contains("What Users Can Do Through This Skill"));
+    assert!(skill.contains("grok-cli status --json"));
+    assert!(skill.contains("bad-credentials"));
+    assert!(skill.contains("grok-cli refresh --json"));
+    assert!(skill.contains("Do not present an empty or generic answer as a real X discussion summary"));
     assert!(skill.contains("Rust 1.88 or newer"));
     assert!(skill.contains("Rust 1.92.0"));
     assert!(skill.contains("rustc --version"));
@@ -241,6 +249,9 @@ fn bundled_skill_requires_command_surface_check() {
     assert!(basic_ref.contains("--excluded-x-handle"));
     assert!(basic_ref.contains("--from-date"));
     assert!(basic_ref.contains("--to-date"));
+    assert!(basic_ref.contains("State the exact query and date range used"));
+    assert!(basic_ref.contains("empty `data.citations`"));
+    assert!(basic_ref.contains("avoid inventing sentiment"));
     assert!(basic_ref.contains("--stream"));
     assert!(basic_ref.contains("--raw-stream"));
     assert!(basic_ref.contains("--allowed-domain"));
@@ -248,6 +259,8 @@ fn bundled_skill_requires_command_surface_check() {
     assert!(advanced_ref.contains("video-edit"));
     assert!(advanced_ref.contains("video-extend"));
     assert!(advanced_ref.contains("--auth-file"));
+    assert!(errors_ref.contains("bad-credentials"));
+    assert!(errors_ref.contains("Sparse Search Results"));
     assert!(advanced_ref.contains("stt-stream"));
     assert!(advanced_ref.contains("endpointing"));
     assert!(skill_validation.contains("A1 | `login`"));

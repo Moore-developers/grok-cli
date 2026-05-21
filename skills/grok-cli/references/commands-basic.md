@@ -36,6 +36,12 @@ Search X / social discussion:
 grok-cli search --json --query "What are builders saying about Grok today?"
 ```
 
+For time-bounded search, include explicit dates:
+
+```bash
+grok-cli search --json --query "What are people saying about Grok CLI on X today?" --from-date 2026-05-21 --to-date 2026-05-21
+```
+
 Public flags:
 
 - `--json`: machine-readable response for agents and scripts.
@@ -50,6 +56,15 @@ Public flags:
 - `--no-stream`: final human-readable response.
 - `--raw-stream`: normalized SSE-style events.
 - `--timeout <SECONDS>`: override the text request timeout.
+
+When summarizing X results:
+
+- State the exact query and date range used.
+- Check whether the response includes enough answer detail or citations to support a summary.
+- Treat empty `data.citations` and empty `data.inline_citations` as insufficient evidence for a sentiment summary unless `data.answer` explicitly says no visible discussion was found.
+- If the result is generic, sparse, or about the concept instead of social posts, retry once with a more explicit query such as `"Grok CLI" OR "grok-cli" feedback reviews launch`.
+- If there still is not enough visible public discussion, say that clearly and avoid inventing sentiment.
+- If the command failed, report the relevant error code and whether it looks like auth, entitlement, command syntax, or upstream search coverage.
 
 ## Model
 

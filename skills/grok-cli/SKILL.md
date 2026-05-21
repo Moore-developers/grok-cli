@@ -20,7 +20,8 @@ https://github.com/Moore-developers/grok-cli
 3. Check OAuth status with `grok-cli status --json`.
 4. If login is missing or expired, run `grok-cli login`.
 5. Resume the original user task with the correct `grok-cli` command.
-6. Prefer `--json` for automation, parsing, and reliable error handling.
+6. For search tasks, report the exact query, date range, and whether the result set was sufficient before giving conclusions.
+7. Prefer `--json` for automation, parsing, and reliable error handling.
 
 Keep the original task in mind while handling installation or login. Authentication and installation are setup steps, not the final answer.
 
@@ -112,7 +113,9 @@ For Release binary installs:
 4. Extract the binary.
 5. Put `grok-cli` or `grok-cli.exe` in a directory already on `PATH`, or create `~/.local/bin` and tell the user to add it to `PATH` if needed.
 6. Run `grok-cli --version` and `grok-cli --help`.
-7. Resume the original Grok task after verification.
+7. Run `grok-cli status --json` before any real capability call.
+8. If status is not usable, complete OAuth handling first.
+9. Resume the original Grok task after verification.
 
 If Cargo is the chosen path, install from the latest repository state when the user asked for latest:
 
@@ -131,6 +134,7 @@ After installation, verify:
 ```bash
 grok-cli --version
 grok-cli --help
+grok-cli status --json
 ```
 
 If reinstalling because a command was missing, rerun the original user task after verification. Do not stop at installation.
@@ -148,6 +152,15 @@ If the status says auth is missing, invalid, or relogin is required, run:
 ```bash
 grok-cli login
 ```
+
+If a capability call fails with a credential validation error such as `bad-credentials`, run:
+
+```bash
+grok-cli refresh --json
+grok-cli status --json
+```
+
+Then retry the original command once. If it still fails, explain the auth or entitlement error clearly and ask the user to run `grok-cli login` only when relogin is actually required.
 
 After login completes, rerun:
 
@@ -172,6 +185,14 @@ Use `search` for X / Twitter / social discussion search:
 ```bash
 grok-cli search --json --query "What are builders saying about Grok today?"
 ```
+
+For X search tasks:
+
+- Include relevant date flags when the user asks for today, recent discussion, or a bounded time window.
+- After running the command, inspect whether `data.answer`, `data.citations`, or `data.inline_citations` support the conclusion.
+- If results are sparse, say that the result set was insufficient and name the likely reason: no visible public discussion in the chosen date range, auth/entitlement failure, or query mismatch.
+- Do not present an empty or generic answer as a real X discussion summary.
+- If the first query is too broad or returns a conceptual explanation, retry once with a more explicit social-feedback query and report both attempts briefly.
 
 Use `image` for image generation:
 

@@ -48,6 +48,16 @@ grok-cli-windows-x86_64-pc-windows-msvc.zip
 
 Use the macOS tarball only for Apple Silicon (`arm64` / `aarch64`) Macs. Do not offer it for macOS Intel. Use the Windows zip only for Windows x64. Each covered asset should have a matching `.sha256` checksum file.
 
+Release binary install flow:
+
+1. Confirm the platform is covered by the exact asset name.
+2. Download the asset and matching `.sha256`.
+3. Verify the checksum when possible.
+4. Extract the binary.
+5. Put `grok-cli` or `grok-cli.exe` in a directory already on `PATH`; if none is suitable, use `~/.local/bin` and tell the user to add it to `PATH`.
+6. Run `grok-cli --version` and `grok-cli --help`.
+7. Continue the original Grok task.
+
 Pinned public install:
 
 ```bash

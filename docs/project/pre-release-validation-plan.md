@@ -26,7 +26,7 @@
 - [ ] 验证 macOS Apple Silicon 本地 release tarball 打包、命名、checksum 和上传说明。
 - [ ] 验证 Windows Release binary 打包、命名、checksum 和下载说明。
 - [ ] 验证安装后 `grok-cli --version`、`grok-cli --help`、`grok-cli status --json`。
-- [ ] 验证 `skills/grok-cli` 可以复制到 `~/.agents/skills/grok-cli` 或 `~/.codex/skills/grok-cli`。
+- [ ] 验证可以通过 `npx --yes skills add https://github.com/Moore-developers/grok-cli --skill grok-cli --global --yes` 安装 `skills/grok-cli`。
 - [ ] 验证 skill 在 CLI 缺失时能走安装检查路径。
 - [ ] 验证 skill 在 Cargo 缺失时能给出清晰提示，而不是继续失败。
 - [ ] 验证 skill 安装 CLI 后能恢复原始 Grok 任务。

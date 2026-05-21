@@ -15,20 +15,17 @@ The [`grok-cli`](./grok-cli/SKILL.md) skill is the recommended user-facing entry
 
 ## Install The Skill
 
-Install the skill by copying `skills/grok-cli` into the skills directory used by your agent runtime.
-
-Common local layouts:
+Install the skill with `npx skills`:
 
 ```bash
-mkdir -p ~/.agents/skills
-cp -R skills/grok-cli ~/.agents/skills/grok-cli
+npx --yes skills add https://github.com/Moore-developers/grok-cli --skill grok-cli --global --yes
 ```
 
-or:
+If you want to inspect or manage the installed skill later:
 
 ```bash
-mkdir -p ~/.codex/skills
-cp -R skills/grok-cli ~/.codex/skills/grok-cli
+npx --yes skills list
+npx --yes skills remove grok-cli --global --yes
 ```
 
 After that, ask your agent to use Grok or xAI. The skill will install the CLI on first use if needed.

@@ -76,14 +76,22 @@ If `grok-cli` is missing or any required command is absent, check whether Cargo 
 command -v cargo
 ```
 
-If Cargo is missing, tell the user they need Rust/Cargo first and point them to install Rust with `rustup`.
-
 Use GitHub Release binaries only when the user's platform is covered and they prefer a no-Cargo route:
 
 - macOS Apple Silicon: `grok-cli-macos-aarch64-apple-darwin.tar.gz`
 - Windows x64: `grok-cli-windows-x86_64-pc-windows-msvc.zip`
 
-For macOS Intel and Linux, do not invent a binary install path. Use Cargo/source install.
+If Cargo is missing, prefer one of those Release binaries on supported platforms instead of forcing a Rust install. For macOS Intel and Linux, do not invent a binary install path; tell the user they need Rust/Cargo first and point them to install Rust with `rustup`.
+
+For Release binary installs:
+
+1. Confirm the platform is exactly covered by the asset name.
+2. Download the asset and matching `.sha256` from the latest GitHub Release.
+3. Verify the checksum when possible.
+4. Extract the binary.
+5. Put `grok-cli` or `grok-cli.exe` in a directory already on `PATH`, or create `~/.local/bin` and tell the user to add it to `PATH` if needed.
+6. Run `grok-cli --version` and `grok-cli --help`.
+7. Resume the original Grok task after verification.
 
 If Cargo exists, install from the latest repository state when the user asked for latest:
 

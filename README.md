@@ -1,20 +1,40 @@
 # grok-cli
 
-OAuth-first command-line access to Grok / xAI capabilities.
+## Overview
 
-[中文说明](README.zh-CN.md)
+`grok-cli` brings Grok / xAI into terminal-first, scriptable, and agent-driven workflows. It supports SuperGrok or X Premium+ through direct OAuth login, so you do not need a separate API key or standalone billing setup.
 
-`grok-cli` gives local workflows, scripts, and agent skills a single CLI for:
+It gives you one CLI for login, chat, search, media, audio, and usage tracking. It also keeps authentication, automation output, local files, remote URLs, and platform-specific installs in one place.
 
-- Browser OAuth login with token refresh
-- Chat through Grok Responses
-- X search through Grok `x_search`
-- Image generation and image editing
-- Video generation, editing, and extension
-- Text-to-speech, batch speech-to-text, and experimental streaming speech-to-text
-- Local session usage accounting in SQLite
+OpenClaw and Hermes Agent cover the officially supported integration paths; `grok-cli` is for Codex, Claude Code, Cursor, custom automation, agent runtimes, skills, scripts, CI jobs, and validation flows.
 
-The recommended public distribution path is SKILL-first. Cargo install works across platforms; macOS Apple Silicon users may also use a maintainer-uploaded GitHub Release tarball when available, while Windows users can download a GitHub Actions-built release binary. macOS Intel and Linux remain source-first through Cargo. A bundled skill at [`skills/grok-cli/SKILL.md`](skills/grok-cli/SKILL.md) can check whether `grok-cli` is installed, install it from GitHub with Cargo when needed, run OAuth login, and then execute the user's Grok task. See [`skills/README.md`](skills/README.md) for skill installation notes.
+## Features
+
+- Text: Grok chat with built-in web search, plus X search.
+- Media: image generation and editing, plus video generation, editing, and extension.
+- Audio: text-to-speech and speech-to-text.
+
+## Quick Install
+
+Pick the path that matches how you want to use `grok-cli`:
+
+- **Skill**: best for Codex, Claude Code, Cursor, and other agent runtimes. Use it when you want the assistant to manage install checks, OAuth login, and command routing for you.
+
+  ```bash
+  npx --yes skills add https://github.com/Moore-developers/grok-cli --skill grok-cli --global --yes
+  ```
+
+- **Cargo**: best if you want to build from source, or if you are on macOS Intel or Linux. This path keeps the workflow fully source-based and installs the CLI directly from the repository.
+
+  ```bash
+  cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
+  ```
+
+- **Release binary**: best if you are on macOS Apple Silicon or Windows and want to skip Rust installation. Download the matching asset from GitHub Releases and extract it locally.
+
+  Download from [GitHub Releases](https://github.com/Moore-developers/grok-cli/releases/latest).
+
+If you are not sure, start with Skill for agent workflows or Cargo for source builds.
 
 Text commands are optimized for both humans and automation:
 
@@ -30,14 +50,6 @@ grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-
 ```
 
 ## Quick Start
-
-Install directly from GitHub:
-
-```bash
-cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
-```
-
-macOS Apple Silicon and Windows users can also download covered release assets from [GitHub Releases](https://github.com/Moore-developers/grok-cli/releases/latest).
 
 Log in with the browser:
 

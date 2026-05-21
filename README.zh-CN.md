@@ -1,20 +1,40 @@
 # grok-cli
 
-一个 OAuth-first 的 Grok / xAI 命令行工具。
+## 概览
 
-[English README](README.md)
+`grok-cli` 把 Grok / xAI 带进终端优先、脚本优先和 agent 驱动的工作流。它支持通过 SuperGrok 或 X Premium+ 订阅直接 OAuth 登录，不需要额外 API Key 或单独付费体系。
 
-`grok-cli` 把 Grok 的常用能力收口成一个本地 CLI：
+它给你一套 CLI，统一登录、聊天、搜索、媒体、音频和 usage，也把认证、自动化输出、本地文件、远程 URL 和不同平台安装收进同一个入口。
 
-- 浏览器 OAuth 登录和 token refresh
-- Grok 聊天
-- 通过 Grok `x_search` 搜索 X
-- 图片生成和图片编辑
-- 视频生成、视频编辑和视频扩展
-- 文本转语音、批量语音转文字和实验性实时语音转文字
-- 基于 SQLite 的本地会话 usage 统计
+OpenClaw 和 Hermes Agent 覆盖官方支持的集成路径；`grok-cli` 适合 Codex、Claude Code、Cursor、自定义自动化、agent runtime、skill、脚本、CI 和验证流程。
 
-推荐的公开分发方式是 SKILL-first。Cargo 安装可跨平台使用；macOS Apple Silicon 用户也可以使用维护者本地构建并上传到 GitHub Release 的 tarball，Windows 用户可以下载 GitHub Actions 构建的发布二进制。macOS Intel 和 Linux 仍然走 source-first / Cargo 安装。仓库内置 [`skills/grok-cli/SKILL.md`](skills/grok-cli/SKILL.md)，可以先检查本机是否已安装 `grok-cli`，缺失时通过 Cargo 从 GitHub 安装，然后处理 OAuth 登录并继续执行用户的 Grok 任务。Skill 安装说明见 [`skills/README.md`](skills/README.md)。
+## 功能介绍
+
+- 文本：带网络搜索的 Grok 聊天，以及 X 搜索。
+- 媒体：图片生成和编辑，以及视频生成、编辑和扩展。
+- 音频：文本转语音和语音转文字。
+
+## 快速安装
+
+先选一种最适合你的方式：
+
+- **Skill**：适合 Codex、Claude Code、Cursor 和其他 agent runtime。它会把内置 skill 安装到你的 agent 环境里，让助手自己处理安装检查、OAuth 登录和命令路由。
+
+  ```bash
+  npx --yes skills add https://github.com/Moore-developers/grok-cli --skill grok-cli --global --yes
+  ```
+
+- **Cargo**：适合从源码构建，或者你在 macOS Intel 和 Linux 上使用。这条路径会直接从仓库安装 CLI，适合保留完整源码工作流。
+
+  ```bash
+  cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
+  ```
+
+- **Release binary**：适合 macOS Apple Silicon 或 Windows，想跳过 Rust 安装时使用。从 GitHub Releases 下载对应产物后解压即可。
+
+  从 [GitHub Releases](https://github.com/Moore-developers/grok-cli/releases/latest) 下载。
+
+如果你不确定，agent 工作流优先选 Skill，源码构建优先选 Cargo。
 
 文本命令同时照顾“给人直接用”和“给脚本稳定接入”两种场景：
 
@@ -30,14 +50,6 @@ grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-
 ```
 
 ## 快速开始
-
-直接从 GitHub 安装：
-
-```bash
-cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
-```
-
-macOS Apple Silicon 和 Windows 用户也可以从 [GitHub Releases](https://github.com/Moore-developers/grok-cli/releases/latest) 下载已覆盖平台的发布产物。
 
 浏览器登录：
 

@@ -176,12 +176,16 @@ fn bundled_skill_requires_command_surface_check() {
     assert!(install_ref.contains("grok-cli status --json"));
     assert!(install_ref.contains("bad-credentials"));
     assert!(install_ref.contains("grok-cli refresh --json"));
-    assert!(install_ref.contains("access_token_expiring"));
-    assert!(install_ref.contains("grok-cli search --json --query \"Grok\" --timeout 120"));
+    assert!(install_ref.contains("Failure-Driven OAuth Flow"));
+    assert!(install_ref.contains("Run the user's real command first"));
+    assert!(install_ref.contains("try refresh first"));
+    assert!(install_ref.contains("If refresh fails because local auth state is missing"));
+    assert!(install_ref.contains("Never replace the user's real command with a probe"));
+    assert!(install_ref.contains("grok-cli search --json --query \"Grok\""));
     assert!(install_ref.contains("PATH configuration issue"));
     assert!(install_ref.contains("PATH=\"$HOME/.local/bin:$PATH\""));
-    assert!(install_ref.contains("Readiness flow before the user's requested task"));
-    assert!(install_ref.contains(
+    assert!(!install_ref.contains("Readiness flow before the user's requested task"));
+    assert!(!install_ref.contains(
         "Only run the user's original Grok command after login and permission are verified"
     ));
     assert!(install_ref.contains("rustc --version"));
@@ -213,19 +217,24 @@ fn bundled_skill_requires_command_surface_check() {
     assert!(readme_zh.contains("grok-cli-macos-aarch64-apple-darwin.tar.gz"));
     assert!(readme_zh.contains("grok-cli-windows-x86_64-pc-windows-msvc.zip"));
     assert!(skill.contains("What Users Can Do Through This Skill"));
-    assert!(skill.contains("Readiness Gate"));
-    assert!(skill.contains("Verify permission with a minimal real command"));
+    assert!(skill.contains("Fast Path And Recovery"));
+    assert!(skill.contains("run the user's requested `grok-cli` command directly"));
+    assert!(skill.contains("Do not run `status`, `state`, login checks"));
+    assert!(skill.contains("Do not run readiness probes"));
+    assert!(skill.contains("A user asking to search should get the real search first"));
+    assert!(skill.contains("try refresh first"));
+    assert!(skill.contains("If refresh fails because local auth state is missing"));
+    assert!(!skill.contains("## Readiness Gate"));
+    assert!(!skill.contains("Verify permission with a minimal real command"));
     assert!(skill.contains("Reply with exactly: ok"));
-    assert!(skill.contains("grok-cli search --json --query \"Grok\" --timeout 120"));
     assert!(skill.contains("access_token_expiring"));
     assert!(skill.contains("PATH configuration issue"));
-    assert!(skill.contains("Do not run the user's requested Grok task until this gate passes"));
-    assert!(skill.contains("grok-cli status --json"));
+    assert!(!skill.contains("Do not run the user's requested Grok task until this gate passes"));
+    assert!(install_ref.contains("grok-cli status --json"));
     assert!(skill.contains("bad-credentials"));
     assert!(skill.contains("grok-cli refresh --json"));
-    assert!(
-        skill.contains("Do not present an empty or generic answer as a real X discussion summary")
-    );
+    assert!(skill.contains("lossless human-readable rendering"));
+    assert!(skill.contains("transformation mode"));
     assert!(skill.contains("Rust 1.88 or newer"));
     assert!(skill.contains("Rust 1.92.0"));
     assert!(skill.contains("rustc --version"));
@@ -266,9 +275,9 @@ fn bundled_skill_requires_command_surface_check() {
     assert!(basic_ref.contains("--excluded-x-handle"));
     assert!(basic_ref.contains("--from-date"));
     assert!(basic_ref.contains("--to-date"));
-    assert!(basic_ref.contains("State the exact query and date range used"));
-    assert!(basic_ref.contains("empty `data.citations`"));
-    assert!(basic_ref.contains("avoid inventing sentiment"));
+    assert!(basic_ref.contains("Return `data.answer` exactly as Grok returned it"));
+    assert!(basic_ref.contains("Preserve `data.citations`"));
+    assert!(basic_ref.contains("Do not add host-assistant sentiment"));
     assert!(basic_ref.contains("--stream"));
     assert!(basic_ref.contains("--raw-stream"));
     assert!(basic_ref.contains("--allowed-domain"));
@@ -278,9 +287,9 @@ fn bundled_skill_requires_command_surface_check() {
     assert!(advanced_ref.contains("--auth-file"));
     assert!(errors_ref.contains("bad-credentials"));
     assert!(errors_ref.contains("access_token_expiring"));
-    assert!(errors_ref.contains(
-        "install, status, login if required, refresh if credentials are stale, permission check"
-    ));
+    assert!(errors_ref.contains("failure-driven"));
+    assert!(errors_ref.contains("Do not run status checks or permission probes"));
+    assert!(errors_ref.contains("run `grok-cli refresh --json` first"));
     assert!(errors_ref.contains("Sparse Search Results"));
     assert!(errors_ref.contains("PATH configuration issue"));
     assert!(errors_ref.contains("platform-specific install path"));

@@ -1,6 +1,6 @@
 ---
 name: grok-cli
-description: Use this skill whenever the user wants to use Grok or xAI through the grok-cli command line, including chat, X search, image generation/editing, video generation/editing/extension, text-to-speech, speech-to-text, OAuth login/status, or local usage stats. This skill should also be used when grok-cli may need to be installed first; it handles checking for the CLI, preferring GitHub Release binaries on covered platforms, falling back to Cargo source install when needed, running JSON-mode commands, and resuming the user's original Grok task after login.
+description: Use this skill whenever the user wants to use Grok or xAI through the grok-cli command line, including chat, X search, image generation/editing, video generation/editing/extension, text-to-speech, speech-to-text, OAuth login/status, or local usage stats. This skill should also be used when grok-cli may need to be installed first; it runs the user's requested grok-cli command directly when possible, repairs install/auth/permission problems only after an actual failure, retries the original task after recovery, and returns Grok/grok-cli results without assistant-side rewriting unless the user explicitly asks for transformation.
 ---
 
 # Grok CLI Skill
@@ -16,37 +16,64 @@ https://github.com/Moore-developers/grok-cli
 ## Core Workflow
 
 1. Identify the user's intended Grok capability.
-2. Ensure `grok-cli` is installed, runnable, and exposes the required commands.
-3. Verify login with `grok-cli status --json`, including `logged_in`, `access_token_expiring`, `relogin_required`, and entitlement fields.
-4. Verify account permission with a lightweight real capability check before the user's requested task.
-5. If login or permission is not usable, run the correct recovery step: `grok-cli login` for missing/relogin-required auth, `grok-cli refresh --json` for expiring or stale credentials, or a clear entitlement explanation for tier failures.
-6. Re-check `grok-cli status --json` after login or refresh.
-7. Retry the readiness check once after recovery.
-8. Resume the original user task with the correct `grok-cli` command only after readiness is confirmed.
-9. If any step fails, handle that step's error and continue the workflow until the task is complete or a real blocker is clear.
-10. For search tasks, report the exact query, date range, and whether the result set was sufficient before giving conclusions.
-11. Prefer `--json` for automation, parsing, and reliable error handling.
+2. Preserve the user's original prompt, query, text, file paths, URLs, and output instructions when constructing the command.
+3. Prefer explicit flags plus `--json` for automation, parsing, and reliable error handling.
+4. Fast path: run the user's requested `grok-cli` command directly when `grok-cli` is available. Do not run `status`, `state`, login checks, refresh checks, entitlement checks, or capability probes before routine `chat`, `search`, `usage`, media, or audio commands.
+5. If the command succeeds, render the result according to the output mode contract below.
+6. If the command fails, inspect the actual shell error or JSON error envelope and run only the matching recovery action.
+7. After a successful recovery action, retry the user's original command once, unchanged except for mechanical fixes required by the recovered environment.
+8. If the retry fails, return the original error code and message with the minimum actionable note needed.
 
-Keep the original task in mind while handling installation, login, refresh, or permission checks. These are setup steps, not the final answer.
+Keep the original task in mind while handling installation, login, refresh, or permission issues. These are recovery steps after a real failure, not preflight work.
 
-## Readiness Gate
+## Output Mode Contract
 
-Do not run the user's requested Grok task until this gate passes:
+Default output mode is lossless human-readable rendering: parse the JSON envelope, extract command-specific primary fields, and display their values exactly as returned. Return full raw JSON only when the user explicitly asks for raw JSON.
 
-1. Install or repair `grok-cli`.
-2. Verify the binary with `grok-cli --version` and `grok-cli --help`.
-3. Verify login with `grok-cli status --json` and inspect `logged_in`, `access_token_expiring`, `relogin_required`, and entitlement fields.
-4. If login is missing, invalid, or relogin is required, run `grok-cli login`, then run `grok-cli status --json` again.
-5. If `access_token_expiring` is true, run `grok-cli refresh --json`, then run `grok-cli status --json` again before any capability probe.
-6. Verify permission with a minimal real command for the intended capability:
-   - Text tasks: `grok-cli chat --json --no-stream --prompt "Reply with exactly: ok" --timeout 120`.
-   - Search tasks: `grok-cli search --json --query "Grok" --timeout 120`.
-   - Usage tasks: `grok-cli usage --json`.
-   - Media or audio tasks: run `grok-cli status --json` first, then rely on the real requested media/audio command because permission can vary by endpoint.
-7. A successful search readiness probe with sparse or empty citations still passes the capability gate; use evidence sufficiency rules only when summarizing the user's real search results.
-8. If the permission check fails with stale credentials such as `bad-credentials`, run `grok-cli refresh --json`, then `grok-cli status --json`, then retry the permission check once.
-9. If the permission check fails with `entitlement_denied` or `xai_oauth_tier_denied`, explain that the account or subscription cannot access that capability. Do not claim reinstalling will fix it.
-10. Once the gate passes, run the user's original command.
+The host assistant is a renderer for Grok results, not a second editor by default. Preserve both the user's request and Grok's response unless the user explicitly asks for translation, summarization, restructuring, rewriting, formatting, or analysis by the host assistant.
+
+Input handling:
+
+- Pass the user's substantive prompt, query, text, URLs, file paths, and requested output format to `grok-cli` exactly as written.
+- Do not translate, summarize, expand, shorten, clean up, normalize, improve, or reinterpret the user's wording before sending it to Grok.
+- Do not add hidden instructions, extra context, preferred structure, safety language, style rules, or examples to the Grok prompt unless the user explicitly provided them.
+- Only make mechanical changes required by the shell or CLI, such as quoting, escaping, choosing the correct flag, adding explicit date flags requested by the user, or resolving a local path.
+- Setup probes, auth checks, and permission checks are separate from the user's original task. Never mix their prompts or outputs into the user's Grok request.
+
+Output handling:
+
+- For text commands, render the exact text value produced by Grok: `data.output_text` for `chat --json`, `data.answer` for `search --json`, and `data.transcript` for `stt --json`.
+- Do not summarize, paraphrase, translate, reorder, trim, markdown-polish, add headings, add bullets, correct grammar, merge citations into prose, or otherwise rewrite Grok's text.
+- Preserve Grok's whitespace, line breaks, code fences, citations, numbering, and wording as much as the chat surface allows.
+- For media commands, return the exact generated file path, URL, data URL, request id, media tag, or handle from the JSON fields. Do not rename or editorialize them.
+- If the user asks for raw CLI output or raw JSON, return the complete stdout/stderr payload unchanged except for the minimal fencing needed to display it safely.
+- If the user explicitly asks the host assistant to summarize, translate, rewrite, extract, format, compare, classify, or restructure Grok output, enter transformation mode and make it clear that the result is transformed output rather than verbatim Grok output.
+- If recovery happened, mention it only after the Grok result, in a short separate note. Do not insert recovery commentary into the Grok result itself.
+- If a command fails, return the original error code and message. Add only the minimum actionable recovery note needed for auth, entitlement, or command-shape blockers.
+
+## Fast Path And Recovery
+
+Use optimistic execution for normal user tasks:
+
+1. Build the user's original command, for example `grok-cli search --json --query "..."`.
+2. Run that command directly.
+3. If it succeeds, render the result.
+4. If it fails, recover based on the actual error, then retry the original command once.
+
+Do not run readiness probes such as `grok-cli search --json --query "Grok"` or `grok-cli chat --json --prompt "Reply with exactly: ok"` before a real user request. A user asking to search should get the real search first.
+
+Recovery map:
+
+- Shell cannot find `grok-cli`: install it, verify `grok-cli --version` and `grok-cli --help`, then retry the original command.
+- Shell says a subcommand is missing: repair or upgrade the install, verify `grok-cli --help`, then retry the original command.
+- JSON error `auth_missing`, invalid auth, credential validation failure such as `bad-credentials`, expired token, or stale token: run `grok-cli refresh --json` first, then retry the original command.
+- If refresh fails because local auth state is missing, refresh cannot recover the session, or `relogin_required` is true, run `grok-cli login`, then retry the original command.
+- JSON error `state_file_missing`, `auth_relogin_required`, or `relogin_required: true` from the original command means refresh is unlikely to help; run `grok-cli login`, then retry the original command.
+- `access_token_expiring` from `status --json`: refresh only when the user specifically asked for `status` or diagnostics. Do not run status just to discover this before routine tasks.
+- `entitlement_denied` or `xai_oauth_tier_denied`: explain that the account or subscription cannot access that capability. Do not retry, reinstall, or relogin unless the error also explicitly requires relogin.
+- `invalid_args`: fix the command shape if the correct shape is clear, then retry once. If essential information is missing, ask the user for that missing input.
+
+After recovery, retry the original user command, not a probe command. Preserve the original prompt or query exactly.
 
 ## What Users Can Do Through This Skill
 
@@ -137,9 +164,7 @@ For Release binary installs:
 5. Put `grok-cli` or `grok-cli.exe` in a directory already on `PATH`; if none is suitable, use `~/.local/bin`, temporarily add it to the current shell `PATH`, and tell the user how to make that permanent.
 6. If `command -v grok-cli` still fails but `~/.local/bin/grok-cli` exists and is executable, treat this as a PATH configuration issue, not a failed install. Continue by temporarily exporting `PATH="$HOME/.local/bin:$PATH"` or using `~/.local/bin/grok-cli` directly for verification.
 7. Run `grok-cli --version` and `grok-cli --help`.
-8. Run `grok-cli status --json` before any real capability call.
-9. If status is not usable, complete OAuth handling first.
-10. Resume the original Grok task after verification.
+8. Retry the original Grok task. If that task reports auth trouble, follow OAuth handling below.
 
 If Cargo is the chosen path, install from the latest repository state when the user asked for latest:
 
@@ -158,48 +183,29 @@ After installation, verify:
 ```bash
 grok-cli --version
 grok-cli --help
-grok-cli status --json
 ```
 
 If reinstalling because a command was missing, rerun the original user task after verification. Do not stop at installation.
 
 ## OAuth Handling
 
-Check status before real capability calls:
+Do not check OAuth status before routine Grok calls. Let the user's real command run first, then recover only if it reports an auth problem.
+
+If the real command says auth is missing, invalid, expired, stale, or `bad-credentials`, try refresh first:
 
 ```bash
-grok-cli status --json
+grok-cli refresh --json
 ```
 
-If the status says auth is missing, invalid, or relogin is required, run:
+Then retry the original command once.
+
+If refresh fails because local auth state is missing, refresh cannot recover the session, or relogin is required, run:
 
 ```bash
 grok-cli login
 ```
 
-If `status --json` reports `access_token_expiring`, refresh before the first capability check:
-
-```bash
-grok-cli refresh --json
-grok-cli status --json
-```
-
-If a capability call fails with a credential validation error such as `bad-credentials`, run:
-
-```bash
-grok-cli refresh --json
-grok-cli status --json
-```
-
-Then retry the original command once. If it still fails, explain the auth or entitlement error clearly and ask the user to run `grok-cli login` only when relogin is actually required.
-
-After login completes, rerun:
-
-```bash
-grok-cli status --json
-```
-
-Then resume the original task. Do not ask the user to repeat it unless essential information is missing.
+Then retry the original command once. If the retry still fails, explain the auth or entitlement error clearly and ask the user to run login only when relogin is actually required.
 
 ## Command Routing
 
@@ -220,10 +226,11 @@ grok-cli search --json --query "What are builders saying about Grok today?"
 For X search tasks:
 
 - Include relevant date flags when the user asks for today, recent discussion, or a bounded time window.
-- After running the command, inspect whether `data.answer`, `data.citations`, or `data.inline_citations` support the conclusion.
-- If results are sparse, say that the result set was insufficient and name the likely reason: no visible public discussion in the chosen date range, auth/entitlement failure, or query mismatch.
-- Do not present an empty or generic answer as a real X discussion summary.
-- If the first query is too broad or returns a conceptual explanation, retry once with a more explicit social-feedback query and report both attempts briefly.
+- Pass the search query text through exactly as the user wrote it.
+- After running the command, return `data.answer` exactly as Grok returned it.
+- Preserve `data.citations` and `data.inline_citations` exactly when exposing citations.
+- Do not add host-assistant conclusions about sufficiency, sentiment, or meaning unless the user explicitly asks for your analysis.
+- If the command itself reports sparse or missing results, pass that message through rather than turning it into a separate summary.
 
 Use `image` for image generation:
 
@@ -317,12 +324,12 @@ Use these prompts to verify that Codex or Claude Code routes through this skill 
 
 - `docs/project/skill-validation-cases.md`
 
-Minimum routing checks:
+Minimum routing and pass-through checks:
 
 - `用 Grok 总结一下最近关于 Rust CLI 设计的讨论，返回结构化结果`
-  Expected route: `grok-cli chat --json --prompt ...`
+  Expected route: `grok-cli chat --json --prompt ...`; the prompt text must remain unchanged.
 - `搜索一下 X 上大家今天怎么评价 Grok CLI`
-  Expected route: `grok-cli search --json --query ...`
+  Expected route: `grok-cli search --json --query ...`; the query text must remain unchanged.
 - `生成一张 1:1 的极简终端图标，保存到本地`
   Expected route: `grok-cli image --json --prompt ... --aspect-ratio 1:1 --output-file ...`
 - `把这张图片改得更像命令行工具封面：./source.png`
@@ -362,13 +369,14 @@ Read JSON errors from the standard envelope:
 
 Important handling rules:
 
-- If `relogin_required` is true, run `grok-cli login`, then resume the task.
+- If auth is missing, invalid, expired, stale, or `bad-credentials`, run `grok-cli refresh --json` first, then retry the original task.
+- If refresh fails because local auth state is missing, refresh cannot recover the session, or `relogin_required` is true, run `grok-cli login`, then retry the original task.
 - If `entitlement_denied` is true, explain that this is an account or tier permission issue, not something a reinstall or relogin necessarily fixes.
-- If `state_file_missing` or `auth_missing` appears, run login before retrying the original task.
+- If `state_file_missing` appears, run login before retrying the original task.
 - If a command returns invalid arguments, fix the command shape instead of asking the user to debug CLI syntax.
 
 ## Output To User
 
-Return the useful Grok result first. Then briefly mention any setup performed, such as installing `grok-cli` or completing OAuth.
+Default to lossless human-readable rendering: parse the JSON envelope, extract the command-specific primary fields, and display their values exactly as returned. Then briefly mention any recovery performed, such as installing `grok-cli`, refreshing credentials, or completing OAuth.
 
-Avoid dumping raw JSON unless the user asked for it. For media commands, report the returned file path, URL, or generated media handle clearly.
+For text commands, copy `data.output_text`, `data.answer`, or `data.transcript` exactly. For media commands, report the exact returned file path, URL, request id, media tag, or generated media handle. Return raw JSON only when the user asks for raw JSON; when they do ask, return the raw JSON unchanged.

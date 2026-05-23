@@ -18,13 +18,13 @@
 ## Auth Recovery
 
 - `state_file_missing`: no saved auth state; run `grok-cli login`, then resume the original task.
-- `auth_missing`: credentials are unavailable; login or refresh before retrying.
+- `auth_missing`: credentials are unavailable; run `grok-cli refresh --json` first, then retry. If refresh fails because local auth state is missing or relogin is required, run `grok-cli login`.
 - `auth_relogin_required`: refresh cannot recover the session; run `grok-cli login`.
-- `access_token_expiring` from `status --json`: refresh proactively with `grok-cli refresh --json`, then rerun `grok-cli status --json` before the readiness probe.
+- `access_token_expiring` from an explicit `status --json` diagnostic: refresh with `grok-cli refresh --json` when the user asked for status or diagnostics.
 - `xai_oauth_tier_denied`: account/tier permission issue; do not promise reinstall or relogin will fix it.
-- Credential validation messages such as `bad-credentials`: run `grok-cli refresh --json`, then `grok-cli status --json`, and retry the original command once before asking the user to log in again.
+- Credential validation messages such as `bad-credentials`: run `grok-cli refresh --json`, then retry the original command once before asking the user to log in again.
 
-The recovery order is install, status, login if required, refresh if credentials are stale, permission check, then the user's original command. Do not skip from install directly to the user's command.
+The recovery order is failure-driven: run the user's real command first, recover from its actual error, then retry the original command once. Do not run status checks or permission probes before routine user tasks.
 
 ## Invalid Arguments
 
@@ -39,7 +39,9 @@ Do not ask the user to debug CLI syntax unless essential information is missing.
 
 ## Sparse Search Results
 
-When `search --json` succeeds but does not provide enough social discussion to answer the user's question, say so directly. Include the query and date range used, then name the likely cause:
+When `search --json` succeeds, return `data.answer` under the output mode contract. Do not add host-assistant sufficiency judgments unless the user explicitly asks for analysis.
+
+If the user asks you to analyze a sparse result, then say so directly. Include the query and date range used when they are available, then name the likely cause:
 
 - no visible public discussion in that window
 - query mismatch or overly broad wording

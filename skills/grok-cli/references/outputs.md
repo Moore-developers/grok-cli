@@ -12,21 +12,21 @@ Use these stable fields when reading JSON output.
 }
 ```
 
-Read `data` for useful results. Avoid returning raw JSON to the user unless asked.
+Read `data` for useful results. Default to lossless human-readable rendering: extract the command-specific field and display its value exactly as returned. The host assistant must not rewrite field values. Return raw JSON only when the user explicitly asks for raw JSON.
 
 ## Text
 
 `chat --json`:
 
-- `data.output_text`
+- `data.output_text`: return exactly as written
 - `data.finish_reason`
 - `data.tool_calls`
 
 `search --json`:
 
-- `data.answer`
-- `data.citations`
-- `data.inline_citations`
+- `data.answer`: return exactly as written
+- `data.citations`: preserve exactly when exposing citations
+- `data.inline_citations`: preserve exactly when exposing citations
 
 ## Media
 
@@ -54,13 +54,22 @@ Read `data` for useful results. Avoid returning raw JSON to the user unless aske
 
 `stt --json`:
 
-- `data.transcript`: transcript text.
+- `data.transcript`: transcript text; return exactly as written.
 - `data.language`, `data.duration`, `data.words`, `data.channels`: only when upstream returns them.
 
 `stt-stream --json`:
 
 - Streaming output is experimental; prefer batch `stt` unless streaming is specifically requested.
 
-## Setup Results
+## Recovery Results
 
-After install or login, return the user's requested Grok result first. Then briefly mention setup that was performed.
+After install, login, refresh, or another recovery action, return the user's requested Grok result first. Then briefly mention the recovery that was performed.
+
+## Output Mode Rules
+
+- Default mode: render the primary field values exactly as returned, without the JSON envelope.
+- Raw mode: if the user asks for raw CLI output or raw JSON, return the complete stdout/stderr payload unchanged except for the minimal fencing needed to display it safely.
+- Transformation mode: if the user explicitly asks the host assistant to summarize, translate, rewrite, extract, format, compare, classify, or restructure Grok output, make it clear that the result is transformed output rather than verbatim Grok output.
+- Do not summarize, paraphrase, translate, reorder, trim, markdown-polish, or reformat Grok text unless the user explicitly asks for that transformation.
+- Preserve whitespace, line breaks, code fences, citations, numbering, and wording as much as the chat surface allows.
+- For media commands, return exact paths, URLs, request ids, media tags, or handles from the JSON fields without renaming or editorializing them.

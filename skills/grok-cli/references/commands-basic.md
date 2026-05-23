@@ -57,14 +57,13 @@ Public flags:
 - `--raw-stream`: normalized SSE-style events.
 - `--timeout <SECONDS>`: override the text request timeout.
 
-When summarizing X results:
+When returning X search results:
 
-- State the exact query and date range used.
-- Check whether the response includes enough answer detail or citations to support a summary.
-- Treat empty `data.citations` and empty `data.inline_citations` as insufficient evidence for a sentiment summary unless `data.answer` explicitly says no visible discussion was found.
-- If the result is generic, sparse, or about the concept instead of social posts, retry once with a more explicit query such as `"Grok CLI" OR "grok-cli" feedback reviews launch`.
-- If there still is not enough visible public discussion, say that clearly and avoid inventing sentiment.
-- If the command failed, report the relevant error code and whether it looks like auth, entitlement, command syntax, or upstream search coverage.
+- Return `data.answer` exactly as Grok returned it.
+- Preserve `data.citations` and `data.inline_citations` exactly when exposing citations.
+- Do not add host-assistant sentiment, conclusions, or sufficiency judgments unless the user explicitly asks for analysis outside Grok.
+- If the user asks to refine or retry the search, keep the original query text intact except for the exact changes the user requests.
+- If the command failed, report the relevant error code and message with only the minimum recovery note needed.
 
 ## Model
 

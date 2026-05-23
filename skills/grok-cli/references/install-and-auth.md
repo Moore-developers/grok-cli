@@ -75,9 +75,7 @@ Release binary install flow:
 5. Put `grok-cli` or `grok-cli.exe` in a directory already on `PATH`; if none is suitable, use `~/.local/bin`, temporarily add it to the current shell `PATH`, and tell the user how to make that permanent.
 6. If `command -v grok-cli` still fails but `~/.local/bin/grok-cli` exists and is executable, treat this as a PATH configuration issue, not a failed install. Continue by temporarily exporting `PATH="$HOME/.local/bin:$PATH"` or using `~/.local/bin/grok-cli` directly for verification.
 7. Run `grok-cli --version` and `grok-cli --help`.
-8. Run `grok-cli status --json`.
-9. If status is not usable, complete OAuth handling before any real capability call.
-10. Continue the original Grok task.
+8. Retry the original Grok task. If that task reports auth trouble, follow the failure-driven OAuth flow below.
 
 Pinned public install:
 
@@ -96,43 +94,23 @@ After install, rerun:
 ```bash
 grok-cli --version
 grok-cli --help
-grok-cli status --json
 ```
 
 Then resume the user's original Grok task.
 
-## OAuth Flow
+## Failure-Driven OAuth Flow
 
-Check status before real Grok calls:
+Do not run `status`, login checks, refresh checks, entitlement checks, or capability probes before routine user tasks. Run the user's real command first. If it succeeds, render the result. If it fails, recover from the actual error and retry the original command once.
 
-```bash
-grok-cli status --json
-```
+Recovery order after a real command failure:
 
-Readiness flow before the user's requested task:
+1. If the error says auth is missing, invalid, credentials are stale or expired, or `bad-credentials`, run `grok-cli refresh --json`, then retry the original command.
+2. If refresh fails because local auth state is missing, refresh cannot recover the session, or relogin is required, run `grok-cli login`, then retry the original command.
+3. If the original command directly reports `state_file_missing`, `auth_relogin_required`, or `relogin_required: true`, run `grok-cli login`, then retry the original command.
+4. If the error is `entitlement_denied` or `xai_oauth_tier_denied`, explain the account/tier blocker and stop. Do not reinstall or relogin unless the error also explicitly says relogin is required.
+5. If the retry still fails, explain the returned auth or entitlement code. Ask for login only when the error says relogin is required.
 
-1. Install or repair `grok-cli`.
-2. Run `grok-cli --version` and `grok-cli --help`.
-3. Run `grok-cli status --json` and inspect `logged_in`, `access_token_expiring`, `relogin_required`, and entitlement fields.
-4. If auth is missing, invalid, or relogin is required, run `grok-cli login`, then `grok-cli status --json`.
-5. If `access_token_expiring` is true, run `grok-cli refresh --json`, then `grok-cli status --json` before any capability probe.
-6. Verify permission with a minimal real capability check before the user's command. For text tasks, use:
-
-```bash
-grok-cli chat --json --no-stream --prompt "Reply with exactly: ok" --timeout 120
-```
-
-For search tasks, use a real search probe:
-
-```bash
-grok-cli search --json --query "Grok" --timeout 120
-```
-
-A successful search readiness probe with sparse or empty citations still passes the capability gate; evaluate citation sufficiency only when summarizing the user's real search results.
-
-7. If the permission check returns stale credentials such as `bad-credentials`, run `grok-cli refresh --json`, then `grok-cli status --json`, and retry the permission check once.
-8. If the permission check returns `entitlement_denied` or `xai_oauth_tier_denied`, explain the account/tier blocker and stop before running the user's requested command.
-9. Only run the user's original Grok command after login and permission are verified.
+Never replace the user's real command with a probe such as `grok-cli search --json --query "Grok"` or `grok-cli chat --json --prompt "Reply with exactly: ok"`. After recovery, retry the user's original command.
 
 Public OAuth and state flags:
 
@@ -142,28 +120,19 @@ Public OAuth and state flags:
 - `state`: `--json`, `--auth-file <PATH>`.
 - `logout`: `--json`, `--auth-file <PATH>`.
 
-If auth is missing, invalid, or `relogin_required` is true:
+If a real command says auth is missing, invalid, credentials are stale or expired, or `bad-credentials`, try refresh first:
+
+```bash
+grok-cli refresh --json
+```
+
+If refresh fails because local auth state is missing, refresh cannot recover the session, or relogin is required, run login:
 
 ```bash
 grok-cli login
-grok-cli status --json
 ```
 
-If `access_token_expiring` is true, refresh before the first real capability call:
-
-```bash
-grok-cli refresh --json
-grok-cli status --json
-```
-
-If a real command fails with a credential validation message such as `bad-credentials`, do not treat installation as broken. Refresh once, verify status, then retry the original command:
-
-```bash
-grok-cli refresh --json
-grok-cli status --json
-```
-
-If the retry still fails, explain the returned auth or entitlement code. Ask for login only when the status or error says relogin is required.
+Do not treat credential errors as installation problems. Refresh or login, then retry the original command once.
 
 Use manual login options when the environment cannot open or receive a browser callback:
 
@@ -177,7 +146,7 @@ Use `--auth-file <PATH>` only when the user explicitly wants an alternate local 
 grok-cli status --json --auth-file ./tmp/auth.json
 ```
 
-Use refresh when the session exists but the access token is expiring:
+Use refresh when a real command or explicit status diagnostic says the session exists but the access token is stale or expiring:
 
 ```bash
 grok-cli refresh --json

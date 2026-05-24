@@ -25,30 +25,103 @@ pub struct CallbackResult {
     pub error_description: Option<String>,
 }
 
-pub fn wait_for_callback(
+#[derive(Debug)]
+pub struct CallbackListener {
+    listener: TcpListener,
+    host: String,
+    port: u16,
+    path: String,
+    redirect_uri: String,
+    used_fallback_port: bool,
+}
+
+impl CallbackListener {
+    pub fn redirect_uri(&self) -> &str {
+        &self.redirect_uri
+    }
+
+    pub fn port(&self) -> u16 {
+        self.port
+    }
+
+    pub fn used_fallback_port(&self) -> bool {
+        self.used_fallback_port
+    }
+
+    pub fn wait(self, timeout_seconds: Option<u64>) -> Result<CallbackResult, AppError> {
+        wait_on_listener(self, timeout_seconds)
+    }
+}
+
+pub fn bind_callback_listener(port: Option<u16>) -> Result<CallbackListener, AppError> {
+    bind_callback_listener_for_redirect(&loopback_redirect_uri(port), !matches!(port, Some(0)))
+}
+
+pub fn bind_callback_listener_for_redirect(
     redirect_uri: &str,
-    timeout_seconds: Option<u64>,
-) -> Result<CallbackResult, AppError> {
+    fallback_to_dynamic_port: bool,
+) -> Result<CallbackListener, AppError> {
     let url = Url::parse(redirect_uri)
         .map_err(|error| AppError::state_file_invalid(format!("invalid redirect_uri: {error}")))?;
-    let host = url.host_str().unwrap_or("127.0.0.1");
-    let port = url.port().unwrap_or(DEFAULT_REDIRECT_PORT);
-    let callback_path = url.path().to_string();
+    let host = url.host_str().unwrap_or("127.0.0.1").to_string();
+    let requested_port = url.port().unwrap_or(DEFAULT_REDIRECT_PORT);
+    let path = url.path().to_string();
 
-    let listener = TcpListener::bind((host, port)).map_err(|error| {
-        AppError::io(format!(
-            "failed to bind callback listener on {host}:{port}: {error}"
-        ))
-    })?;
+    let (listener, used_fallback_port) = match TcpListener::bind((host.as_str(), requested_port)) {
+        Ok(listener) => (listener, false),
+        Err(bind_error) if fallback_to_dynamic_port && requested_port != 0 => {
+            tracing::warn!(
+                host,
+                requested_port,
+                error = %bind_error,
+                "OAuth callback port is unavailable; falling back to a dynamic local port"
+            );
+            let listener = TcpListener::bind((host.as_str(), 0)).map_err(|error| {
+                AppError::io(format!(
+                    "failed to bind callback listener on {host}; attempted {requested_port} and dynamic port: {error}"
+                ))
+            })?;
+            (listener, true)
+        }
+        Err(error) => {
+            return Err(AppError::io(format!(
+                "failed to bind callback listener on {host}:{requested_port}: {error}"
+            )));
+        }
+    };
+
     listener
         .set_nonblocking(true)
         .map_err(|error| AppError::io(format!("failed to enable nonblocking listener: {error}")))?;
 
+    let local_addr = listener
+        .local_addr()
+        .map_err(|error| AppError::io(format!("failed to inspect callback listener: {error}")))?;
+    let port = local_addr.port();
+    let redirect_uri = loopback_redirect_uri(Some(port));
+
+    Ok(CallbackListener {
+        listener,
+        host,
+        port,
+        path,
+        redirect_uri,
+        used_fallback_port,
+    })
+}
+
+fn wait_on_listener(
+    callback_listener: CallbackListener,
+    timeout_seconds: Option<u64>,
+) -> Result<CallbackResult, AppError> {
     let timeout = timeout_seconds.unwrap_or(180);
     let start = Instant::now();
     loop {
-        match listener.accept() {
+        match callback_listener.listener.accept() {
             Ok((mut stream, _addr)) => {
+                stream.set_nonblocking(false).map_err(|error| {
+                    AppError::io(format!("failed to configure callback stream: {error}"))
+                })?;
                 stream
                     .set_read_timeout(Some(StdDuration::from_secs(5)))
                     .map_err(|error| {
@@ -56,8 +129,11 @@ pub fn wait_for_callback(
                     })?;
 
                 let request = parse_http_request(&read_http_request(&mut stream)?)?;
-                let callback_url = Url::parse(&format!("http://{host}:{port}{}", request.target))
-                    .map_err(|error| {
+                let callback_url = Url::parse(&format!(
+                    "http://{}:{}{}",
+                    callback_listener.host, callback_listener.port, request.target
+                ))
+                .map_err(|error| {
                     AppError::new(
                         ErrorCode::AuthCallbackTimeout,
                         format!("invalid callback URL: {error}"),
@@ -65,7 +141,7 @@ pub fn wait_for_callback(
                 })?;
                 let cors_origin = allowed_callback_origin(request.origin.as_deref());
 
-                if callback_url.path() != callback_path {
+                if callback_url.path() != callback_listener.path {
                     let _ = write_text_response(
                         &mut stream,
                         404,
@@ -361,9 +437,9 @@ mod tests {
     use std::thread;
     use std::time::Duration as StdDuration;
 
-    use super::{
-        CallbackResult, loopback_redirect_uri, parse_manual_callback_input, wait_for_callback,
-    };
+    use crate::error::ErrorCode;
+
+    use super::{CallbackResult, bind_callback_listener, parse_manual_callback_input};
 
     #[test]
     fn parse_manual_callback_accepts_bare_code() {
@@ -394,10 +470,25 @@ mod tests {
     }
 
     #[test]
+    fn parse_manual_callback_accepts_callback_path() {
+        let result = parse_manual_callback_input("/callback?code=abc&state=xyz").unwrap();
+
+        assert_eq!(result.code.as_deref(), Some("abc"));
+        assert_eq!(result.state.as_deref(), Some("xyz"));
+    }
+
+    #[test]
+    fn parse_manual_callback_rejects_empty_input() {
+        let error = parse_manual_callback_input("   ").unwrap_err();
+
+        assert_eq!(error.code, ErrorCode::InvalidArgs);
+    }
+
+    #[test]
     fn wait_for_callback_handles_options_preflight_before_get() {
         let port = reserve_free_port();
-        let redirect_uri = loopback_redirect_uri(Some(port));
-        let handle = thread::spawn(move || wait_for_callback(&redirect_uri, Some(2)).unwrap());
+        let listener = bind_callback_listener(Some(port)).unwrap();
+        let handle = thread::spawn(move || listener.wait(Some(2)).unwrap());
 
         let preflight = send_request(
             port,
@@ -431,8 +522,8 @@ mod tests {
     #[test]
     fn wait_for_callback_keeps_waiting_after_empty_callback_hit() {
         let port = reserve_free_port();
-        let redirect_uri = loopback_redirect_uri(Some(port));
-        let handle = thread::spawn(move || wait_for_callback(&redirect_uri, Some(2)).unwrap());
+        let listener = bind_callback_listener(Some(port)).unwrap();
+        let handle = thread::spawn(move || listener.wait(Some(2)).unwrap());
 
         let empty = send_request(
             port,
@@ -450,6 +541,75 @@ mod tests {
         let result = handle.join().unwrap();
         assert_eq!(result.code.as_deref(), Some("abc"));
         assert_eq!(result.state.as_deref(), Some("xyz"));
+    }
+
+    #[test]
+    fn wait_for_callback_rejects_wrong_path_and_method_before_error_callback() {
+        let listener = bind_callback_listener(Some(0)).unwrap();
+        let port = listener.port();
+        let handle = thread::spawn(move || listener.wait(Some(2)).unwrap());
+
+        let wrong_path = send_request(
+            port,
+            "GET /wrong?code=abc HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+        );
+        assert!(wrong_path.contains("HTTP/1.1 404 Not Found"));
+
+        let wrong_method = send_request(
+            port,
+            "POST /callback?code=abc HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+        );
+        assert!(wrong_method.contains("HTTP/1.1 405 Method Not Allowed"));
+
+        let callback = send_request(
+            port,
+            "GET /callback?error=access_denied&error_description=denied HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+        );
+        assert!(callback.contains("HTTP/1.1 200 OK"));
+        assert!(callback.contains("Grok authorization failed."));
+
+        let result = handle.join().unwrap();
+        assert_eq!(result.error.as_deref(), Some("access_denied"));
+        assert_eq!(result.error_description.as_deref(), Some("denied"));
+    }
+
+    #[test]
+    fn bind_callback_listener_uses_requested_free_port() {
+        let port = reserve_free_port();
+        let listener = bind_callback_listener(Some(port)).unwrap();
+
+        assert_eq!(listener.port(), port);
+        assert_eq!(
+            listener.redirect_uri(),
+            format!("http://127.0.0.1:{port}/callback")
+        );
+        assert!(!listener.used_fallback_port());
+    }
+
+    #[test]
+    fn bind_callback_listener_port_zero_uses_dynamic_port_without_fallback_flag() {
+        let listener = bind_callback_listener(Some(0)).unwrap();
+
+        assert_ne!(listener.port(), 0);
+        assert_eq!(
+            listener.redirect_uri(),
+            format!("http://127.0.0.1:{}/callback", listener.port())
+        );
+        assert!(!listener.used_fallback_port());
+    }
+
+    #[test]
+    fn bind_callback_listener_falls_back_when_requested_port_is_busy() {
+        let occupied = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let occupied_port = occupied.local_addr().unwrap().port();
+        let listener = bind_callback_listener(Some(occupied_port)).unwrap();
+
+        assert_ne!(listener.port(), occupied_port);
+        assert_eq!(
+            listener.redirect_uri(),
+            format!("http://127.0.0.1:{}/callback", listener.port())
+        );
+        assert!(listener.used_fallback_port());
     }
 
     #[test]

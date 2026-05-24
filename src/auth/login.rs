@@ -296,32 +296,34 @@ pub fn build_authorize_params(
     ctx: &AppContext,
     opts: &LoginOptions,
 ) -> Result<AuthorizeParamsData, AppError> {
+    build_authorize_params_with_redirect_uri(ctx, opts, None)
+}
+
+pub(crate) fn build_authorize_params_with_redirect_uri(
+    ctx: &AppContext,
+    opts: &LoginOptions,
+    redirect_uri_override: Option<String>,
+) -> Result<AuthorizeParamsData, AppError> {
     let discovery = fetch_discovery(ctx)?;
     validate_discovery(&discovery)?;
 
-    let redirect_uri = resolve_redirect_uri(opts.port, opts.manual_paste);
+    let redirect_uri =
+        redirect_uri_override.unwrap_or_else(|| resolve_redirect_uri(opts.port, opts.manual_paste));
     let pkce = pkce::generate_pkce();
     let state = pkce::generate_state();
     let nonce = pkce::generate_nonce();
 
-    let mut url = Url::parse(&discovery.authorization_endpoint).map_err(|error| {
-        AppError::state_file_invalid(format!("invalid authorization endpoint: {error}"))
-    })?;
-
-    url.query_pairs_mut()
-        .append_pair("response_type", "code")
-        .append_pair("client_id", CLIENT_ID)
-        .append_pair("redirect_uri", &redirect_uri)
-        .append_pair("scope", SCOPE)
-        .append_pair("code_challenge", &pkce.challenge)
-        .append_pair("code_challenge_method", pkce.method)
-        .append_pair("state", &state)
-        .append_pair("nonce", &nonce)
-        .append_pair("plan", HERMES_PLAN)
-        .append_pair("referrer", HERMES_REFERRER);
+    let authorize_url = build_authorize_url(
+        &discovery.authorization_endpoint,
+        &redirect_uri,
+        &pkce.challenge,
+        pkce.method,
+        &state,
+        &nonce,
+    )?;
 
     Ok(AuthorizeParamsData {
-        authorize_url: url.to_string(),
+        authorize_url,
         redirect_uri,
         state,
         nonce,
@@ -333,6 +335,33 @@ pub fn build_authorize_params(
         authorization_endpoint: discovery.authorization_endpoint,
         token_endpoint: discovery.token_endpoint,
     })
+}
+
+fn build_authorize_url(
+    authorization_endpoint: &str,
+    redirect_uri: &str,
+    code_challenge: &str,
+    code_challenge_method: &str,
+    state: &str,
+    nonce: &str,
+) -> Result<String, AppError> {
+    let mut url = Url::parse(authorization_endpoint).map_err(|error| {
+        AppError::state_file_invalid(format!("invalid authorization endpoint: {error}"))
+    })?;
+
+    url.query_pairs_mut()
+        .append_pair("response_type", "code")
+        .append_pair("client_id", CLIENT_ID)
+        .append_pair("redirect_uri", redirect_uri)
+        .append_pair("scope", SCOPE)
+        .append_pair("code_challenge", code_challenge)
+        .append_pair("code_challenge_method", code_challenge_method)
+        .append_pair("state", state)
+        .append_pair("nonce", nonce)
+        .append_pair("plan", HERMES_PLAN)
+        .append_pair("referrer", HERMES_REFERRER);
+
+    Ok(url.to_string())
 }
 
 fn resolve_redirect_uri(port: Option<u16>, manual_paste: bool) -> String {
@@ -589,15 +618,17 @@ pub(crate) fn send_oauth_form_with_retry(
         }
     }
 
-    let error = last_error.expect("retry loop should capture the last transport error");
-    Err(build_oauth_transport_error(
-        phase,
-        endpoint,
-        grant_type,
-        &error,
-        failure_code,
-        OAUTH_NETWORK_RETRY_ATTEMPTS,
-    ))
+    match last_error {
+        Some(error) => Err(build_oauth_transport_error(
+            phase,
+            endpoint,
+            grant_type,
+            &error,
+            failure_code,
+            OAUTH_NETWORK_RETRY_ATTEMPTS,
+        )),
+        None => unreachable!("OAuth retry loop should return before exhausting without error"),
+    }
 }
 
 fn should_retry_oauth_transport_error(error: &reqwest::Error, attempt: usize) -> bool {
@@ -613,7 +644,7 @@ fn build_oauth_transport_error(
     endpoint: &str,
     grant_type: &str,
     error: &reqwest::Error,
-    failure_code: ErrorCode,
+    _failure_code: ErrorCode,
     attempts: usize,
 ) -> AppError {
     let kind = oauth_transport_error_kind(error);
@@ -629,7 +660,14 @@ fn build_oauth_transport_error(
         error = %error,
         "OAuth transport request failed",
     );
-    AppError::new(failure_code, message)
+    let code = if error.is_timeout() {
+        ErrorCode::NetworkTimeout
+    } else if error.is_connect() {
+        ErrorCode::NetworkConnectFailed
+    } else {
+        ErrorCode::NetworkTransportFailed
+    };
+    AppError::new(code, message)
 }
 
 fn oauth_transport_error_kind(error: &reqwest::Error) -> &'static str {
@@ -675,7 +713,7 @@ fn exchange_code_request(
     if response.status().is_success() {
         return response.json::<TokenResponse>().map_err(|error| {
             AppError::new(
-                ErrorCode::AuthTokenExchangeFailed,
+                ErrorCode::ResponseDecodeFailed,
                 format!("failed to decode token exchange response: {error}"),
             )
         });
@@ -743,7 +781,7 @@ pub(crate) fn persist_pending_session(
 
 #[cfg(test)]
 mod tests {
-    use super::{build_oauth_error_context, resolve_exchange_inputs};
+    use super::{build_authorize_url, build_oauth_error_context, resolve_exchange_inputs};
     use crate::state::model::PendingOAuthState;
 
     fn sample_pending() -> PendingOAuthState {
@@ -813,6 +851,48 @@ mod tests {
                 .get("retry_attempts")
                 .and_then(|value| value.as_u64()),
             Some(2)
+        );
+    }
+
+    #[test]
+    fn build_authorize_url_uses_listener_redirect_uri() {
+        let authorize_url = build_authorize_url(
+            "https://auth.x.ai/oauth2/authorize",
+            "http://127.0.0.1:49152/callback",
+            "sample-challenge",
+            "S256",
+            "sample-state",
+            "sample-nonce",
+        )
+        .unwrap();
+
+        let parsed = url::Url::parse(&authorize_url).unwrap();
+        let pairs: std::collections::BTreeMap<_, _> = parsed.query_pairs().collect();
+        assert_eq!(
+            parsed.as_str().split('?').next().unwrap(),
+            "https://auth.x.ai/oauth2/authorize"
+        );
+        assert_eq!(
+            pairs.get("redirect_uri").map(|value| value.as_ref()),
+            Some("http://127.0.0.1:49152/callback")
+        );
+        assert_eq!(
+            pairs.get("code_challenge").map(|value| value.as_ref()),
+            Some("sample-challenge")
+        );
+        assert_eq!(
+            pairs
+                .get("code_challenge_method")
+                .map(|value| value.as_ref()),
+            Some("S256")
+        );
+        assert_eq!(
+            pairs.get("state").map(|value| value.as_ref()),
+            Some("sample-state")
+        );
+        assert_eq!(
+            pairs.get("nonce").map(|value| value.as_ref()),
+            Some("sample-nonce")
         );
     }
 }

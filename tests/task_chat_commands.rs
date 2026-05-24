@@ -315,6 +315,38 @@ fn task_chat_retries_after_transient_server_failure() {
 }
 
 #[test]
+fn task_chat_maps_connect_failure_to_network_connect_failed() {
+    let temp = tempdir().unwrap();
+    let auth_file = temp.path().join("auth.json");
+    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    drop(listener);
+    write_auth_state(&auth_file, &format!("http://127.0.0.1:{port}/v1"));
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "chat",
+            "--json",
+            "--auth-file",
+            auth_file.to_str().unwrap(),
+            "--prompt",
+            "Connect failure",
+        ])
+        .assert()
+        .code(1)
+        .stdout(predicate::str::contains(
+            "\"code\":\"network_connect_failed\"",
+        ))
+        .stdout(predicate::str::contains("\"category\":\"request_failed\""))
+        .stdout(predicate::str::contains(
+            "\"recovery_action\":\"wait_then_retry\"",
+        ))
+        .stdout(predicate::str::contains("\"retryable\":true"))
+        .stdout(predicate::str::contains("\"rate_limited\":false"));
+}
+
+#[test]
 fn task_chat_stream_emits_formatted_text() {
     let temp = tempdir().unwrap();
     let auth_file = temp.path().join("auth.json");

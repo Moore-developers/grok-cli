@@ -53,3 +53,35 @@ pub fn default_context_window_tokens(model: &str) -> Option<u64> {
         _ => None,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{default_context_window_tokens, estimate_text_cost_micro_usd};
+
+    #[test]
+    fn estimate_text_cost_handles_supported_models_and_trims_case() {
+        assert_eq!(
+            estimate_text_cost_micro_usd(" GROK-4.3-LATEST ", 1_000_000, 1_000_000),
+            Some(3_750_000)
+        );
+        assert_eq!(
+            estimate_text_cost_micro_usd("grok-4.20-0309-non-reasoning", 2_000_000, 0),
+            Some(2_500_000)
+        );
+    }
+
+    #[test]
+    fn estimate_text_cost_rejects_unknown_models() {
+        assert_eq!(estimate_text_cost_micro_usd("unknown-model", 1, 1), None);
+    }
+
+    #[test]
+    fn default_context_window_tokens_maps_known_families() {
+        assert_eq!(default_context_window_tokens("grok-4.20"), Some(2_000_000));
+        assert_eq!(
+            default_context_window_tokens("GROK-LATEST"),
+            Some(1_000_000)
+        );
+        assert_eq!(default_context_window_tokens("unknown-model"), None);
+    }
+}

@@ -6,16 +6,31 @@ use crate::cli::CommandResult;
 use crate::error::{AppError, CommandError, ErrorCode};
 use crate::state::model::AuthState;
 
-use super::callback::{parse_manual_callback_input, wait_for_callback};
+use super::callback::{bind_callback_listener, parse_manual_callback_input};
 use super::login::{
-    LoginData, build_authorize_params, build_last_auth_error, exchange_pending_session,
-    open_browser, persist_pending_session,
+    LoginData, build_authorize_params, build_authorize_params_with_redirect_uri,
+    build_last_auth_error, exchange_pending_session, open_browser, persist_pending_session,
 };
 
 pub fn login(ctx: &AppContext, opts: LoginOptions) -> CommandResult {
     let command = "login";
-    let params = build_authorize_params(ctx, &opts)
+    let (params, callback_listener) = if opts.manual_paste {
+        (
+            build_authorize_params(ctx, &opts)
+                .map_err(|error| CommandError::new(command, opts.common.json, error))?,
+            None,
+        )
+    } else {
+        let callback_listener = bind_callback_listener(opts.port)
+            .map_err(|error| CommandError::new(command, opts.common.json, error))?;
+        let params = build_authorize_params_with_redirect_uri(
+            ctx,
+            &opts,
+            Some(callback_listener.redirect_uri().to_string()),
+        )
         .map_err(|error| CommandError::new(command, opts.common.json, error))?;
+        (params, Some(callback_listener))
+    };
 
     let auth_store_path = persist_pending_session(ctx, &opts, &params)
         .map_err(|error| CommandError::new(command, opts.common.json, error))?;
@@ -50,7 +65,25 @@ pub fn login(ctx: &AppContext, opts: LoginOptions) -> CommandResult {
             .map_err(|error| CommandError::new(command, opts.common.json, error))?;
     }
 
-    match wait_for_callback(&params.redirect_uri, opts.timeout) {
+    let callback_listener = callback_listener.ok_or_else(|| {
+        CommandError::new(
+            command,
+            opts.common.json,
+            AppError::new(
+                ErrorCode::AuthCallbackTimeout,
+                "callback listener was not initialized",
+            ),
+        )
+    })?;
+
+    if callback_listener.used_fallback_port() {
+        tracing::info!(
+            port = callback_listener.port(),
+            "OAuth callback listener is using a dynamic local port"
+        );
+    }
+
+    match callback_listener.wait(opts.timeout) {
         Ok(callback) => finalize_login(ctx, &opts, params.redirect_uri, callback),
         Err(error) => {
             if should_fallback_to_manual_paste(&error, &opts) {

@@ -38,3 +38,9 @@ jobs:
 
       - name: Run tests
         run: cargo test --locked
+
+      - name: Install coverage tool
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Check coverage
+        run: cargo llvm-cov --locked --summary-only --fail-under-lines 80

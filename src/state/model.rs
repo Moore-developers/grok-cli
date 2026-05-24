@@ -282,3 +282,75 @@ fn redact_secret(secret: &str) -> String {
         .collect();
     format!("{prefix}...{suffix}")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{AuthState, LastAuthError, PendingOAuthState};
+    use serde_json::Map;
+    use time::{Duration, OffsetDateTime, format_description::well_known::Rfc3339};
+
+    #[test]
+    fn validate_reports_required_auth_state_fields() {
+        let mut state = AuthState::empty("https://api.x.ai/v1".to_string());
+        state.version = 0;
+        state.provider = " ".to_string();
+        state.auth_mode = String::new();
+        state.base_url = String::new();
+
+        let problems = state.validate();
+        assert!(problems.contains(&"version must be >= 1".to_string()));
+        assert!(problems.contains(&"provider is required".to_string()));
+        assert!(problems.contains(&"auth_mode is required".to_string()));
+        assert!(problems.contains(&"base_url is required".to_string()));
+    }
+
+    #[test]
+    fn auth_status_uses_token_presence_expiry_and_last_error_flags() {
+        let now = OffsetDateTime::now_utc();
+        let mut state = AuthState::empty("https://api.x.ai/v1".to_string());
+        state.tokens.access_token = Some("access-token".to_string());
+        state.tokens.refresh_token = Some("refresh-token".to_string());
+        state.tokens.expires_at = Some((now + Duration::seconds(60)).format(&Rfc3339).unwrap());
+        state.last_auth_error = Some(LastAuthError {
+            provider: "xai-oauth".to_string(),
+            code: "auth_relogin_required".to_string(),
+            message: "login again".to_string(),
+            reason: Some("test".to_string()),
+            relogin_required: true,
+            entitlement_denied: false,
+            context: Map::new(),
+            at: now.format(&Rfc3339).unwrap(),
+        });
+
+        let status = state.auth_status_data("/tmp/auth.json".to_string(), now);
+        assert!(status.logged_in);
+        assert!(status.access_token_present);
+        assert!(status.refresh_token_present);
+        assert!(status.access_token_expiring);
+        assert!(status.relogin_required);
+        assert_eq!(status.auth_store_path, "/tmp/auth.json");
+    }
+
+    #[test]
+    fn pending_oauth_round_trips_and_clears() {
+        let mut state = AuthState::empty("https://api.x.ai/v1".to_string());
+        let pending = PendingOAuthState {
+            state: "state".to_string(),
+            nonce: "nonce".to_string(),
+            code_verifier: "verifier".to_string(),
+            code_challenge: "challenge".to_string(),
+            code_challenge_method: "S256".to_string(),
+            manual_paste: false,
+            no_browser: true,
+            created_at: None,
+        };
+
+        state.set_pending_oauth(pending.clone());
+        let round_trip = state.pending_oauth().unwrap();
+        assert_eq!(round_trip.state, pending.state);
+        assert_eq!(round_trip.code_challenge_method, "S256");
+
+        state.clear_pending_oauth();
+        assert!(state.pending_oauth().is_none());
+    }
+}

@@ -20,6 +20,11 @@ pub enum ErrorCode {
     RateLimited,
     ModelCapabilityMismatch,
     RequestFailed,
+    NetworkTimeout,
+    NetworkConnectFailed,
+    NetworkTransportFailed,
+    ResponseDecodeFailed,
+    OutputSerializationFailed,
     NotImplemented,
 }
 
@@ -43,6 +48,11 @@ impl ErrorCode {
             Self::RateLimited => "rate_limited",
             Self::ModelCapabilityMismatch => "model_capability_mismatch",
             Self::RequestFailed => "request_failed",
+            Self::NetworkTimeout => "network_timeout",
+            Self::NetworkConnectFailed => "network_connect_failed",
+            Self::NetworkTransportFailed => "network_transport_failed",
+            Self::ResponseDecodeFailed => "response_decode_failed",
+            Self::OutputSerializationFailed => "output_serialization_failed",
             Self::NotImplemented => "not_implemented",
         }
     }
@@ -241,7 +251,16 @@ fn default_recovery(code: ErrorCode) -> (ErrorCategory, RecoveryAction, bool) {
             RecoveryAction::StopUnknown,
             false,
         ),
-        ErrorCode::RequestFailed => (
+        ErrorCode::NetworkTimeout
+        | ErrorCode::NetworkConnectFailed
+        | ErrorCode::NetworkTransportFailed => (
+            ErrorCategory::RequestFailed,
+            RecoveryAction::WaitThenRetry,
+            true,
+        ),
+        ErrorCode::RequestFailed
+        | ErrorCode::ResponseDecodeFailed
+        | ErrorCode::OutputSerializationFailed => (
             ErrorCategory::RequestFailed,
             RecoveryAction::StopUnknown,
             false,
@@ -357,6 +376,16 @@ mod tests {
                 5,
             ),
             (ErrorCode::RequestFailed, ErrorCategory::RequestFailed, 1),
+            (
+                ErrorCode::ResponseDecodeFailed,
+                ErrorCategory::RequestFailed,
+                1,
+            ),
+            (
+                ErrorCode::OutputSerializationFailed,
+                ErrorCategory::RequestFailed,
+                1,
+            ),
             (ErrorCode::NotImplemented, ErrorCategory::NotImplemented, 1),
         ];
 
@@ -366,6 +395,21 @@ mod tests {
             assert_eq!(error.recovery_action, RecoveryAction::StopUnknown);
             assert!(!error.retryable);
             assert_eq!(error.exit_code(), exit_code);
+        }
+    }
+
+    #[test]
+    fn default_recovery_maps_network_transport_errors_to_retry() {
+        for code in [
+            ErrorCode::NetworkTimeout,
+            ErrorCode::NetworkConnectFailed,
+            ErrorCode::NetworkTransportFailed,
+        ] {
+            let error = AppError::new(code, "network failed");
+            assert_eq!(error.category, ErrorCategory::RequestFailed);
+            assert_eq!(error.recovery_action, RecoveryAction::WaitThenRetry);
+            assert!(error.retryable);
+            assert_eq!(error.exit_code(), 1);
         }
     }
 

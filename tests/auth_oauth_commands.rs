@@ -231,6 +231,44 @@ fn auth_login_times_out_waiting_for_callback() {
 }
 
 #[test]
+fn auth_login_falls_back_to_dynamic_callback_port_when_requested_port_is_busy() {
+    let temp = tempdir().unwrap();
+    let auth_file = temp.path().join("auth.json");
+    let occupied = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let occupied_port = occupied.local_addr().unwrap().port();
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "login",
+            "--json",
+            "--no-browser",
+            "--timeout",
+            "1",
+            "--port",
+            &occupied_port.to_string(),
+            "--auth-file",
+            auth_file.to_str().unwrap(),
+        ])
+        .assert()
+        .code(1)
+        .stdout(predicate::str::contains(
+            "\"code\":\"auth_callback_timeout\"",
+        ));
+
+    let raw = fs::read_to_string(&auth_file).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&raw).unwrap();
+    let redirect_uri = json["redirect_uri"].as_str().unwrap();
+    assert!(redirect_uri.starts_with("http://127.0.0.1:"));
+    assert!(redirect_uri.ends_with("/callback"));
+    assert!(!redirect_uri.contains(&format!(":{occupied_port}/")));
+    assert_eq!(
+        json["metadata"]["pending_oauth"]["no_browser"].as_bool(),
+        Some(true)
+    );
+}
+
+#[test]
 fn auth_login_loopback_callback_state_mismatch_is_reported() {
     let temp = tempdir().unwrap();
     let auth_file = temp.path().join("auth.json");

@@ -1,7 +1,7 @@
 use serde::Serialize;
 use serde_json::json;
 
-use crate::error::AppError;
+use crate::error::{AppError, ErrorCode};
 
 #[derive(Debug, Serialize)]
 struct SuccessEnvelope<'a, T> {
@@ -41,10 +41,16 @@ where
         command,
         data: data.clone(),
     };
-    println!(
-        "{}",
-        serde_json::to_string(&envelope).expect("serialize success envelope")
-    );
+    match serde_json::to_string(&envelope) {
+        Ok(serialized) => println!("{serialized}"),
+        Err(error) => print_json_error(
+            command,
+            &AppError::new(
+                ErrorCode::OutputSerializationFailed,
+                format!("failed to serialize success envelope: {error}"),
+            ),
+        ),
+    }
 }
 
 pub fn print_json_error(command: &str, error: &AppError) {
@@ -65,14 +71,25 @@ pub fn print_json_error(command: &str, error: &AppError) {
             rate_limited: error.rate_limited,
         },
     };
-    println!(
-        "{}",
-        serde_json::to_string(&envelope).expect("serialize error envelope")
-    );
+    println!("{}", serialize_error_envelope(&envelope));
 }
 
 pub fn print_human_error(command: &str, error: &AppError) {
     eprintln!("{command}: {} ({})", error.message, error.code);
+}
+
+fn serialize_error_envelope(envelope: &ErrorEnvelope<'_>) -> String {
+    serde_json::to_string(envelope).unwrap_or_else(|_| {
+        let command = escape_json_string(envelope.command);
+        r#"{"ok":false,"command":"#
+            .to_string()
+            + &command
+            + r#","error":{"code":"output_serialization_failed","message":"failed to serialize error envelope","relogin_required":false,"entitlement_denied":false,"category":"request_failed","recovery_action":"stop_unknown","retryable":false,"retry_after_seconds":null,"billing_required":false,"quota_exhausted":false,"rate_limited":false}}"#
+    })
+}
+
+fn escape_json_string(value: &str) -> String {
+    serde_json::to_string(value).unwrap_or_else(|_| "\"unknown\"".to_string())
 }
 
 pub fn print_pretty_json(value: serde_json::Value) {
@@ -84,7 +101,7 @@ pub fn print_pretty_json(value: serde_json::Value) {
 
 #[cfg(test)]
 mod tests {
-    use super::{ErrorEnvelope, ErrorPayload};
+    use super::{ErrorEnvelope, ErrorPayload, serialize_error_envelope};
     use crate::error::{AppError, ErrorCode, RecoveryAction};
 
     #[test]
@@ -123,5 +140,37 @@ mod tests {
         assert_eq!(serialized["error"]["rate_limited"], true);
         assert_eq!(serialized["error"]["billing_required"], false);
         assert_eq!(serialized["error"]["quota_exhausted"], false);
+    }
+
+    #[test]
+    fn serialization_failure_error_uses_failure_code_not_success_envelope() {
+        let error = AppError::new(
+            ErrorCode::OutputSerializationFailed,
+            "failed to serialize success envelope",
+        );
+        let envelope = ErrorEnvelope {
+            ok: false,
+            command: "chat",
+            error: ErrorPayload {
+                code: error.code.as_str(),
+                message: &error.message,
+                relogin_required: error.relogin_required,
+                entitlement_denied: error.entitlement_denied,
+                category: error.category.as_str(),
+                recovery_action: error.recovery_action.as_str(),
+                retryable: error.retryable,
+                retry_after_seconds: error.retry_after_seconds,
+                billing_required: error.billing_required,
+                quota_exhausted: error.quota_exhausted,
+                rate_limited: error.rate_limited,
+            },
+        };
+
+        let serialized = serialize_error_envelope(&envelope);
+        let json: serde_json::Value = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(json["ok"], false);
+        assert_eq!(json["command"], "chat");
+        assert_eq!(json["error"]["code"], "output_serialization_failed");
+        assert_eq!(json["error"]["category"], "request_failed");
     }
 }

@@ -92,18 +92,13 @@ pub fn post_responses_api(
         body,
         timeout_seconds,
     )
-    .map_err(|error| {
-        AppError::new(
-            ErrorCode::RequestFailed,
-            format!("responses request failed: {error}"),
-        )
-    })?;
+    .map_err(|error| map_transport_error("responses request", &error))?;
 
     if response.status().is_success() {
         let rate_limits = extract_rate_limits(response.headers(), &credentials.provider);
         let response_json = response.json::<Value>().map_err(|error| {
             AppError::new(
-                ErrorCode::RequestFailed,
+                ErrorCode::ResponseDecodeFailed,
                 format!("failed to decode responses API payload: {error}"),
             )
         })?;
@@ -162,12 +157,7 @@ pub fn post_responses_stream_api(
         body,
         timeout_seconds,
     )
-    .map_err(|error| {
-        AppError::new(
-            ErrorCode::RequestFailed,
-            format!("responses stream request failed: {error}"),
-        )
-    })?;
+    .map_err(|error| map_transport_error("responses stream request", &error))?;
 
     if response.status().is_success() {
         let rate_limits = extract_rate_limits(response.headers(), &credentials.provider);
@@ -253,11 +243,25 @@ fn send_responses_request_with_retry(
         }
     }
 
-    Err(last_error.expect("responses retry loop should capture last transport error"))
+    match last_error {
+        Some(error) => Err(error),
+        None => unreachable!("responses retry loop should return before exhausting without error"),
+    }
 }
 
 fn should_retry_transport_error(error: &reqwest::Error) -> bool {
     error.is_timeout() || error.is_connect() || error.is_request()
+}
+
+pub(crate) fn map_transport_error(operation: &str, error: &reqwest::Error) -> AppError {
+    let code = if error.is_timeout() {
+        ErrorCode::NetworkTimeout
+    } else if error.is_connect() {
+        ErrorCode::NetworkConnectFailed
+    } else {
+        ErrorCode::NetworkTransportFailed
+    };
+    AppError::new(code, format!("{operation} failed: {error}"))
 }
 
 pub fn post_json_api_with_options(
@@ -295,12 +299,7 @@ pub fn post_json_api_with_options(
         ))
         .json(body)
         .send()
-        .map_err(|error| {
-            AppError::new(
-                ErrorCode::RequestFailed,
-                format!("request failed for {endpoint_path}: {error}"),
-            )
-        })?;
+        .map_err(|error| map_transport_error(endpoint_path, &error))?;
 
     map_json_response(response, credentials.provider, endpoint_path)
 }
@@ -337,12 +336,7 @@ pub fn get_json_api_with_options(
             timeout_seconds.unwrap_or(DEFAULT_MEDIA_TIMEOUT_SECONDS),
         ))
         .send()
-        .map_err(|error| {
-            AppError::new(
-                ErrorCode::RequestFailed,
-                format!("request failed for {endpoint_path}: {error}"),
-            )
-        })?;
+        .map_err(|error| map_transport_error(endpoint_path, &error))?;
 
     map_json_response(response, credentials.provider, endpoint_path)
 }
@@ -382,12 +376,7 @@ pub fn post_bytes_api_with_options(
         ))
         .json(body)
         .send()
-        .map_err(|error| {
-            AppError::new(
-                ErrorCode::RequestFailed,
-                format!("request failed for {endpoint_path}: {error}"),
-            )
-        })?;
+        .map_err(|error| map_transport_error(endpoint_path, &error))?;
 
     map_bytes_response(response, credentials.provider, endpoint_path)
 }
@@ -426,12 +415,7 @@ pub fn post_multipart_api_with_options(
         ))
         .multipart(form)
         .send()
-        .map_err(|error| {
-            AppError::new(
-                ErrorCode::RequestFailed,
-                format!("request failed for {endpoint_path}: {error}"),
-            )
-        })?;
+        .map_err(|error| map_transport_error(endpoint_path, &error))?;
 
     map_json_response(response, credentials.provider, endpoint_path)
 }
@@ -445,7 +429,7 @@ fn map_json_response(
         let rate_limits = extract_rate_limits(response.headers(), &credential_source);
         let response_json = response.json::<Value>().map_err(|error| {
             AppError::new(
-                ErrorCode::RequestFailed,
+                ErrorCode::ResponseDecodeFailed,
                 format!("failed to decode {endpoint_path} payload: {error}"),
             )
         })?;
@@ -491,7 +475,7 @@ fn map_bytes_response(
         let rate_limits = extract_rate_limits(response.headers(), &credential_source);
         let bytes = response.bytes().map_err(|error| {
             AppError::new(
-                ErrorCode::RequestFailed,
+                ErrorCode::NetworkTransportFailed,
                 format!("failed to read {endpoint_path} bytes payload: {error}"),
             )
         })?;

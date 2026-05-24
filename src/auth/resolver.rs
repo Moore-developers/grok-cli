@@ -101,7 +101,7 @@ pub fn refresh_state_tokens(
     if response.status().is_success() {
         let token_response = response.json::<TokenResponse>().map_err(|error| {
             AppError::new(
-                ErrorCode::AuthRefreshFailed,
+                ErrorCode::ResponseDecodeFailed,
                 format!("failed to decode refresh response: {error}"),
             )
         })?;
@@ -202,6 +202,26 @@ mod tests {
             &state,
             RuntimeCredentialOptions {
                 refresh_if_expiring: false,
+            },
+            OffsetDateTime::parse(
+                "2026-05-20T00:00:00Z",
+                &time::format_description::well_known::Rfc3339,
+            )
+            .unwrap(),
+        ));
+    }
+
+    #[test]
+    fn proactive_refresh_stays_off_without_refresh_token() {
+        let mut state = AuthState::empty("https://api.x.ai/v1".to_string());
+        state.tokens.access_token = Some("sample-access-token".to_string());
+        state.tokens.expires_in = Some(3600);
+        state.last_refresh = Some("2026-05-19T00:00:00Z".to_string());
+
+        assert!(!should_refresh_before_request(
+            &state,
+            RuntimeCredentialOptions {
+                refresh_if_expiring: true,
             },
             OffsetDateTime::parse(
                 "2026-05-20T00:00:00Z",

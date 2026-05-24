@@ -37,6 +37,7 @@ Fix:
 Additional note:
 
 - If the upstream body says `The OAuth2 access token could not be validated`, it is not always a true subscription-tier failure.
+- Current builds classify credential-validation wording such as `bad-credentials` as `auth_expired`, even when xAI returns it through a forbidden/tier-shaped response. Run `grok-cli refresh --json`, then retry the original command once.
 - During real media validation on 2026-05-20, this text was also seen when the access token was close to expiry; refresh recovered the request.
 - Current media commands refresh before requests when the token is close to expiry.
 - If you see this on an old binary, upgrade first and retry.

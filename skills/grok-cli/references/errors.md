@@ -19,10 +19,11 @@
 
 - `state_file_missing`: no saved auth state; run `grok-cli login`, then resume the original task.
 - `auth_missing`: credentials are unavailable; run `grok-cli refresh --json` first, then retry. If refresh fails because local auth state is missing or relogin is required, run `grok-cli login`.
+- `auth_expired`: the upstream request rejected the access token; run `grok-cli refresh --json`, then retry the original command once.
 - `auth_relogin_required`: refresh cannot recover the session; run `grok-cli login`.
 - `access_token_expiring` from an explicit `status --json` diagnostic: refresh with `grok-cli refresh --json` when the user asked for status or diagnostics.
-- `xai_oauth_tier_denied`: account/tier permission issue; do not promise reinstall or relogin will fix it.
-- Credential validation messages such as `bad-credentials`: run `grok-cli refresh --json`, then retry the original command once before asking the user to log in again.
+- Credential validation messages such as `bad-credentials` or `The OAuth2 access token could not be validated`: run `grok-cli refresh --json`, then retry the original command once before asking the user to log in again. This rule takes priority even when the same envelope also contains `xai_oauth_tier_denied` or `entitlement_denied: true`.
+- Pure `xai_oauth_tier_denied` with no credential-validation wording: account/tier permission issue; do not promise reinstall, refresh, or relogin will fix it.
 
 The recovery order is failure-driven: run the user's real command first, recover from its actual error, then retry the original command once. Do not run status checks or permission probes before routine user tasks.
 

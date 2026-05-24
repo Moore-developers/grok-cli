@@ -179,6 +179,7 @@ fn bundled_skill_requires_command_surface_check() {
     assert!(install_ref.contains("Failure-Driven OAuth Flow"));
     assert!(install_ref.contains("Run the user's real command first"));
     assert!(install_ref.contains("try refresh first"));
+    assert!(install_ref.contains("Credential-validation wording takes priority"));
     assert!(install_ref.contains("If refresh fails because local auth state is missing"));
     assert!(install_ref.contains("Never replace the user's real command with a probe"));
     assert!(install_ref.contains("grok-cli search --json --query \"Grok\""));
@@ -223,6 +224,10 @@ fn bundled_skill_requires_command_surface_check() {
     assert!(skill.contains("Do not run readiness probes"));
     assert!(skill.contains("A user asking to search should get the real search first"));
     assert!(skill.contains("try refresh first"));
+    assert!(skill.contains("Credential problems have priority over entitlement wording"));
+    assert!(
+        skill.contains("This refresh-first rule takes priority over `entitlement_denied: true`")
+    );
     assert!(skill.contains("If refresh fails because local auth state is missing"));
     assert!(!skill.contains("## Readiness Gate"));
     assert!(!skill.contains("Verify permission with a minimal real command"));
@@ -286,6 +291,9 @@ fn bundled_skill_requires_command_surface_check() {
     assert!(advanced_ref.contains("video-extend"));
     assert!(advanced_ref.contains("--auth-file"));
     assert!(errors_ref.contains("bad-credentials"));
+    assert!(
+        errors_ref.contains("This rule takes priority even when the same envelope also contains")
+    );
     assert!(errors_ref.contains("access_token_expiring"));
     assert!(errors_ref.contains("failure-driven"));
     assert!(errors_ref.contains("Do not run status checks or permission probes"));

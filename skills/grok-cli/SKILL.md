@@ -66,11 +66,11 @@ Recovery map:
 
 - Shell cannot find `grok-cli`: install it, verify `grok-cli --version` and `grok-cli --help`, then retry the original command.
 - Shell says a subcommand is missing: repair or upgrade the install, verify `grok-cli --help`, then retry the original command.
-- JSON error `auth_missing`, invalid auth, credential validation failure such as `bad-credentials`, expired token, or stale token: run `grok-cli refresh --json` first, then retry the original command.
+- Credential problems have priority over entitlement wording. If the error code or message contains `auth_missing`, invalid auth, credential validation failure such as `bad-credentials`, `The OAuth2 access token could not be validated`, expired token, stale token, or `auth_expired`, run `grok-cli refresh --json` first, then retry the original command. Do this even if the same error envelope also says `entitlement_denied: true` or `xai_oauth_tier_denied`.
 - If refresh fails because local auth state is missing, refresh cannot recover the session, or `relogin_required` is true, run `grok-cli login`, then retry the original command.
 - JSON error `state_file_missing`, `auth_relogin_required`, or `relogin_required: true` from the original command means refresh is unlikely to help; run `grok-cli login`, then retry the original command.
 - `access_token_expiring` from `status --json`: refresh only when the user specifically asked for `status` or diagnostics. Do not run status just to discover this before routine tasks.
-- `entitlement_denied` or `xai_oauth_tier_denied`: explain that the account or subscription cannot access that capability. Do not retry, reinstall, or relogin unless the error also explicitly requires relogin.
+- Pure `entitlement_denied` or `xai_oauth_tier_denied` without any credential-validation wording: explain that the account or subscription cannot access that capability. Do not retry, reinstall, refresh, or relogin unless the error also explicitly requires relogin.
 - `invalid_args`: fix the command shape if the correct shape is clear, then retry once. If essential information is missing, ask the user for that missing input.
 
 After recovery, retry the original user command, not a probe command. Preserve the original prompt or query exactly.
@@ -191,7 +191,7 @@ If reinstalling because a command was missing, rerun the original user task afte
 
 Do not check OAuth status before routine Grok calls. Let the user's real command run first, then recover only if it reports an auth problem.
 
-If the real command says auth is missing, invalid, expired, stale, or `bad-credentials`, try refresh first:
+If the real command says auth is missing, invalid, expired, stale, `auth_expired`, `bad-credentials`, or `The OAuth2 access token could not be validated`, try refresh first. Credential-validation wording wins over `entitlement_denied` flags because xAI has returned token validation failures through forbidden/tier-shaped envelopes:
 
 ```bash
 grok-cli refresh --json
@@ -369,9 +369,9 @@ Read JSON errors from the standard envelope:
 
 Important handling rules:
 
-- If auth is missing, invalid, expired, stale, or `bad-credentials`, run `grok-cli refresh --json` first, then retry the original task.
+- If auth is missing, invalid, expired, stale, `auth_expired`, `bad-credentials`, or `The OAuth2 access token could not be validated`, run `grok-cli refresh --json` first, then retry the original task. This refresh-first rule takes priority over `entitlement_denied: true` when both signals appear together.
 - If refresh fails because local auth state is missing, refresh cannot recover the session, or `relogin_required` is true, run `grok-cli login`, then retry the original task.
-- If `entitlement_denied` is true, explain that this is an account or tier permission issue, not something a reinstall or relogin necessarily fixes.
+- If `entitlement_denied` is true with no credential-validation wording, explain that this is an account or tier permission issue, not something a reinstall or relogin necessarily fixes.
 - If `state_file_missing` appears, run login before retrying the original task.
 - If a command returns invalid arguments, fix the command shape instead of asking the user to debug CLI syntax.
 

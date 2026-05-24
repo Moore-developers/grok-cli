@@ -60,12 +60,14 @@
   - 通常先 `refresh --json`，refresh 无法恢复或要求重登时再 `login`
 - `bad-credentials` / 过期凭据
   - 通常先 `refresh --json`，再重试原始命令
+- `auth_expired` / `The OAuth2 access token could not be validated`
+  - 当这类凭据校验失败和 `entitlement_denied=true` 同时出现时，先按凭据问题处理：执行 `refresh --json`，再重试原始命令一次
 - `auth_relogin_required`
   - 说明刷新已无法恢复
   - 必须重新登录
 - `xai_oauth_tier_denied`
-  - 说明 OAuth 账号没有对应能力权限
-  - 不要误导用户去重登
+  - 如果没有任何凭据校验失败字样，说明 OAuth 账号没有对应能力权限
+  - 不要误导用户去重登或反复刷新
 
 ## 5. 原样透传输出契约
 

@@ -140,6 +140,40 @@ fn task_x_search_maps_forbidden_to_tier_denied() {
 }
 
 #[test]
+fn task_x_search_maps_bad_credentials_forbidden_to_auth_expired() {
+    let temp = tempdir().unwrap();
+    let auth_file = temp.path().join("auth.json");
+    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    write_auth_state(&auth_file, &format!("http://127.0.0.1:{port}/v1"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let _ = read_request(&mut stream);
+        let body = r#"{"error":"forbidden","error_description":"The OAuth2 access token could not be validated. [WKE=unauthenticated:bad-credentials]"}"#;
+        write_response(&mut stream, "403 Forbidden", body);
+    });
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "search",
+            "--json",
+            "--auth-file",
+            auth_file.to_str().unwrap(),
+            "--query",
+            "Hermes Grok updates",
+        ])
+        .assert()
+        .code(3)
+        .stdout(predicate::str::contains("\"code\":\"auth_expired\""))
+        .stdout(predicate::str::contains("\"entitlement_denied\":false"))
+        .stdout(predicate::str::contains("bad-credentials"));
+
+    server.join().unwrap();
+}
+
+#[test]
 fn task_x_search_reports_request_failed_when_answer_is_missing() {
     let temp = tempdir().unwrap();
     let auth_file = temp.path().join("auth.json");

@@ -29,6 +29,7 @@
 补充说明：
 
 - 如果错误正文包含 `The OAuth2 access token could not be validated`，它未必真的是订阅层级不足
+- 当前版本会把 `bad-credentials` 这类凭据校验失败归类为 `auth_expired`，即使 xAI 通过 forbidden / tier 形状返回；处理方式是先执行 `grok-cli refresh --json`，再重试原始命令一次
 - `2026-05-20` 的真实媒体验证中，这类错误曾由“access token 已接近过期”触发，`refresh` 后恢复正常
 - 当前媒体请求入口已增加“即将过期先 refresh”的自动编排，用来降低这类误判
 - 如果你是在旧二进制上复现到这个错误，先升级到包含该自动编排的版本，再重新跑媒体命令

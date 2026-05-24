@@ -129,11 +129,13 @@ pub fn post_responses_api(
         .or(payload.error)
         .unwrap_or_else(|| body_text.clone());
 
-    if status == reqwest::StatusCode::FORBIDDEN {
-        return Err(AppError::new(
-            ErrorCode::XaiOauthTierDenied,
-            format!("responses request was denied: {detail}"),
-        ));
+    if let Some(error) = map_upstream_auth_error(
+        status,
+        &detail,
+        || format!("responses request was denied: {detail}"),
+        || format!("responses request auth failed: {detail}"),
+    ) {
+        return Err(error);
     }
 
     Err(AppError::new(
@@ -201,11 +203,13 @@ pub fn post_responses_stream_api(
         .or(payload.error)
         .unwrap_or_else(|| body_text.clone());
 
-    if status == reqwest::StatusCode::FORBIDDEN {
-        return Err(AppError::new(
-            ErrorCode::XaiOauthTierDenied,
-            format!("responses stream request was denied: {detail}"),
-        ));
+    if let Some(error) = map_upstream_auth_error(
+        status,
+        &detail,
+        || format!("responses stream request was denied: {detail}"),
+        || format!("responses stream request auth failed: {detail}"),
+    ) {
+        return Err(error);
     }
 
     Err(AppError::new(
@@ -491,11 +495,13 @@ fn map_json_response(
         .or(payload.error)
         .unwrap_or_else(|| body_text.clone());
 
-    if status == reqwest::StatusCode::FORBIDDEN {
-        return Err(AppError::new(
-            ErrorCode::XaiOauthTierDenied,
-            format!("{endpoint_path} was denied: {detail}"),
-        ));
+    if let Some(error) = map_upstream_auth_error(
+        status,
+        &detail,
+        || format!("{endpoint_path} was denied: {detail}"),
+        || format!("{endpoint_path} auth failed: {detail}"),
+    ) {
+        return Err(error);
     }
 
     Err(AppError::new(
@@ -545,11 +551,13 @@ fn map_bytes_response(
         .or(payload.error)
         .unwrap_or_else(|| body_text.clone());
 
-    if status == reqwest::StatusCode::FORBIDDEN {
-        return Err(AppError::new(
-            ErrorCode::XaiOauthTierDenied,
-            format!("{endpoint_path} was denied: {detail}"),
-        ));
+    if let Some(error) = map_upstream_auth_error(
+        status,
+        &detail,
+        || format!("{endpoint_path} was denied: {detail}"),
+        || format!("{endpoint_path} auth failed: {detail}"),
+    ) {
+        return Err(error);
     }
 
     Err(AppError::new(
@@ -563,6 +571,30 @@ fn map_bytes_response(
             }
         ),
     ))
+}
+
+fn map_upstream_auth_error(
+    status: reqwest::StatusCode,
+    detail: &str,
+    tier_message: impl FnOnce() -> String,
+    credential_message: impl FnOnce() -> String,
+) -> Option<AppError> {
+    let lower = detail.to_lowercase();
+    if lower.contains("bad-credentials")
+        || lower.contains("access token could not be validated")
+        || lower.contains("token could not be validated")
+        || lower.contains("invalid token")
+        || lower.contains("expired token")
+        || lower.contains("unauthenticated")
+    {
+        return Some(AppError::new(ErrorCode::AuthExpired, credential_message()));
+    }
+
+    if status == reqwest::StatusCode::FORBIDDEN {
+        return Some(AppError::new(ErrorCode::XaiOauthTierDenied, tier_message()));
+    }
+
+    None
 }
 
 fn extract_usage_summary(response: &Value) -> ResponseUsageSummary {

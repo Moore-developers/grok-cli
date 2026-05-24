@@ -42,10 +42,11 @@ Notes:
 
 ## 3. Error Handling
 
-- `auth_missing`, invalid auth, or stale credential messages such as `bad-credentials` mean the caller should try `refresh --json` before retrying.
+- `auth_missing`, `auth_expired`, invalid auth, or stale credential messages such as `bad-credentials` or `The OAuth2 access token could not be validated` mean the caller should try `refresh --json` before retrying.
+- Credential-validation wording takes priority over `entitlement_denied` flags. If both appear together, refresh first, then retry the original command once.
 - `state_file_missing`, `auth_relogin_required`, or `relogin_required` means a fresh login is required.
 - If refresh fails because local auth state is missing or relogin is required, run login before retrying.
-- `entitlement_denied` means the account or tier does not have the capability, so reinstalling will not fix it.
+- Pure `entitlement_denied` without credential-validation wording means the account or tier does not have the capability, so reinstalling, refreshing, or relogin will not fix it.
 - Invalid arguments should be corrected in the command shape rather than surfaced to the user as CLI confusion.
 
 ## 4. Pass-Through Output Contract

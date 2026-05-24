@@ -21,6 +21,8 @@ pub enum ErrorCode {
     ModelCapabilityMismatch,
     RequestFailed,
     NotImplemented,
+    NetworkTransportError,
+    IOBufferOverflow,
 }
 
 impl ErrorCode {
@@ -44,6 +46,8 @@ impl ErrorCode {
             Self::ModelCapabilityMismatch => "model_capability_mismatch",
             Self::RequestFailed => "request_failed",
             Self::NotImplemented => "not_implemented",
+            Self::NetworkTransportError => "network_transport_error",
+            Self::IOBufferOverflow => "io_buffer_overflow",
         }
     }
 }
@@ -231,7 +235,9 @@ fn default_recovery(code: ErrorCode) -> (ErrorCategory, RecoveryAction, bool) {
             RecoveryAction::StopQuota,
             false,
         ),
-        ErrorCode::RateLimited => (
+        ErrorCode::RateLimited
+        | ErrorCode::NetworkTransportError
+        | ErrorCode::IOBufferOverflow => (
             ErrorCategory::RateLimited,
             RecoveryAction::StopRateLimit,
             false,

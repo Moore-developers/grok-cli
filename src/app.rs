@@ -17,17 +17,24 @@ pub struct AppContext {
 
 impl AppContext {
     pub fn new() -> Self {
+        let client = reqwest::blocking::Client::builder()
+            // In this environment reqwest/native-tls can take a broken IPv6
+            // path to auth.x.ai while curl/browser succeed via IPv4 fallback.
+            // Bind outbound HTTP to IPv4 so OAuth token exchange/refresh stays
+            // aligned with the working browser path.
+            .local_address(IpAddr::V4(Ipv4Addr::UNSPECIFIED))
+            .user_agent("grok-cli/0.1.0")
+            .build();
+
         Self {
             state_store: StateStore::new(),
-            http_client: reqwest::blocking::Client::builder()
-                // In this environment reqwest/native-tls can take a broken IPv6
-                // path to auth.x.ai while curl/browser succeed via IPv4 fallback.
-                // Bind outbound HTTP to IPv4 so OAuth token exchange/refresh stays
-                // aligned with the working browser path.
-                .local_address(IpAddr::V4(Ipv4Addr::UNSPECIFIED))
-                .user_agent("grok-cli/0.1.0")
-                .build()
-                .expect("build shared HTTP client"),
+            http_client: client.unwrap_or_else(|_| {
+                // Fallback: build without IPv4 bind if binding fails
+                reqwest::blocking::Client::builder()
+                    .user_agent("grok-cli/0.1.0")
+                    .build()
+                    .unwrap_or_default()
+            }),
         }
     }
 

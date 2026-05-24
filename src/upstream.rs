@@ -253,7 +253,10 @@ fn send_responses_request_with_retry(
         }
     }
 
-    Err(last_error.expect("responses retry loop should capture last transport error"))
+    Err(last_error.map_or_else(
+        || reqwest::Error::from(std::io::Error::new(std::io::ErrorKind::Other, "retry exhausted")),
+        |e| e,
+    ))
 }
 
 fn should_retry_transport_error(error: &reqwest::Error) -> bool {

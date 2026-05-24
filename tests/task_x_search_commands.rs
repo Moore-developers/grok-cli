@@ -134,7 +134,14 @@ fn task_x_search_maps_forbidden_to_tier_denied() {
         .stdout(predicate::str::contains(
             "\"code\":\"xai_oauth_tier_denied\"",
         ))
-        .stdout(predicate::str::contains("\"entitlement_denied\":true"));
+        .stdout(predicate::str::contains("\"entitlement_denied\":true"))
+        .stdout(predicate::str::contains(
+            "\"category\":\"entitlement_denied\"",
+        ))
+        .stdout(predicate::str::contains(
+            "\"recovery_action\":\"stop_entitlement\"",
+        ))
+        .stdout(predicate::str::contains("\"retryable\":false"));
 
     server.join().unwrap();
 }
@@ -168,7 +175,131 @@ fn task_x_search_maps_bad_credentials_forbidden_to_auth_expired() {
         .code(3)
         .stdout(predicate::str::contains("\"code\":\"auth_expired\""))
         .stdout(predicate::str::contains("\"entitlement_denied\":false"))
+        .stdout(predicate::str::contains(
+            "\"category\":\"auth_refreshable\"",
+        ))
+        .stdout(predicate::str::contains(
+            "\"recovery_action\":\"refresh_then_retry\"",
+        ))
+        .stdout(predicate::str::contains("\"retryable\":true"))
         .stdout(predicate::str::contains("bad-credentials"));
+
+    server.join().unwrap();
+}
+
+#[test]
+fn task_x_search_maps_payment_required_to_billing_required() {
+    let temp = tempdir().unwrap();
+    let auth_file = temp.path().join("auth.json");
+    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    write_auth_state(&auth_file, &format!("http://127.0.0.1:{port}/v1"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let _ = read_request(&mut stream);
+        let body = r#"{"error":"payment_required","error_description":"Billing required: insufficient credits"}"#;
+        write_response(&mut stream, "402 Payment Required", body);
+    });
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "search",
+            "--json",
+            "--auth-file",
+            auth_file.to_str().unwrap(),
+            "--query",
+            "Hermes Grok updates",
+        ])
+        .assert()
+        .code(4)
+        .stdout(predicate::str::contains("\"code\":\"billing_required\""))
+        .stdout(predicate::str::contains(
+            "\"category\":\"billing_required\"",
+        ))
+        .stdout(predicate::str::contains(
+            "\"recovery_action\":\"stop_billing\"",
+        ))
+        .stdout(predicate::str::contains("\"billing_required\":true"))
+        .stdout(predicate::str::contains("\"retryable\":false"));
+
+    server.join().unwrap();
+}
+
+#[test]
+fn task_x_search_maps_quota_exhausted_to_stop_quota() {
+    let temp = tempdir().unwrap();
+    let auth_file = temp.path().join("auth.json");
+    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    write_auth_state(&auth_file, &format!("http://127.0.0.1:{port}/v1"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let _ = read_request(&mut stream);
+        let body = r#"{"error":"insufficient_quota","error_description":"Quota exhausted for this account"}"#;
+        write_response(&mut stream, "429 Too Many Requests", body);
+    });
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "search",
+            "--json",
+            "--auth-file",
+            auth_file.to_str().unwrap(),
+            "--query",
+            "Hermes Grok updates",
+        ])
+        .assert()
+        .code(4)
+        .stdout(predicate::str::contains("\"code\":\"quota_exhausted\""))
+        .stdout(predicate::str::contains("\"category\":\"quota_exhausted\""))
+        .stdout(predicate::str::contains(
+            "\"recovery_action\":\"stop_quota\"",
+        ))
+        .stdout(predicate::str::contains("\"quota_exhausted\":true"))
+        .stdout(predicate::str::contains("\"retryable\":false"));
+
+    server.join().unwrap();
+}
+
+#[test]
+fn task_x_search_maps_rate_limit_with_retry_after_to_wait_then_retry() {
+    let temp = tempdir().unwrap();
+    let auth_file = temp.path().join("auth.json");
+    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    write_auth_state(&auth_file, &format!("http://127.0.0.1:{port}/v1"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let _ = read_request(&mut stream);
+        let body = r#"{"error":"rate_limit_exceeded","error_description":"Too many requests"}"#;
+        write_rate_limited_response(&mut stream, body, 12);
+    });
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "search",
+            "--json",
+            "--auth-file",
+            auth_file.to_str().unwrap(),
+            "--query",
+            "Hermes Grok updates",
+        ])
+        .assert()
+        .code(4)
+        .stdout(predicate::str::contains("\"code\":\"rate_limited\""))
+        .stdout(predicate::str::contains("\"category\":\"rate_limited\""))
+        .stdout(predicate::str::contains(
+            "\"recovery_action\":\"wait_then_retry\"",
+        ))
+        .stdout(predicate::str::contains("\"retry_after_seconds\":12"))
+        .stdout(predicate::str::contains("\"rate_limited\":true"))
+        .stdout(predicate::str::contains("\"retryable\":true"));
 
     server.join().unwrap();
 }
@@ -421,6 +552,16 @@ fn read_request(stream: &mut std::net::TcpStream) -> String {
 fn write_response(stream: &mut std::net::TcpStream, status: &str, body: &str) {
     let response = format!(
         "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        body.len(),
+        body
+    );
+    stream.write_all(response.as_bytes()).unwrap();
+    stream.flush().unwrap();
+}
+
+fn write_rate_limited_response(stream: &mut std::net::TcpStream, body: &str, retry_after: u64) {
+    let response = format!(
+        "HTTP/1.1 429 Too Many Requests\r\nContent-Type: application/json\r\nRetry-After: {retry_after}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
         body.len(),
         body
     );

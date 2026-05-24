@@ -104,11 +104,12 @@ Do not run `status`, login checks, refresh checks, entitlement checks, or capabi
 
 Recovery order after a real command failure:
 
-1. If the error says auth is missing, invalid, credentials are stale or expired, `auth_expired`, `bad-credentials`, or `The OAuth2 access token could not be validated`, run `grok-cli refresh --json`, then retry the original command. Credential-validation wording takes priority even if the same envelope also says `entitlement_denied: true` or `xai_oauth_tier_denied`.
-2. If refresh fails because local auth state is missing, refresh cannot recover the session, or relogin is required, run `grok-cli login`, then retry the original command.
-3. If the original command directly reports `state_file_missing`, `auth_relogin_required`, or `relogin_required: true`, run `grok-cli login`, then retry the original command.
-4. If the error is pure `entitlement_denied` or `xai_oauth_tier_denied` without credential-validation wording, explain the account/tier blocker and stop. Do not reinstall, refresh, or relogin unless the error also explicitly says relogin is required.
-5. If the retry still fails, explain the returned auth or entitlement code. Ask for login only when the error says relogin is required.
+1. If the JSON error includes `error.recovery_action`, follow that single action instead of reinterpreting the other fields.
+2. `refresh_then_retry`: run `grok-cli refresh --json`, then retry the original command once.
+3. `login_then_retry`: run `grok-cli login`, then retry the original command once.
+4. `wait_then_retry`: wait for `error.retry_after_seconds`, then retry the original command once.
+5. `stop_billing`, `stop_quota`, `stop_rate_limit`, or `stop_entitlement`: explain the blocker and stop. Do not reinstall, refresh, or relogin for these blockers.
+6. If the local binary is old and lacks `recovery_action`, fall back to message/code matching: refresh credential-validation failures, login relogin-required failures, and stop for pure billing, quota, rate-limit-without-window, or entitlement blockers.
 
 Never replace the user's real command with a probe such as `grok-cli search --json --query "Grok"` or `grok-cli chat --json --prompt "Reply with exactly: ok"`. After recovery, retry the user's original command.
 

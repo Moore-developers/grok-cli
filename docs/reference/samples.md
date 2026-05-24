@@ -85,6 +85,28 @@ Note:
 }
 ```
 
+## Error Envelope
+
+```json
+{
+  "ok": false,
+  "command": "chat",
+  "error": {
+    "code": "auth_expired",
+    "message": "responses request auth failed: The OAuth2 access token could not be validated. [WKE=unauthenticated:bad-credentials]",
+    "relogin_required": false,
+    "entitlement_denied": false,
+    "category": "auth_refreshable",
+    "recovery_action": "refresh_then_retry",
+    "retryable": true,
+    "retry_after_seconds": null,
+    "billing_required": false,
+    "quota_exhausted": false,
+    "rate_limited": false
+  }
+}
+```
+
 ## 6. `usage --json`
 
 ```json

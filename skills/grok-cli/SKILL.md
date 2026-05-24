@@ -62,7 +62,20 @@ Use optimistic execution for normal user tasks:
 
 Do not run readiness probes such as `grok-cli search --json --query "Grok"` or `grok-cli chat --json --prompt "Reply with exactly: ok"` before a real user request. A user asking to search should get the real search first.
 
-Recovery map:
+Structured recovery:
+
+- If the JSON error includes `error.recovery_action`, treat that as the single source of truth. Do not reinterpret `code`, `message`, `relogin_required`, or `entitlement_denied` into a different action.
+- `refresh_then_retry`: run `grok-cli refresh --json`, then retry the original command once.
+- `login_then_retry`: run `grok-cli login`, then retry the original command once.
+- `wait_then_retry`: wait for `error.retry_after_seconds` when present, then retry the original command once. If no retry-after value is present, return the rate-limit message.
+- `fix_args_then_retry`: fix the command shape when the missing or incompatible argument is clear, then retry once.
+- `stop_billing`: stop and explain that the official account billing, balance, credits, or spend cap must be fixed outside the CLI.
+- `stop_quota`: stop and explain that quota or usage limit is exhausted.
+- `stop_rate_limit`: stop and explain that the upstream rate limit did not provide a retry window.
+- `stop_entitlement`: stop and explain that the account or subscription cannot access that capability.
+- `stop_unknown` or `none`: return the original error code and message with the minimum useful note.
+
+Fallback recovery for old `grok-cli` versions without `recovery_action`:
 
 - Shell cannot find `grok-cli`: install it, verify `grok-cli --version` and `grok-cli --help`, then retry the original command.
 - Shell says a subcommand is missing: repair or upgrade the install, verify `grok-cli --help`, then retry the original command.
@@ -70,6 +83,9 @@ Recovery map:
 - If refresh fails because local auth state is missing, refresh cannot recover the session, or `relogin_required` is true, run `grok-cli login`, then retry the original command.
 - JSON error `state_file_missing`, `auth_relogin_required`, or `relogin_required: true` from the original command means refresh is unlikely to help; run `grok-cli login`, then retry the original command.
 - `access_token_expiring` from `status --json`: refresh only when the user specifically asked for `status` or diagnostics. Do not run status just to discover this before routine tasks.
+- `billing_required`, `payment_required`, `insufficient funds`, `insufficient balance`, `credits`, or `spend cap`: stop and explain that the official account billing or balance must be fixed outside the CLI.
+- `quota_exhausted`, `insufficient_quota`, `quota exceeded`, or `usage limit`: stop and explain that quota is exhausted unless the error provides a retry window.
+- `rate_limited` or `rate limit`: retry only when the error provides a retry-after window; otherwise stop.
 - Pure `entitlement_denied` or `xai_oauth_tier_denied` without any credential-validation wording: explain that the account or subscription cannot access that capability. Do not retry, reinstall, refresh, or relogin unless the error also explicitly requires relogin.
 - `invalid_args`: fix the command shape if the correct shape is clear, then retry once. If essential information is missing, ask the user for that missing input.
 
@@ -191,21 +207,13 @@ If reinstalling because a command was missing, rerun the original user task afte
 
 Do not check OAuth status before routine Grok calls. Let the user's real command run first, then recover only if it reports an auth problem.
 
-If the real command says auth is missing, invalid, expired, stale, `auth_expired`, `bad-credentials`, or `The OAuth2 access token could not be validated`, try refresh first. Credential-validation wording wins over `entitlement_denied` flags because xAI has returned token validation failures through forbidden/tier-shaped envelopes:
+For current `grok-cli` JSON errors, follow `error.recovery_action`:
 
-```bash
-grok-cli refresh --json
-```
+- `refresh_then_retry`: run `grok-cli refresh --json`, then retry the original command once.
+- `login_then_retry`: run `grok-cli login`, then retry the original command once.
+- `stop_billing`, `stop_quota`, `stop_rate_limit`, or `stop_entitlement`: stop and surface the blocker; do not refresh, relogin, reinstall, or run probes.
 
-Then retry the original command once.
-
-If refresh fails because local auth state is missing, refresh cannot recover the session, or relogin is required, run:
-
-```bash
-grok-cli login
-```
-
-Then retry the original command once. If the retry still fails, explain the auth or entitlement error clearly and ask the user to run login only when relogin is actually required.
+For old `grok-cli` JSON errors without `recovery_action`, use the fallback recovery map above. If the retry still fails, explain the returned structured error clearly and ask for login only when the error says relogin is required.
 
 ## Command Routing
 
@@ -362,17 +370,23 @@ Read JSON errors from the standard envelope:
     "code": "auth_missing",
     "message": "...",
     "relogin_required": false,
-    "entitlement_denied": false
+    "entitlement_denied": false,
+    "category": "auth_refreshable",
+    "recovery_action": "refresh_then_retry",
+    "retryable": true,
+    "retry_after_seconds": null,
+    "billing_required": false,
+    "quota_exhausted": false,
+    "rate_limited": false
   }
 }
 ```
 
 Important handling rules:
 
-- If auth is missing, invalid, expired, stale, `auth_expired`, `bad-credentials`, or `The OAuth2 access token could not be validated`, run `grok-cli refresh --json` first, then retry the original task. This refresh-first rule takes priority over `entitlement_denied: true` when both signals appear together.
-- If refresh fails because local auth state is missing, refresh cannot recover the session, or `relogin_required` is true, run `grok-cli login`, then retry the original task.
-- If `entitlement_denied` is true with no credential-validation wording, explain that this is an account or tier permission issue, not something a reinstall or relogin necessarily fixes.
-- If `state_file_missing` appears, run login before retrying the original task.
+- Prefer `error.recovery_action` over every other field.
+- If `recovery_action` is absent because the local binary is old, use the fallback recovery rules above.
+- Billing, quota, and pure entitlement blockers should not trigger refresh, login, or reinstall loops.
 - If a command returns invalid arguments, fix the command shape instead of asking the user to debug CLI syntax.
 
 ## Output To User

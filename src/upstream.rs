@@ -1,3 +1,4 @@
+use reqwest::header::HeaderMap;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use time::OffsetDateTime;
@@ -115,26 +116,14 @@ pub fn post_responses_api(
         });
     }
 
+    let retry_after_seconds = parse_retry_after_seconds(response.headers());
     let status = response.status();
     let body_text = response.text().unwrap_or_default();
-    let payload =
-        serde_json::from_str::<OAuthErrorResponse>(&body_text).unwrap_or(OAuthErrorResponse {
-            error: None,
-            error_description: None,
-            message: None,
-        });
-    let detail = payload
-        .error_description
-        .or(payload.message)
-        .or(payload.error)
-        .unwrap_or_else(|| body_text.clone());
+    let detail = parse_error_detail(&body_text);
 
-    if let Some(error) = map_upstream_auth_error(
-        status,
-        &detail,
-        || format!("responses request was denied: {detail}"),
-        || format!("responses request auth failed: {detail}"),
-    ) {
+    let error_context = UpstreamErrorContext::new("responses request", status, &detail)
+        .with_retry_after_seconds(retry_after_seconds);
+    if let Some(error) = classify_upstream_error(error_context) {
         return Err(error);
     }
 
@@ -189,26 +178,14 @@ pub fn post_responses_stream_api(
         });
     }
 
+    let retry_after_seconds = parse_retry_after_seconds(response.headers());
     let status = response.status();
     let body_text = response.text().unwrap_or_default();
-    let payload =
-        serde_json::from_str::<OAuthErrorResponse>(&body_text).unwrap_or(OAuthErrorResponse {
-            error: None,
-            error_description: None,
-            message: None,
-        });
-    let detail = payload
-        .error_description
-        .or(payload.message)
-        .or(payload.error)
-        .unwrap_or_else(|| body_text.clone());
+    let detail = parse_error_detail(&body_text);
 
-    if let Some(error) = map_upstream_auth_error(
-        status,
-        &detail,
-        || format!("responses stream request was denied: {detail}"),
-        || format!("responses stream request auth failed: {detail}"),
-    ) {
+    let error_context = UpstreamErrorContext::new("responses stream request", status, &detail)
+        .with_retry_after_seconds(retry_after_seconds);
+    if let Some(error) = classify_upstream_error(error_context) {
         return Err(error);
     }
 
@@ -481,26 +458,14 @@ fn map_json_response(
         });
     }
 
+    let retry_after_seconds = parse_retry_after_seconds(response.headers());
     let status = response.status();
     let body_text = response.text().unwrap_or_default();
-    let payload =
-        serde_json::from_str::<OAuthErrorResponse>(&body_text).unwrap_or(OAuthErrorResponse {
-            error: None,
-            error_description: None,
-            message: None,
-        });
-    let detail = payload
-        .error_description
-        .or(payload.message)
-        .or(payload.error)
-        .unwrap_or_else(|| body_text.clone());
+    let detail = parse_error_detail(&body_text);
 
-    if let Some(error) = map_upstream_auth_error(
-        status,
-        &detail,
-        || format!("{endpoint_path} was denied: {detail}"),
-        || format!("{endpoint_path} auth failed: {detail}"),
-    ) {
+    let error_context = UpstreamErrorContext::new(endpoint_path, status, &detail)
+        .with_retry_after_seconds(retry_after_seconds);
+    if let Some(error) = classify_upstream_error(error_context) {
         return Err(error);
     }
 
@@ -537,26 +502,14 @@ fn map_bytes_response(
         });
     }
 
+    let retry_after_seconds = parse_retry_after_seconds(response.headers());
     let status = response.status();
     let body_text = response.text().unwrap_or_default();
-    let payload =
-        serde_json::from_str::<OAuthErrorResponse>(&body_text).unwrap_or(OAuthErrorResponse {
-            error: None,
-            error_description: None,
-            message: None,
-        });
-    let detail = payload
-        .error_description
-        .or(payload.message)
-        .or(payload.error)
-        .unwrap_or_else(|| body_text.clone());
+    let detail = parse_error_detail(&body_text);
 
-    if let Some(error) = map_upstream_auth_error(
-        status,
-        &detail,
-        || format!("{endpoint_path} was denied: {detail}"),
-        || format!("{endpoint_path} auth failed: {detail}"),
-    ) {
+    let error_context = UpstreamErrorContext::new(endpoint_path, status, &detail)
+        .with_retry_after_seconds(retry_after_seconds);
+    if let Some(error) = classify_upstream_error(error_context) {
         return Err(error);
     }
 
@@ -573,28 +526,131 @@ fn map_bytes_response(
     ))
 }
 
-fn map_upstream_auth_error(
+fn parse_error_detail(body_text: &str) -> String {
+    let payload =
+        serde_json::from_str::<OAuthErrorResponse>(body_text).unwrap_or(OAuthErrorResponse {
+            error: None,
+            error_description: None,
+            message: None,
+        });
+    payload
+        .error_description
+        .or(payload.message)
+        .or(payload.error)
+        .unwrap_or_else(|| body_text.to_string())
+}
+
+struct UpstreamErrorContext<'a> {
+    operation: &'a str,
     status: reqwest::StatusCode,
-    detail: &str,
-    tier_message: impl FnOnce() -> String,
-    credential_message: impl FnOnce() -> String,
-) -> Option<AppError> {
-    let lower = detail.to_lowercase();
+    detail: &'a str,
+    retry_after_seconds: Option<u64>,
+}
+
+impl<'a> UpstreamErrorContext<'a> {
+    fn new(operation: &'a str, status: reqwest::StatusCode, detail: &'a str) -> Self {
+        Self {
+            operation,
+            status,
+            detail,
+            retry_after_seconds: None,
+        }
+    }
+
+    fn with_retry_after_seconds(mut self, retry_after_seconds: Option<u64>) -> Self {
+        self.retry_after_seconds = retry_after_seconds;
+        self
+    }
+
+    fn message(&self, kind: &str) -> String {
+        format!("{} {kind}: {}", self.operation, self.detail)
+    }
+}
+
+fn classify_upstream_error(ctx: UpstreamErrorContext<'_>) -> Option<AppError> {
+    let lower = ctx.detail.to_lowercase();
     if lower.contains("bad-credentials")
         || lower.contains("access token could not be validated")
         || lower.contains("token could not be validated")
         || lower.contains("invalid token")
         || lower.contains("expired token")
         || lower.contains("unauthenticated")
+        || lower.contains("incorrect api key provided")
     {
-        return Some(AppError::new(ErrorCode::AuthExpired, credential_message()));
+        return Some(AppError::new(
+            ErrorCode::AuthExpired,
+            ctx.message("auth failed"),
+        ));
     }
 
-    if status == reqwest::StatusCode::FORBIDDEN {
-        return Some(AppError::new(ErrorCode::XaiOauthTierDenied, tier_message()));
+    if ctx.status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+        if has_quota_signal(&lower) {
+            return Some(AppError::new(
+                ErrorCode::QuotaExhausted,
+                ctx.message("quota exhausted"),
+            ));
+        }
+        let mut error = AppError::new(ErrorCode::RateLimited, ctx.message("rate limited"))
+            .with_retry_after_seconds(ctx.retry_after_seconds);
+        if ctx.retry_after_seconds.is_some() {
+            error.retryable = true;
+            error.recovery_action = crate::error::RecoveryAction::WaitThenRetry;
+        }
+        return Some(error);
+    }
+
+    if ctx.status == reqwest::StatusCode::PAYMENT_REQUIRED || has_billing_signal(&lower) {
+        return Some(AppError::new(
+            ErrorCode::BillingRequired,
+            ctx.message("billing failed"),
+        ));
+    }
+
+    if has_quota_signal(&lower) {
+        return Some(AppError::new(
+            ErrorCode::QuotaExhausted,
+            ctx.message("quota exhausted"),
+        ));
+    }
+
+    if ctx.status == reqwest::StatusCode::FORBIDDEN {
+        return Some(AppError::new(
+            ErrorCode::XaiOauthTierDenied,
+            ctx.message("was denied"),
+        ));
     }
 
     None
+}
+
+fn has_billing_signal(lower: &str) -> bool {
+    lower.contains("billing")
+        || lower.contains("payment required")
+        || lower.contains("payment_required")
+        || lower.contains("insufficient funds")
+        || lower.contains("insufficient_funds")
+        || lower.contains("insufficient balance")
+        || lower.contains("balance")
+        || lower.contains("credits")
+        || lower.contains("credit")
+        || lower.contains("spend cap")
+        || lower.contains("spend_cap")
+}
+
+fn has_quota_signal(lower: &str) -> bool {
+    lower.contains("quota")
+        || lower.contains("insufficient_quota")
+        || lower.contains("quota_exceeded")
+        || lower.contains("quota exceeded")
+        || lower.contains("usage limit")
+        || lower.contains("usage_limit")
+}
+
+fn parse_retry_after_seconds(headers: &HeaderMap) -> Option<u64> {
+    headers
+        .get(reqwest::header::RETRY_AFTER)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.trim().parse::<u64>().ok())
 }
 
 fn extract_usage_summary(response: &Value) -> ResponseUsageSummary {
@@ -703,11 +759,191 @@ fn header_u64(headers: &reqwest::header::HeaderMap, key: &str) -> Option<u64> {
 
 #[cfg(test)]
 mod tests {
-    use super::{DEFAULT_MEDIA_TIMEOUT_SECONDS, DEFAULT_TEXT_TIMEOUT_SECONDS};
+    use super::{
+        DEFAULT_MEDIA_TIMEOUT_SECONDS, DEFAULT_TEXT_TIMEOUT_SECONDS, UpstreamErrorContext,
+        classify_upstream_error, parse_error_detail,
+    };
+    use crate::error::{ErrorCategory, ErrorCode, RecoveryAction};
 
     #[test]
     fn timeout_defaults_match_cli_policy() {
         assert_eq!(DEFAULT_TEXT_TIMEOUT_SECONDS, 3_600);
         assert_eq!(DEFAULT_MEDIA_TIMEOUT_SECONDS, 120);
+    }
+
+    #[test]
+    fn classifier_prefers_credentials_over_forbidden_shape() {
+        let error = classify_upstream_error(UpstreamErrorContext::new(
+            "responses request",
+            reqwest::StatusCode::FORBIDDEN,
+            "The OAuth2 access token could not be validated. [WKE=unauthenticated:bad-credentials]",
+        ))
+        .unwrap();
+
+        assert_eq!(error.code, ErrorCode::AuthExpired);
+        assert_eq!(error.category, ErrorCategory::AuthRefreshable);
+        assert_eq!(error.recovery_action, RecoveryAction::RefreshThenRetry);
+        assert!(error.retryable);
+        assert!(!error.entitlement_denied);
+    }
+
+    #[test]
+    fn classifier_maps_incorrect_api_key_to_refreshable_auth() {
+        let error = classify_upstream_error(UpstreamErrorContext::new(
+            "responses request",
+            reqwest::StatusCode::BAD_REQUEST,
+            "Incorrect API key provided: de***st. You can obtain an API key from https://console.x.ai.",
+        ))
+        .unwrap();
+
+        assert_eq!(error.code, ErrorCode::AuthExpired);
+        assert_eq!(error.category, ErrorCategory::AuthRefreshable);
+        assert_eq!(error.recovery_action, RecoveryAction::RefreshThenRetry);
+        assert!(error.retryable);
+        assert!(!error.entitlement_denied);
+    }
+
+    #[test]
+    fn classifier_maps_payment_required_to_billing_stop() {
+        let error = classify_upstream_error(UpstreamErrorContext::new(
+            "/videos/generations",
+            reqwest::StatusCode::PAYMENT_REQUIRED,
+            "Billing required: insufficient credits",
+        ))
+        .unwrap();
+
+        assert_eq!(error.code, ErrorCode::BillingRequired);
+        assert_eq!(error.category, ErrorCategory::BillingRequired);
+        assert_eq!(error.recovery_action, RecoveryAction::StopBilling);
+        assert!(error.billing_required);
+        assert!(!error.retryable);
+    }
+
+    #[test]
+    fn classifier_maps_quota_signal_to_quota_stop() {
+        let error = classify_upstream_error(UpstreamErrorContext::new(
+            "responses request",
+            reqwest::StatusCode::TOO_MANY_REQUESTS,
+            "insufficient_quota",
+        ))
+        .unwrap();
+
+        assert_eq!(error.code, ErrorCode::QuotaExhausted);
+        assert_eq!(error.category, ErrorCategory::QuotaExhausted);
+        assert_eq!(error.recovery_action, RecoveryAction::StopQuota);
+        assert!(error.quota_exhausted);
+        assert!(!error.retryable);
+    }
+
+    #[test]
+    fn classifier_maps_retry_after_rate_limit_to_wait_retry() {
+        let error = classify_upstream_error(
+            UpstreamErrorContext::new(
+                "responses request",
+                reqwest::StatusCode::TOO_MANY_REQUESTS,
+                "rate_limit_exceeded",
+            )
+            .with_retry_after_seconds(Some(12)),
+        )
+        .unwrap();
+
+        assert_eq!(error.code, ErrorCode::RateLimited);
+        assert_eq!(error.category, ErrorCategory::RateLimited);
+        assert_eq!(error.recovery_action, RecoveryAction::WaitThenRetry);
+        assert_eq!(error.retry_after_seconds, Some(12));
+        assert!(error.rate_limited);
+        assert!(error.retryable);
+    }
+
+    #[test]
+    fn classifier_maps_rate_limit_without_retry_after_to_stop_rate_limit() {
+        let error = classify_upstream_error(UpstreamErrorContext::new(
+            "responses request",
+            reqwest::StatusCode::TOO_MANY_REQUESTS,
+            "rate_limit_exceeded",
+        ))
+        .unwrap();
+
+        assert_eq!(error.code, ErrorCode::RateLimited);
+        assert_eq!(error.category, ErrorCategory::RateLimited);
+        assert_eq!(error.recovery_action, RecoveryAction::StopRateLimit);
+        assert_eq!(error.retry_after_seconds, None);
+        assert!(error.rate_limited);
+        assert!(!error.retryable);
+    }
+
+    #[test]
+    fn classifier_maps_non_429_quota_signal_to_quota_stop() {
+        let error = classify_upstream_error(UpstreamErrorContext::new(
+            "/images/generations",
+            reqwest::StatusCode::FORBIDDEN,
+            "usage limit exceeded",
+        ))
+        .unwrap();
+
+        assert_eq!(error.code, ErrorCode::QuotaExhausted);
+        assert_eq!(error.category, ErrorCategory::QuotaExhausted);
+        assert_eq!(error.recovery_action, RecoveryAction::StopQuota);
+        assert!(error.quota_exhausted);
+        assert!(!error.entitlement_denied);
+    }
+
+    #[test]
+    fn classifier_maps_billing_keywords_without_402_to_billing_stop() {
+        let error = classify_upstream_error(UpstreamErrorContext::new(
+            "/videos/generations",
+            reqwest::StatusCode::FORBIDDEN,
+            "Spend cap reached for account balance",
+        ))
+        .unwrap();
+
+        assert_eq!(error.code, ErrorCode::BillingRequired);
+        assert_eq!(error.category, ErrorCategory::BillingRequired);
+        assert_eq!(error.recovery_action, RecoveryAction::StopBilling);
+        assert!(error.billing_required);
+        assert!(!error.entitlement_denied);
+    }
+
+    #[test]
+    fn classifier_maps_forbidden_to_entitlement_stop() {
+        let error = classify_upstream_error(UpstreamErrorContext::new(
+            "responses request",
+            reqwest::StatusCode::FORBIDDEN,
+            "tier access denied",
+        ))
+        .unwrap();
+
+        assert_eq!(error.code, ErrorCode::XaiOauthTierDenied);
+        assert_eq!(error.category, ErrorCategory::EntitlementDenied);
+        assert_eq!(error.recovery_action, RecoveryAction::StopEntitlement);
+        assert!(error.entitlement_denied);
+        assert!(!error.retryable);
+    }
+
+    #[test]
+    fn classifier_returns_none_for_unclassified_server_errors() {
+        let error = classify_upstream_error(UpstreamErrorContext::new(
+            "responses request",
+            reqwest::StatusCode::INTERNAL_SERVER_ERROR,
+            "temporary upstream failure",
+        ));
+
+        assert!(error.is_none());
+    }
+
+    #[test]
+    fn parse_error_detail_prefers_description_then_message_then_error_then_raw_body() {
+        assert_eq!(
+            parse_error_detail(
+                r#"{"error":"outer","message":"message text","error_description":"description text"}"#
+            ),
+            "description text"
+        );
+        assert_eq!(
+            parse_error_detail(r#"{"error":"outer","message":"message text"}"#),
+            "message text"
+        );
+        assert_eq!(parse_error_detail(r#"{"error":"outer"}"#), "outer");
+        assert_eq!(parse_error_detail("plain text body"), "plain text body");
     }
 }

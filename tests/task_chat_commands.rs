@@ -253,6 +253,13 @@ fn task_chat_maps_bad_credentials_forbidden_to_auth_expired() {
         .code(3)
         .stdout(predicate::str::contains("\"code\":\"auth_expired\""))
         .stdout(predicate::str::contains("\"entitlement_denied\":false"))
+        .stdout(predicate::str::contains(
+            "\"category\":\"auth_refreshable\"",
+        ))
+        .stdout(predicate::str::contains(
+            "\"recovery_action\":\"refresh_then_retry\"",
+        ))
+        .stdout(predicate::str::contains("\"retryable\":true"))
         .stdout(predicate::str::contains("bad-credentials"));
 
     server.join().unwrap();

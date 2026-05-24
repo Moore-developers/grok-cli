@@ -144,6 +144,8 @@ fn bundled_skill_requires_command_surface_check() {
     let errors_ref = fs::read_to_string(root.join("skills/grok-cli/references/errors.md")).unwrap();
     let media_ref =
         fs::read_to_string(root.join("skills/grok-cli/references/commands-media.md")).unwrap();
+    let skill_integration =
+        fs::read_to_string(root.join("docs/reference/skill-integration.md")).unwrap();
     let skill_validation =
         fs::read_to_string(root.join("docs/project/skill-validation-cases.md")).unwrap();
 
@@ -178,8 +180,11 @@ fn bundled_skill_requires_command_surface_check() {
     assert!(install_ref.contains("grok-cli refresh --json"));
     assert!(install_ref.contains("Failure-Driven OAuth Flow"));
     assert!(install_ref.contains("Run the user's real command first"));
-    assert!(install_ref.contains("try refresh first"));
-    assert!(install_ref.contains("Credential-validation wording takes priority"));
+    assert!(install_ref.contains("error.recovery_action"));
+    assert!(install_ref.contains("refresh_then_retry"));
+    assert!(install_ref.contains("stop_billing"));
+    assert!(install_ref.contains("stop_quota"));
+    assert!(install_ref.contains("stop_rate_limit"));
     assert!(install_ref.contains("If refresh fails because local auth state is missing"));
     assert!(install_ref.contains("Never replace the user's real command with a probe"));
     assert!(install_ref.contains("grok-cli search --json --query \"Grok\""));
@@ -223,11 +228,14 @@ fn bundled_skill_requires_command_surface_check() {
     assert!(skill.contains("Do not run `status`, `state`, login checks"));
     assert!(skill.contains("Do not run readiness probes"));
     assert!(skill.contains("A user asking to search should get the real search first"));
-    assert!(skill.contains("try refresh first"));
-    assert!(skill.contains("Credential problems have priority over entitlement wording"));
-    assert!(
-        skill.contains("This refresh-first rule takes priority over `entitlement_denied: true`")
-    );
+    assert!(skill.contains("Structured recovery"));
+    assert!(skill.contains("error.recovery_action"));
+    assert!(skill.contains("single source of truth"));
+    assert!(skill.contains("refresh_then_retry"));
+    assert!(skill.contains("stop_billing"));
+    assert!(skill.contains("stop_quota"));
+    assert!(skill.contains("stop_rate_limit"));
+    assert!(skill.contains("Fallback recovery for old `grok-cli` versions"));
     assert!(skill.contains("If refresh fails because local auth state is missing"));
     assert!(!skill.contains("## Readiness Gate"));
     assert!(!skill.contains("Verify permission with a minimal real command"));
@@ -291,13 +299,17 @@ fn bundled_skill_requires_command_surface_check() {
     assert!(advanced_ref.contains("video-extend"));
     assert!(advanced_ref.contains("--auth-file"));
     assert!(errors_ref.contains("bad-credentials"));
-    assert!(
-        errors_ref.contains("This rule takes priority even when the same envelope also contains")
-    );
+    assert!(errors_ref.contains("Structured Recovery"));
+    assert!(errors_ref.contains("error.recovery_action"));
+    assert!(errors_ref.contains("stop_billing"));
+    assert!(errors_ref.contains("stop_quota"));
+    assert!(errors_ref.contains("stop_rate_limit"));
     assert!(errors_ref.contains("access_token_expiring"));
     assert!(errors_ref.contains("failure-driven"));
     assert!(errors_ref.contains("Do not run status checks or permission probes"));
     assert!(errors_ref.contains("run `grok-cli refresh --json` first"));
+    assert!(skill_integration.contains("error.recovery_action"));
+    assert!(skill_integration.contains("single recovery decision"));
     assert!(errors_ref.contains("Sparse Search Results"));
     assert!(errors_ref.contains("PATH configuration issue"));
     assert!(errors_ref.contains("platform-specific install path"));

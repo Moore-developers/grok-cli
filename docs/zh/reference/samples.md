@@ -336,7 +336,14 @@
     "code": "state_file_missing",
     "message": "state file not found: /abs/path/auth.json",
     "relogin_required": false,
-    "entitlement_denied": false
+    "entitlement_denied": false,
+    "category": "auth_relogin_required",
+    "recovery_action": "login_then_retry",
+    "retryable": true,
+    "retry_after_seconds": null,
+    "billing_required": false,
+    "quota_exhausted": false,
+    "rate_limited": false
   }
 }
 ```

@@ -42,11 +42,13 @@ Notes:
 
 ## 3. Error Handling
 
-- `auth_missing`, `auth_expired`, invalid auth, or stale credential messages such as `bad-credentials` or `The OAuth2 access token could not be validated` mean the caller should try `refresh --json` before retrying.
-- Credential-validation wording takes priority over `entitlement_denied` flags. If both appear together, refresh first, then retry the original command once.
-- `state_file_missing`, `auth_relogin_required`, or `relogin_required` means a fresh login is required.
-- If refresh fails because local auth state is missing or relogin is required, run login before retrying.
-- Pure `entitlement_denied` without credential-validation wording means the account or tier does not have the capability, so reinstalling, refreshing, or relogin will not fix it.
+- Prefer `error.recovery_action` when the JSON error includes it. This field is the CLI's single recovery decision and should override ad hoc interpretation of `code`, `message`, `relogin_required`, or `entitlement_denied`.
+- `refresh_then_retry`: run `refresh --json`, then retry the original command once.
+- `login_then_retry`: run `login`, then retry the original command once.
+- `wait_then_retry`: wait for `error.retry_after_seconds`, then retry the original command once.
+- `fix_args_then_retry`: correct a clear command-shape issue, then retry once.
+- `stop_billing`, `stop_quota`, `stop_rate_limit`, and `stop_entitlement` mean the caller should stop and surface the blocker. Do not reinstall, refresh, or relogin for these blockers.
+- For old binaries without `recovery_action`, use fallback matching: credential-validation failures refresh, relogin-required failures login, pure billing/quota/rate-limit/entitlement blockers stop.
 - Invalid arguments should be corrected in the command shape rather than surfaced to the user as CLI confusion.
 
 ## 4. Pass-Through Output Contract

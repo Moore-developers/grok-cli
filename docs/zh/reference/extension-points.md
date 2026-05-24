@@ -43,7 +43,14 @@
     "code": "request_failed",
     "message": "...",
     "relogin_required": false,
-    "entitlement_denied": false
+    "entitlement_denied": false,
+    "category": "request_failed",
+    "recovery_action": "stop_unknown",
+    "retryable": false,
+    "retry_after_seconds": null,
+    "billing_required": false,
+    "quota_exhausted": false,
+    "rate_limited": false
   }
 }
 ```

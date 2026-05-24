@@ -52,29 +52,20 @@
 
 ## 4. 错误码处理建议
 
-- `state_file_missing`
-  - 说明还没有认证状态文件
-  - 通常进入 `login`
-- `auth_missing`
-  - 说明当前任务缺少有效凭据
-  - 通常先 `refresh --json`，refresh 无法恢复或要求重登时再 `login`
-- `bad-credentials` / 过期凭据
-  - 通常先 `refresh --json`，再重试原始命令
-- `auth_expired` / `The OAuth2 access token could not be validated`
-  - 当这类凭据校验失败和 `entitlement_denied=true` 同时出现时，先按凭据问题处理：执行 `refresh --json`，再重试原始命令一次
-- `auth_relogin_required`
-  - 说明刷新已无法恢复
-  - 必须重新登录
-- `xai_oauth_tier_denied`
-  - 如果没有任何凭据校验失败字样，说明 OAuth 账号没有对应能力权限
-  - 不要误导用户去重登或反复刷新
+- 如果 JSON 错误里有 `error.recovery_action`，优先执行这个字段；它是 CLI 给出的单一恢复裁决，不要再用 `code`、`message`、`relogin_required`、`entitlement_denied` 重新猜一遍。
+- `refresh_then_retry`：执行 `refresh --json`，然后重试原始命令一次。
+- `login_then_retry`：执行 `login`，然后重试原始命令一次。
+- `wait_then_retry`：按 `error.retry_after_seconds` 等待，然后重试原始命令一次。
+- `fix_args_then_retry`：如果参数错误很明确，修正命令形状后重试一次。
+- `stop_billing`、`stop_quota`、`stop_rate_limit`、`stop_entitlement`：停止并说明对应阻塞，不要重装、刷新或重登。
+- 如果本地是旧版 CLI，没有 `recovery_action`，再使用兜底匹配：凭据校验失败走 refresh，明确要求重登走 login，纯计费/额度/限流/权限阻塞则停止。
 
 ## 5. 原样透传输出契约
 
 SKILL 依赖下列字段时，可以认为它们已经稳定：
 
 - 顶层成功信封：`ok` / `command` / `data`
-- 顶层失败信封：`ok` / `command` / `error.code` / `error.message`
+- 顶层失败信封：`ok` / `command` / `error.code` / `error.message` / `error.category` / `error.recovery_action`
 - `chat`：`protocol` / `output_text` / `finish_reason` / `tool_calls`
 - `search`：`answer` / `citations` / `inline_citations`
 - `image`：`image`

@@ -106,6 +106,47 @@ fn task_image_gen_sends_count_and_response_format() {
 }
 
 #[test]
+fn task_image_gen_maps_payment_required_to_structured_billing_stop() {
+    let temp = tempdir().unwrap();
+    let auth_file = temp.path().join("auth.json");
+    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    write_auth_state(&auth_file, &format!("http://127.0.0.1:{port}/v1"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let request = read_request(&mut stream);
+        assert!(request.contains("POST /v1/images/generations"));
+        let body = r#"{"error":"payment_required","error_description":"Billing required: insufficient credits"}"#;
+        write_response(&mut stream, "402 Payment Required", body);
+    });
+
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "image",
+            "--json",
+            "--auth-file",
+            auth_file.to_str().unwrap(),
+            "--prompt",
+            "Draw a futuristic skyline",
+        ])
+        .assert()
+        .code(4)
+        .stdout(predicate::str::contains("\"code\":\"billing_required\""))
+        .stdout(predicate::str::contains(
+            "\"category\":\"billing_required\"",
+        ))
+        .stdout(predicate::str::contains(
+            "\"recovery_action\":\"stop_billing\"",
+        ))
+        .stdout(predicate::str::contains("\"billing_required\":true"))
+        .stdout(predicate::str::contains("\"retryable\":false"));
+
+    server.join().unwrap();
+}
+
+#[test]
 fn task_image_gen_accepts_prompt_as_positional_argument() {
     let temp = tempdir().unwrap();
     let auth_file = temp.path().join("auth.json");

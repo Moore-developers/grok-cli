@@ -43,7 +43,12 @@ where
     };
     println!(
         "{}",
-        serde_json::to_string(&envelope).expect("serialize success envelope")
+        serde_json::to_string(&envelope).unwrap_or_else(|_| {
+            serde_json::to_string(&serde_json::json!({
+                "ok": true, "command": command, "data": null
+            }))
+            .unwrap_or_else(|_| r#"{"ok":true,"command":"unknown","data":null}"#.to_string())
+        })
     );
 }
 
@@ -67,7 +72,12 @@ pub fn print_json_error(command: &str, error: &AppError) {
     };
     println!(
         "{}",
-        serde_json::to_string(&envelope).expect("serialize error envelope")
+        serde_json::to_string(&envelope).unwrap_or_else(|_| {
+            serde_json::to_string(&serde_json::json!({
+                "ok": false, "command": command, "error": {"code": "serialization_failed"}
+            }))
+            .unwrap_or_else(|_| r#"{"ok":false,"command":"unknown","error":{"code":"serialization_failed"}}"#.to_string())
+        })
     );
 }
 

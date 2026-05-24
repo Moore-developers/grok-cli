@@ -32,14 +32,22 @@ pub fn wait_for_callback(
     let url = Url::parse(redirect_uri)
         .map_err(|error| AppError::state_file_invalid(format!("invalid redirect_uri: {error}")))?;
     let host = url.host_str().unwrap_or("127.0.0.1");
-    let port = url.port().unwrap_or(DEFAULT_REDIRECT_PORT);
+    let mut port = url.port().unwrap_or(DEFAULT_REDIRECT_PORT);
     let callback_path = url.path().to_string();
 
-    let listener = TcpListener::bind((host, port)).map_err(|error| {
-        AppError::io(format!(
-            "failed to bind callback listener on {host}:{port}: {error}"
-        ))
-    })?;
+    let listener = match TcpListener::bind((host, port)) {
+        Ok(l) => l,
+        Err(_) => TcpListener::bind((host, 0)).map_err(|error| {
+            AppError::io(format!(
+                "failed to bind callback listener on {host} (attempted {port} and dynamic): {error}"
+            ))
+        })?,
+    };
+
+    if let Ok(addr) = listener.local_addr() {
+        port = addr.port();
+    }
+
     listener
         .set_nonblocking(true)
         .map_err(|error| AppError::io(format!("failed to enable nonblocking listener: {error}")))?;

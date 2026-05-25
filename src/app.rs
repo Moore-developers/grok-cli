@@ -10,6 +10,7 @@ use crate::output;
 use crate::state::storage::StateStore;
 use crate::usage::sqlite::SessionStore;
 
+#[derive(Clone)]
 pub struct AppContext {
     pub state_store: StateStore,
     pub http_client: reqwest::blocking::Client,

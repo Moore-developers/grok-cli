@@ -58,6 +58,24 @@ pub enum TopLevelCommand {
     /// Stream speech to text over WebSocket.
     #[command(name = "stt-stream")]
     SttStream(SttStreamOptions),
+    /// Start an OpenAI-compatible API server.
+    Serve(crate::args::ServeOptions),
+}
+
+#[derive(Debug, Clone, Args)]
+#[command(
+    about = "Start an OpenAI-compatible API server",
+    long_about = "Start an API server that proxies Grok requests through an OpenAI-compatible interface.\n\nThis allows tools like Cline, Aider, and OpenHands to use grok-cli as a backend. The server uses your local OAuth session for authentication."
+)]
+pub struct ServeOptions {
+    #[command(flatten)]
+    pub common: StateFileOptions,
+    /// Host to bind the server to.
+    #[arg(long, default_value = "127.0.0.1")]
+    pub host: String,
+    /// Port to bind the server to.
+    #[arg(long, default_value = "8080")]
+    pub port: u16,
 }
 
 #[derive(Debug, Clone, Args)]

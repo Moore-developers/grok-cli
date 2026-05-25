@@ -25,5 +25,12 @@ pub fn dispatch(ctx: &AppContext, cli: Cli) -> CommandResult {
         TopLevelCommand::Tts(opts) => task::audio::execute_tts(ctx, opts),
         TopLevelCommand::Stt(opts) => task::audio::execute_stt(ctx, opts),
         TopLevelCommand::SttStream(opts) => task::audio::execute_stt_stream(ctx, opts),
+        TopLevelCommand::Serve(opts) => {
+            let rt = tokio::runtime::Runtime::new().unwrap();
+            let port = opts.port;
+            let default_model = "grok-1".to_string();
+            rt.block_on(task::serve::run(port, default_model, ctx.clone()))
+                .map_err(|e| CommandError::new("serve", false, crate::error::AppError::new(crate::error::ErrorCode::RequestFailed, e.to_string())))
+        }
     }
 }

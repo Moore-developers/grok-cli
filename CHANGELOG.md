@@ -8,6 +8,13 @@ The project follows semantic versioning once public releases begin.
 
 No changes yet.
 
+## 0.1.4 - 2026-06-08
+
+### Changed
+
+- Updated the shared Grok text model catalog to `grok-4.3`, `grok-4.20-0309-reasoning`, `grok-4.20-0309-non-reasoning`, and `grok-4.20-multi-agent-0309`.
+- Changed the default `chat` and `search` text model to `grok-4.3`.
+
 ## 0.1.1 - 2026-05-21
 
 ### Changed

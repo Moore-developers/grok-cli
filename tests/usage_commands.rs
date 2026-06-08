@@ -349,7 +349,7 @@ COMMIT;
                 "2026-05-20T10:00:00Z",
                 "2026-05-20T10:47:12Z",
                 "xai-oauth",
-                "grok-4.20-reasoning",
+                "grok-4.3",
                 request_count,
                 input_tokens,
                 output_tokens,
@@ -366,7 +366,7 @@ COMMIT;
                     event_id, session_id, command, provider, model, started_at, completed_at, duration_ms,
                     input_tokens, output_tokens, cache_read_tokens, cache_write_tokens,
                     reasoning_tokens, estimated_cost_micro_usd, context_window_tokens, request_id, metadata_json
-                ) VALUES(?1, ?2, ?3, 'xai-oauth', 'grok-4.20-reasoning', ?4, ?5, 0, ?6, ?7, 0, 0, 0, ?8, ?9, NULL, NULL)",
+                ) VALUES(?1, ?2, ?3, 'xai-oauth', 'grok-4.3', ?4, ?5, 0, ?6, ?7, 0, 0, 0, ?8, ?9, NULL, NULL)",
                 params![
                     format!("evt_{index}"),
                     session_id,

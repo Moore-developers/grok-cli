@@ -77,7 +77,7 @@ cargo run -- usage --json
     "duration_seconds": 514,
     "request_count": 6,
     "tracked_command_count": 6,
-    "models": ["grok-4.20-reasoning"],
+    "models": ["grok-4.3"],
     "session_store_path": "/abs/path/session.db"
   },
   "local_usage": {
@@ -90,7 +90,7 @@ cargo run -- usage --json
     "estimated_cost_usd": 0.184215,
     "pricing_status": "estimated",
     "pricing_source": "bundled_xai_table",
-    "last_model": "grok-4.20-reasoning",
+    "last_model": "grok-4.3",
     "context_window_tokens": null,
     "history_turns": 6,
     "compression_count": 0,

@@ -73,7 +73,7 @@ grok-cli chat "Tell a short story" --raw-stream
 
 ## Behavior
 
-- Default model is `grok-4.20-reasoning`; it can be changed with [`model --model ...`](./model.md).
+- Default model is `grok-4.3`; it can be changed with [`model --model ...`](./model.md).
 - Requests use `store: false`.
 - `web_search` is attached by default.
 - Non-JSON output defaults to readable text streaming and does not print raw event wrappers.

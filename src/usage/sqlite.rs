@@ -605,7 +605,7 @@ mod tests {
         let delta = UsageDelta {
             provider: "xai-oauth".to_string(),
             command: "chat".to_string(),
-            model: Some("grok-4.20-reasoning".to_string()),
+            model: Some("grok-4.3".to_string()),
             input_tokens: 100,
             output_tokens: 50,
             estimated_cost_micro_usd: 700,

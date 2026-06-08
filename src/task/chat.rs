@@ -12,7 +12,7 @@ use crate::upstream;
 use crate::usage::model::UsageDelta;
 use crate::usage::{pricing, tracker};
 
-const DEFAULT_CHAT_MODEL: &str = "grok-4.20-reasoning";
+const DEFAULT_CHAT_MODEL: &str = "grok-4.3";
 
 #[derive(Debug, Clone, Serialize)]
 struct ChatData {

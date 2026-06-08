@@ -15,8 +15,9 @@ const SHARED_TEXT_MODEL_KEY: &str = "text";
 const SWITCHABLE_TASK_KEYS: &[&str] = &["chat", "search"];
 const MODEL_CATALOG: &[&str] = &[
     "grok-4.3",
-    "grok-4.20-reasoning",
     "grok-4.20-0309-reasoning",
+    "grok-4.20-0309-non-reasoning",
+    "grok-4.20-multi-agent-0309",
 ];
 
 #[derive(Debug, Clone, Serialize)]
@@ -301,17 +302,17 @@ mod tests {
             "default_models".to_string(),
             json!({
                 "text": "grok-4.3",
-                "chat": "grok-4.20-reasoning",
-                "search": "grok-4.20-reasoning"
+                "chat": "grok-4.20-0309-reasoning",
+                "search": "grok-4.20-0309-reasoning"
             }),
         );
 
         assert_eq!(
-            default_model_for_task(Some(&state), "chat", "grok-4.20-reasoning"),
+            default_model_for_task(Some(&state), "chat", "grok-4.3"),
             "grok-4.3"
         );
         assert_eq!(
-            default_model_for_task(Some(&state), "search", "grok-4.20-reasoning"),
+            default_model_for_task(Some(&state), "search", "grok-4.3"),
             "grok-4.3"
         );
     }
@@ -344,7 +345,7 @@ mod tests {
         );
 
         assert_eq!(
-            default_model_for_task(Some(&state), "search", "grok-4.20-reasoning"),
+            default_model_for_task(Some(&state), "search", "grok-4.3"),
             "grok-4.3"
         );
     }

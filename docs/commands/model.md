@@ -19,8 +19,9 @@ In an interactive terminal, the command shows the following list and supports ar
 
 ```text
 grok-4.3
-grok-4.20-reasoning
 grok-4.20-0309-reasoning
+grok-4.20-0309-non-reasoning
+grok-4.20-multi-agent-0309
 exit
 ```
 

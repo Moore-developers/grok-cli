@@ -62,7 +62,7 @@ grok-cli search "AI news" --raw-stream
 
 ## Behavior
 
-- Default model is `grok-4.20-reasoning`; it can be changed with [`model --model ...`](./model.md).
+- Default model is `grok-4.3`; it can be changed with [`model --model ...`](./model.md).
 - Request tool is fixed to `x_search`.
 - Non-JSON output defaults to readable text streaming and does not print raw event wrappers.
 - `response.created` and `x_search` tool events are not printed as human-visible status messages. Text comes from `response.output_text.delta`.

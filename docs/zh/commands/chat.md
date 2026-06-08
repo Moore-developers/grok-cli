@@ -73,7 +73,7 @@ grok-cli chat "讲一个短故事" --raw-stream
 
 ## 行为规格
 
-- 默认模型为 `grok-4.20-reasoning`，可被 [`model --model ...`](./model.md) 作为共享文本模型覆盖。
+- 默认模型为 `grok-4.3`，可被 [`model --model ...`](./model.md) 作为共享文本模型覆盖。
 - 默认请求写入 `store: false`。
 - 默认附带 `web_search`。
 - 非 `--json` 时默认走“人类可读正文流式输出”；不会直接打印底层事件包装。

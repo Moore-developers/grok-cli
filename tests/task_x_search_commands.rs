@@ -43,7 +43,8 @@ fn task_x_search_returns_structured_success_from_stubbed_upstream() {
 
     let server = thread::spawn(move || {
         let (mut stream, _) = listener.accept().unwrap();
-        let _ = read_request(&mut stream);
+        let request = read_request(&mut stream);
+        assert!(request.contains("\"model\":\"grok-4.3\""));
         let body = r#"{"output":[{"type":"message","content":[{"type":"output_text","text":"Hermes + Grok update","annotations":[{"type":"url_citation","url":"https://x.com/example/status/1","title":"1"}]}]}]}"#;
         write_response(&mut stream, "200 OK", body);
     });

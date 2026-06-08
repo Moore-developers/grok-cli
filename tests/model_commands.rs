@@ -43,6 +43,36 @@ fn model_persists_default_model_and_json_reads_it() {
 }
 
 #[test]
+fn model_accepts_all_supported_text_models() {
+    for model in [
+        "grok-4.3",
+        "grok-4.20-0309-reasoning",
+        "grok-4.20-0309-non-reasoning",
+        "grok-4.20-multi-agent-0309",
+    ] {
+        let temp = tempdir().unwrap();
+        let auth_file = temp.path().join("auth.json");
+        write_auth_state(&auth_file);
+
+        Command::cargo_bin("grok-cli")
+            .unwrap()
+            .args([
+                "model",
+                "--json",
+                "--auth-file",
+                auth_file.to_str().unwrap(),
+                "--model",
+                model,
+            ])
+            .assert()
+            .success()
+            .stdout(predicate::str::contains(format!("\"model\":\"{model}\"")))
+            .stdout(predicate::str::contains(format!("\"chat\":\"{model}\"")))
+            .stdout(predicate::str::contains(format!("\"search\":\"{model}\"")));
+    }
+}
+
+#[test]
 fn model_rejects_non_text_task_keys() {
     let temp = tempdir().unwrap();
     let auth_file = temp.path().join("auth.json");
@@ -82,8 +112,10 @@ fn model_human_output_lists_shared_model_catalog() {
         .stdout(predicate::str::contains("Grok Models"))
         .stdout(predicate::str::contains("Selected"))
         .stdout(predicate::str::contains("grok-4.3"))
-        .stdout(predicate::str::contains("grok-4.20-reasoning"))
         .stdout(predicate::str::contains("grok-4.20-0309-reasoning"))
+        .stdout(predicate::str::contains("grok-4.20-0309-non-reasoning"))
+        .stdout(predicate::str::contains("grok-4.20-multi-agent-0309"))
+        .stdout(predicate::str::contains("grok-4.20-reasoning").not())
         .stdout(predicate::str::contains("exit"))
         .stdout(predicate::str::contains("show").not())
         .stdout(predicate::str::contains("set").not());

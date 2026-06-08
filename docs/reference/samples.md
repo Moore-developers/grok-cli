@@ -62,7 +62,7 @@ Note:
   "command": "chat",
   "data": {
     "provider": "xai",
-    "model": "grok-4.20-reasoning",
+    "model": "grok-4.3",
     "protocol": "responses",
     "output_text": "..."
   }
@@ -79,7 +79,7 @@ Note:
     "success": true,
     "provider": "xai",
     "tool": "x_search",
-    "model": "grok-4.20-reasoning",
+    "model": "grok-4.3",
     "query": "..."
   }
 }

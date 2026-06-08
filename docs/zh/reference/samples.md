@@ -76,8 +76,9 @@
     },
     "catalog": [
       "grok-4.3",
-      "grok-4.20-reasoning",
-      "grok-4.20-0309-reasoning"
+      "grok-4.20-0309-reasoning",
+      "grok-4.20-0309-non-reasoning",
+      "grok-4.20-multi-agent-0309"
     ]
   }
 }
@@ -99,7 +100,7 @@
     "provider": "xai",
     "credential_source": "xai-oauth",
     "tool": "x_search",
-    "model": "grok-4.20-reasoning",
+    "model": "grok-4.3",
     "query": "AI infra discourse",
     "answer": "...",
     "citations": [],
@@ -412,7 +413,7 @@ Usage Breakdown
       "duration_seconds": 2832,
       "request_count": 7,
       "tracked_command_count": 7,
-      "models": ["grok-4.20-reasoning"],
+      "models": ["grok-4.3"],
       "session_store_path": "/abs/path/session.db"
     },
     "local_usage": {
@@ -425,8 +426,8 @@ Usage Breakdown
       "estimated_cost_usd": 0.269193,
       "pricing_status": "estimated",
       "pricing_source": "bundled_xai_table",
-      "last_model": "grok-4.20-reasoning",
-      "context_window_tokens": 2000000,
+      "last_model": "grok-4.3",
+      "context_window_tokens": 1000000,
       "history_turns": 7,
       "compression_count": 0,
       "has_unflushed_tracker_data": false

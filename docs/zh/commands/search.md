@@ -62,7 +62,7 @@ grok-cli search "AI news" --raw-stream
 
 ## 行为规格
 
-- 默认模型为 `grok-4.20-reasoning`，可被 [`model --model ...`](./model.md) 作为共享文本模型覆盖。
+- 默认模型为 `grok-4.3`，可被 [`model --model ...`](./model.md) 作为共享文本模型覆盖。
 - 请求工具固定为 `x_search`。
 - 非 `--json` 时默认走“人类可读正文流式输出”；不会直接打印底层事件包装。
 - `response.created` / `x_search` tool 事件不会打印为人类可见状态；正文只来自 `response.output_text.delta`。

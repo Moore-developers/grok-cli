@@ -49,6 +49,7 @@ Default documentation is in English. The preserved Chinese version is available 
 ### Usage
 
 - [`usage`](./commands/usage.md): inspect local session usage and recent rate-limit snapshots.
+- [`update`](./commands/update.md): check the latest release, update the CLI, and manage passive update notices.
 
 ## Reference Docs
 

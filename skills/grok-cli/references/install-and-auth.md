@@ -19,6 +19,7 @@ image-edit
 video-edit
 video-extend
 stt-stream
+update
 ```
 
 This matters because older pre-release installs can report a valid version while still missing newer commands.
@@ -94,9 +95,29 @@ After install, rerun:
 ```bash
 grok-cli --version
 grok-cli --help
+grok-cli update --check --json
 ```
 
 Then resume the user's original Grok task.
+
+## Update Checks And Upgrades
+
+Use `grok-cli update --check --json` only when the user explicitly asks whether the CLI is current, or during install/repair verification. Do not run update checks before routine Grok tasks.
+
+Use `grok-cli update` when the user explicitly asks to upgrade the CLI. The command follows the release strategy: macOS Apple Silicon and Windows x64 use GitHub Release assets with `.sha256` verification, while macOS Intel, Linux, and other source-first platforms use a tagged Cargo source install.
+
+Use these settings commands for passive update prompts:
+
+```bash
+grok-cli update --no-update-check
+grok-cli update --enable-update-check
+```
+
+Passive update notices are skipped for `--json`, `--raw-stream`, non-interactive output, and update commands. For one command only, set:
+
+```bash
+GROK_CLI_NO_UPDATE_CHECK=1 grok-cli chat "Hello"
+```
 
 ## Failure-Driven OAuth Flow
 

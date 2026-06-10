@@ -5,7 +5,7 @@
 ## 顶层命令
 
 ```text
-grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-edit|video|video-edit|video-extend|tts|stt|stt-stream> ...
+grok-cli <login|status|refresh|logout|state|model|usage|update|chat|search|image|image-edit|video|video-edit|video-extend|tts|stt|stt-stream> ...
 ```
 
 ## 认证命令
@@ -49,6 +49,7 @@ grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-
 | 命令 | 文档 | 用途 |
 | --- | --- | --- |
 | `usage` | [`usage.md`](./usage.md) | 查看本地 session usage、分类统计、成本估算和最近 rate-limit 快照。 |
+| `update` | [`update.md`](./update.md) | 检查最新 release、升级 CLI，并管理被动更新提示。 |
 
 ## 通用约定
 
@@ -76,6 +77,7 @@ grok-cli tts "Hello from Grok"
 grok-cli stt ./sample.wav
 grok-cli stt-stream ./sample.wav --interim-results
 grok-cli usage
+grok-cli update --check
 ```
 
 脚本模式：
@@ -85,4 +87,5 @@ grok-cli status --json
 grok-cli chat --json --prompt "Summarize today's AI news"
 grok-cli search --json --query "Grok Hermes latest updates"
 grok-cli usage --json
+grok-cli update --check --json
 ```

@@ -36,6 +36,16 @@ cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.
    - macOS: extract the tarball and run `grok-cli`
    - Windows: unzip and run `grok-cli.exe`
 
+After installation, users can check for a newer release:
+
+```bash
+grok-cli update --check
+```
+
+`grok-cli update` installs a newer release when one is available. It follows the same platform split as installation: macOS Apple Silicon and Windows x64 use GitHub Release assets with `.sha256` verification, while macOS Intel, Linux, and other source-first platforms use `cargo install --git ... --tag <LATEST_TAG> --locked --force`.
+
+Passive update notices are low-frequency, written to stderr, and skipped for `--json`, `--raw-stream`, non-interactive output, and `update` itself. Users can disable passive notices persistently with `grok-cli update --no-update-check`, re-enable them with `grok-cli update --enable-update-check`, or temporarily suppress them with `GROK_CLI_NO_UPDATE_CHECK=1`.
+
 The project intentionally keeps hosted CI release builds narrow. Windows gets a GitHub Actions binary because the maintainer cannot build it locally on macOS. macOS Apple Silicon can be built locally by the maintainer, then uploaded as a Release asset. macOS Intel and Linux remain source-first until there is enough demand to justify dedicated release ownership.
 
 ## 2. Why This Split
@@ -185,6 +195,7 @@ After installation, users should verify:
 ```bash
 grok-cli --version
 grok-cli --help
+grok-cli update --check
 grok-cli status --json
 ```
 

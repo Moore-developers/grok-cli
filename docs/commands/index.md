@@ -5,7 +5,7 @@ This directory contains specs and usage notes for every public `grok-cli` comman
 ## Top-Level Commands
 
 ```text
-grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-edit|video|video-edit|video-extend|tts|stt|stt-stream> ...
+grok-cli <login|status|refresh|logout|state|model|usage|update|chat|search|image|image-edit|video|video-edit|video-extend|tts|stt|stt-stream> ...
 ```
 
 ## Authentication
@@ -54,6 +54,7 @@ grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-
 | Command | Doc | Purpose |
 | --- | --- | --- |
 | `usage` | [`usage.md`](./usage.md) | Inspect local session usage and recent rate-limit snapshots. |
+| `update` | [`update.md`](./update.md) | Check the latest release, update the CLI, and manage passive update notices. |
 
 ## Notes
 

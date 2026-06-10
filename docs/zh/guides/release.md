@@ -36,6 +36,16 @@ cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.
    - macOS: extract the tarball and run `grok-cli`
    - Windows: unzip and run `grok-cli.exe`
 
+安装后，用户可以检查是否有新版：
+
+```bash
+grok-cli update --check
+```
+
+`grok-cli update` 会在有新版时安装。它沿用同一套平台分发策略：macOS Apple Silicon 和 Windows x64 使用 GitHub Release asset 并校验 `.sha256`，macOS Intel、Linux 和其他 source-first 平台使用 `cargo install --git ... --tag <LATEST_TAG> --locked --force`。
+
+被动更新提示是低频的，写入 stderr，并且会跳过 `--json`、`--raw-stream`、非交互式输出以及 `update` 本身。用户可以用 `grok-cli update --no-update-check` 持久关闭被动提示，用 `grok-cli update --enable-update-check` 重新开启，或用 `GROK_CLI_NO_UPDATE_CHECK=1` 只临时关闭单次命令。
+
 The project intentionally keeps hosted CI release builds narrow. Windows gets a GitHub Actions binary because the maintainer cannot build it locally on macOS. macOS Apple Silicon can be built locally by the maintainer, then uploaded as a Release asset. macOS Intel and Linux remain source-first until there is enough demand to justify dedicated release ownership.
 
 ## 2. Why This Split
@@ -185,6 +195,7 @@ After installation, users should verify:
 ```bash
 grok-cli --version
 grok-cli --help
+grok-cli update --check
 grok-cli status --json
 ```
 

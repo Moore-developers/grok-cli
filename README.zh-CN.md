@@ -30,6 +30,14 @@ cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
 - macOS Apple Silicon：`grok-cli-macos-aarch64-apple-darwin.tar.gz`
 - Windows x64：`grok-cli-windows-x86_64-pc-windows-msvc.zip`
 
+安装后可以检查 CLI 更新：
+
+```bash
+grok-cli update --check
+```
+
+有新版时运行 `grok-cli update` 升级。被动更新提示是低频的，并且不会出现在 `--json` 或 raw stream 输出中。可用 `grok-cli update --no-update-check` 关闭，用 `grok-cli update --enable-update-check` 恢复，或用 `GROK_CLI_NO_UPDATE_CHECK=1` 只临时关闭单次命令的被动检查。
+
 ## 快速开始
 
 ```bash
@@ -152,6 +160,7 @@ npx --yes skills add Moore-developers/grok-cli --skill grok-cli --global --yes
 | `stt` | 语音转文字 |
 | `stt-stream` | WebSocket 实时语音转文字（实验） |
 | `usage` | 查看本地用量和 rate-limit 快照 |
+| `update` | 检查更新、升级 CLI，并管理被动更新提示 |
 | `model` | 设置 `chat` 和 `search` 的默认模型 |
 | `state` | 查看脱敏的本地认证状态 |
 
@@ -161,6 +170,7 @@ npx --yes skills add Moore-developers/grok-cli --skill grok-cli --global --yes
 
 - **Auth token**：`~/.grok-cli/auth.json`
 - **Usage 历史**：`~/.grok-cli/session.db`（SQLite）
+- **更新设置**：`~/.grok-cli/update.json`
 
 Usage 记录 session 总量、每次命令事件、媒体类型统计和 rate-limit 快照。媒体文件不存数据库。
 

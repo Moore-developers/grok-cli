@@ -32,6 +32,14 @@ Release assets:
 - macOS Apple Silicon: `grok-cli-macos-aarch64-apple-darwin.tar.gz`
 - Windows x64: `grok-cli-windows-x86_64-pc-windows-msvc.zip`
 
+After installation, check for CLI updates with:
+
+```bash
+grok-cli update --check
+```
+
+Run `grok-cli update` to install a newer release when available. Passive update notices are low-frequency and never appear in `--json` or raw stream output. Disable them with `grok-cli update --no-update-check`, re-enable them with `grok-cli update --enable-update-check`, or temporarily suppress them with `GROK_CLI_NO_UPDATE_CHECK=1`.
+
 ## Quick Start
 
 ```bash
@@ -154,6 +162,7 @@ npx --yes skills add Moore-developers/grok-cli --skill grok-cli --global --yes
 | `stt` | Speech-to-text |
 | `stt-stream` | Streaming STT over WebSocket (experimental) |
 | `usage` | Show local session usage and rate-limit snapshots |
+| `update` | Check for updates, upgrade the CLI, and manage passive update notices |
 | `model` | Set the default text model for `chat` and `search` |
 | `state` | Inspect redacted local auth state |
 
@@ -163,6 +172,7 @@ Use `--help` on any command for details.
 
 - **Auth tokens**: `~/.grok-cli/auth.json`
 - **Usage history**: `~/.grok-cli/session.db` (SQLite)
+- **Update settings**: `~/.grok-cli/update.json`
 
 Usage history tracks session totals, per-command events, media-type breakdowns, and rate-limit snapshots. Media files are not stored.
 

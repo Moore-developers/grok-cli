@@ -1,7 +1,7 @@
 use crate::app::AppContext;
 use crate::args::{Cli, TopLevelCommand};
 use crate::error::CommandError;
-use crate::{auth, model, state, task, usage};
+use crate::{auth, model, state, task, update, usage};
 
 pub type CommandResult = Result<(), CommandError>;
 
@@ -15,6 +15,7 @@ pub fn dispatch(ctx: &AppContext, cli: Cli) -> CommandResult {
         TopLevelCommand::State(opts) => state::show(ctx, opts),
         TopLevelCommand::Model(cmd) => model::execute(ctx, cmd),
         TopLevelCommand::Usage(opts) => usage::command::execute(ctx, opts),
+        TopLevelCommand::Update(opts) => update::execute(ctx, opts),
         TopLevelCommand::Chat(opts) => task::chat::execute(ctx, opts),
         TopLevelCommand::Search(opts) => task::search::execute(ctx, opts),
         TopLevelCommand::Image(opts) => task::image::execute(ctx, opts),

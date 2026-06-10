@@ -34,6 +34,8 @@ pub enum TopLevelCommand {
     Model(ModelCommand),
     /// Show local session usage.
     Usage(UsageOptions),
+    /// Check for and install grok-cli updates.
+    Update(UpdateOptions),
     /// Run text chat through the Grok Responses API.
     Chat(ChatOptions),
     /// Search X through the Grok x_search tool.
@@ -58,6 +60,31 @@ pub enum TopLevelCommand {
     /// Stream speech to text over WebSocket.
     #[command(name = "stt-stream")]
     SttStream(SttStreamOptions),
+}
+
+impl Cli {
+    pub fn allows_passive_update_check(&self) -> bool {
+        match &self.command {
+            TopLevelCommand::Login(opts) => !opts.common.json,
+            TopLevelCommand::Status(opts)
+            | TopLevelCommand::Refresh(opts)
+            | TopLevelCommand::Logout(opts)
+            | TopLevelCommand::State(opts) => !opts.json,
+            TopLevelCommand::ExchangeCode(_) | TopLevelCommand::Update(_) => false,
+            TopLevelCommand::Model(opts) => !opts.common.json,
+            TopLevelCommand::Usage(opts) => !opts.common.json,
+            TopLevelCommand::Chat(opts) => !opts.common.json && !opts.raw_stream,
+            TopLevelCommand::Search(opts) => !opts.common.json && !opts.raw_stream,
+            TopLevelCommand::Image(opts) => !opts.common.json,
+            TopLevelCommand::ImageEdit(opts) => !opts.common.json,
+            TopLevelCommand::Video(opts) => !opts.common.json,
+            TopLevelCommand::VideoEdit(opts) => !opts.common.json,
+            TopLevelCommand::VideoExtend(opts) => !opts.common.json,
+            TopLevelCommand::Tts(opts) => !opts.common.json,
+            TopLevelCommand::Stt(opts) => !opts.common.json,
+            TopLevelCommand::SttStream(opts) => !opts.common.json,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Args)]
@@ -116,6 +143,35 @@ pub struct UsageOptions {
     /// Compatibility option; usage is local-only by default.
     #[arg(long = "local-only", hide = true)]
     pub local_only: bool,
+}
+
+#[derive(Debug, Clone, Args)]
+#[command(
+    about = "Check for and install grok-cli updates",
+    long_about = "Check the latest GitHub Release and optionally update grok-cli.\n\nBy default, `grok-cli update` checks the latest release and installs it when a newer version is available. Use `--check` to only report availability, `--no-update-check` to turn off passive background update prompts, or `--enable-update-check` to turn them back on."
+)]
+pub struct UpdateOptions {
+    /// Print machine-readable JSON.
+    #[arg(long)]
+    pub json: bool,
+    /// Only check the latest release; do not install anything.
+    #[arg(long, conflicts_with_all = ["force", "no_update_check", "enable_update_check"])]
+    pub check: bool,
+    /// Reinstall the latest release even when this version is already current.
+    #[arg(long, conflicts_with_all = ["check", "no_update_check", "enable_update_check"])]
+    pub force: bool,
+    /// Disable passive background update prompts.
+    #[arg(
+        long = "no-update-check",
+        conflicts_with_all = ["check", "force", "enable_update_check"]
+    )]
+    pub no_update_check: bool,
+    /// Re-enable passive background update prompts.
+    #[arg(
+        long = "enable-update-check",
+        conflicts_with_all = ["check", "force", "no_update_check"]
+    )]
+    pub enable_update_check: bool,
 }
 
 #[derive(Debug, Clone, Args)]

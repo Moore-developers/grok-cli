@@ -105,15 +105,20 @@ pub fn run() -> i32 {
         }
     };
 
+    let allow_passive_update_check = cli.allows_passive_update_check();
     let ctx = AppContext::new();
 
-    match cli::dispatch(&ctx, cli) {
+    let exit_code = match cli::dispatch(&ctx, cli) {
         Ok(()) => 0,
         Err(report) => {
             emit_command_error(&report);
             report.error.exit_code()
         }
-    }
+    };
+
+    crate::update::maybe_print_passive_update_notice(&ctx, allow_passive_update_check);
+
+    exit_code
 }
 
 fn init_tracing() {

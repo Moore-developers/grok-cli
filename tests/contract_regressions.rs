@@ -30,6 +30,7 @@ fn top_level_help_lists_all_primary_command_groups() {
         .stdout(predicate::str::contains("stt-stream"))
         .stdout(predicate::str::contains("state"))
         .stdout(predicate::str::contains("usage"))
+        .stdout(predicate::str::contains("update"))
         .stdout(predicate::str::contains("print-authorize-url").not())
         .stdout(predicate::str::contains("exchange-code").not());
 }
@@ -178,6 +179,9 @@ fn bundled_skill_requires_command_surface_check() {
     assert!(install_ref.contains("grok-cli status --json"));
     assert!(install_ref.contains("bad-credentials"));
     assert!(install_ref.contains("grok-cli refresh --json"));
+    assert!(install_ref.contains("grok-cli update --check --json"));
+    assert!(install_ref.contains("grok-cli update --no-update-check"));
+    assert!(install_ref.contains("grok-cli update --enable-update-check"));
     assert!(install_ref.contains("Failure-Driven OAuth Flow"));
     assert!(install_ref.contains("Run the user's real command first"));
     assert!(install_ref.contains("error.recovery_action"));
@@ -246,6 +250,9 @@ fn bundled_skill_requires_command_surface_check() {
     assert!(install_ref.contains("grok-cli status --json"));
     assert!(skill.contains("bad-credentials"));
     assert!(skill.contains("grok-cli refresh --json"));
+    assert!(skill.contains("grok-cli update --check --json"));
+    assert!(skill.contains("grok-cli update --no-update-check"));
+    assert!(skill.contains("grok-cli update --enable-update-check"));
     assert!(skill.contains("lossless human-readable rendering"));
     assert!(skill.contains("transformation mode"));
     assert!(skill.contains("Rust 1.88 or newer"));

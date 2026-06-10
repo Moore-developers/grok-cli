@@ -44,6 +44,7 @@
 ### 使用统计
 
 - [`usage`](./commands/usage.md)：查看本地 session usage、分类统计和最近 rate-limit 快照。
+- [`update`](./commands/update.md)：检查最新 release、升级 CLI，并管理被动更新提示。
 
 ## 文档结构
 
@@ -59,6 +60,7 @@ docs/
 │  ├─ state.md
 │  ├─ model.md
 │  ├─ usage.md
+│  ├─ update.md
 │  ├─ chat.md
 │  ├─ search.md
 │  ├─ image.md
@@ -113,7 +115,7 @@ skills/
 ## 当前公开命令
 
 ```text
-grok-cli <login|status|refresh|logout|state|model|usage|chat|search|image|image-edit|video|video-edit|video-extend|tts|stt|stt-stream> ...
+grok-cli <login|status|refresh|logout|state|model|usage|update|chat|search|image|image-edit|video|video-edit|video-extend|tts|stt|stt-stream> ...
 ```
 
 ## 输出约定

@@ -135,6 +135,7 @@ image-edit
 video-edit
 video-extend
 stt-stream
+update
 ```
 
 If `grok-cli` is missing or any required command is absent, first identify the platform and choose the install path in this order:
@@ -199,7 +200,10 @@ After installation, verify:
 ```bash
 grok-cli --version
 grok-cli --help
+grok-cli update --check --json
 ```
+
+Use `grok-cli update` when the user explicitly asks to upgrade the CLI. Use `grok-cli update --no-update-check` when the user asks to disable passive update prompts, and `grok-cli update --enable-update-check` when they ask to turn prompts back on. Do not run update checks before routine Grok tasks; the CLI skips passive notices for JSON and raw stream automation output.
 
 If reinstalling because a command was missing, rerun the original user task after verification. Do not stop at installation.
 

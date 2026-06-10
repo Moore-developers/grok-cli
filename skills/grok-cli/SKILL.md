@@ -192,7 +192,7 @@ cargo install --git https://github.com/Moore-developers/grok-cli.git --locked --
 For a pinned public version:
 
 ```bash
-cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.5 --locked --force
+cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.6 --locked --force
 ```
 
 After installation, verify:

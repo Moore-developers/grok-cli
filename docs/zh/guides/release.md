@@ -24,7 +24,7 @@ cargo install --git https://github.com/Moore-developers/grok-cli.git --locked
 3. Install a tagged version from source on macOS, Linux, or Windows:
 
 ```bash
-cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.5 --locked
+cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.6 --locked
 ```
 
 4. Download a GitHub Release binary when the platform is covered:
@@ -140,8 +140,8 @@ Update:
 Create and push a tag:
 
 ```bash
-git tag v0.1.5
-git push origin v0.1.5
+git tag v0.1.6
+git push origin v0.1.6
 ```
 
 GitHub Actions builds the Windows release asset from the tag and attaches it to the GitHub Release with its checksum:
@@ -154,7 +154,7 @@ grok-cli-windows-x86_64-pc-windows-msvc.zip.sha256
 After the GitHub Release exists, package and upload the local macOS Apple Silicon asset from the same tagged commit:
 
 ```bash
-scripts/package-local-macos-release.sh v0.1.5 --upload
+scripts/package-local-macos-release.sh v0.1.6 --upload
 ```
 
 This uploads:

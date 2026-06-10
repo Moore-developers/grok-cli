@@ -36,7 +36,11 @@ jobs:
           Copy-Item target\x86_64-pc-windows-msvc\release\grok-cli.exe dist\grok-cli.exe
           Compress-Archive -Path dist\grok-cli.exe -DestinationPath grok-cli-windows-x86_64-pc-windows-msvc.zip -Force
           $hash = Get-FileHash grok-cli-windows-x86_64-pc-windows-msvc.zip -Algorithm SHA256
-          "$($hash.Hash.ToLower())  grok-cli-windows-x86_64-pc-windows-msvc.zip" | Out-File -Encoding ascii grok-cli-windows-x86_64-pc-windows-msvc.zip.sha256
+          [System.IO.File]::WriteAllText(
+            "grok-cli-windows-x86_64-pc-windows-msvc.zip.sha256",
+            "$($hash.Hash.ToLower())  grok-cli-windows-x86_64-pc-windows-msvc.zip`n",
+            [System.Text.Encoding]::ASCII
+          )
 
       - name: Upload release asset
         uses: softprops/action-gh-release@v3

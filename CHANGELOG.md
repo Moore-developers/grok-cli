@@ -8,6 +8,18 @@ The project follows semantic versioning once public releases begin.
 
 No changes yet.
 
+## 0.1.5 - 2026-06-10
+
+### Added
+
+- Added `grok-cli update` for release checks and self-upgrades.
+- Added low-frequency passive update notices for interactive human-readable commands.
+- Added `grok-cli update --no-update-check` and `grok-cli update --enable-update-check` to persistently control passive notices.
+
+### Changed
+
+- Documented the update command, release asset strategy, and checksum-backed upgrade flow.
+
 ## 0.1.4 - 2026-06-08
 
 ### Changed

@@ -81,7 +81,7 @@ Release binary install flow:
 Pinned public install:
 
 ```bash
-cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.4 --locked --force
+cargo install --git https://github.com/Moore-developers/grok-cli.git --tag v0.1.5 --locked --force
 ```
 
 Latest repository install:

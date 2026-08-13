@@ -103,7 +103,7 @@ grok-cli stt-stream ./sample.wav --interim-results
 grok-cli model
 
 # 设置 chat 和 search 的默认模型
-grok-cli model --model grok-4.3
+grok-cli model --model grok-4.6
 ```
 
 ## JSON 输出

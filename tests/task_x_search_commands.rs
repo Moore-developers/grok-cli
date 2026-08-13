@@ -19,6 +19,25 @@ fn task_x_search_rejects_empty_query() {
 }
 
 #[test]
+fn task_x_search_rejects_removed_text_model() {
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args([
+            "search",
+            "--json",
+            "--query",
+            "news",
+            "--model",
+            "grok-4.20-0309-reasoning",
+        ])
+        .assert()
+        .code(2)
+        .stdout(predicate::str::contains(
+            "--model must be one of: grok-4.5, grok-4.6",
+        ));
+}
+
+#[test]
 fn task_x_search_rejects_too_many_allowed_handles() {
     let mut cmd = Command::cargo_bin("grok-cli").unwrap();
     cmd.args(["search", "--json", "--query", "xAI"]);
@@ -44,7 +63,7 @@ fn task_x_search_returns_structured_success_from_stubbed_upstream() {
     let server = thread::spawn(move || {
         let (mut stream, _) = listener.accept().unwrap();
         let request = read_request(&mut stream);
-        assert!(request.contains("\"model\":\"grok-4.3\""));
+        assert!(request.contains("\"model\":\"grok-4.6\""));
         let body = r#"{"output":[{"type":"message","content":[{"type":"output_text","text":"Hermes + Grok update","annotations":[{"type":"url_citation","url":"https://x.com/example/status/1","title":"1"}]}]}]}"#;
         write_response(&mut stream, "200 OK", body);
     });

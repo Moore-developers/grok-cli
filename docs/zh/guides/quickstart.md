@@ -53,7 +53,7 @@ cargo run -- login --json --manual-paste
 
 ```bash
 cargo run -- model --json
-cargo run -- model --json --model grok-4.3
+cargo run -- model --json --model grok-4.6
 ```
 
 说明：

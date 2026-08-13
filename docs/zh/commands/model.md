@@ -18,10 +18,8 @@ grok-cli mode
 在交互式终端中会显示以下列表，并支持方向键上下选择，回车确认：
 
 ```text
-grok-4.3
-grok-4.20-0309-reasoning
-grok-4.20-0309-non-reasoning
-grok-4.20-multi-agent-0309
+grok-4.5
+grok-4.6
 exit
 ```
 
@@ -40,7 +38,7 @@ grok-cli model --json
 脚本或 SKILL 直接设置：
 
 ```bash
-grok-cli model --json --model grok-4.3
+grok-cli model --json --model grok-4.6
 ```
 
 ## 参数

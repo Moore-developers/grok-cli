@@ -105,7 +105,7 @@ grok-cli stt-stream ./sample.wav --interim-results
 grok-cli model
 
 # Set a specific model for chat and search
-grok-cli model --model grok-4.3
+grok-cli model --model grok-4.6
 ```
 
 ## JSON Output

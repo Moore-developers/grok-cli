@@ -79,7 +79,7 @@ grok-cli login --json --manual-paste
 
 ```bash
 grok-cli model --json
-grok-cli model --json --model grok-4.3
+grok-cli model --json --model grok-4.6
 ```
 
 Notes:

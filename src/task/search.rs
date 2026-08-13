@@ -12,7 +12,7 @@ use crate::upstream;
 use crate::usage::model::UsageDelta;
 use crate::usage::{pricing, tracker};
 
-const DEFAULT_X_SEARCH_MODEL: &str = "grok-4.3";
+const DEFAULT_X_SEARCH_MODEL: &str = "grok-4.6";
 
 #[derive(Debug, Clone, Serialize)]
 struct XSearchData {
@@ -153,6 +153,10 @@ fn validate_options(opts: &XSearchOptions) -> Result<(), AppError> {
             ErrorCode::InvalidArgs,
             "query must not be empty",
         ));
+    }
+
+    if let Some(selected_model) = opts.model.as_deref() {
+        model::normalize_model(selected_model)?;
     }
 
     if opts.allowed_x_handles.len() > 10 {
@@ -335,7 +339,7 @@ mod tests {
             to_date: Some("2026-05-20".to_string()),
             enable_image_understanding: true,
             enable_video_understanding: false,
-            model: Some("grok-4.3".to_string()),
+            model: Some("grok-4.6".to_string()),
             stream: false,
             no_stream: false,
             raw_stream: false,
@@ -364,8 +368,8 @@ mod tests {
     #[test]
     fn build_request_includes_tool_filters() {
         let opts = sample_opts();
-        let request = build_request(&opts, "grok-4.3", true);
-        assert_eq!(request["model"], "grok-4.3");
+        let request = build_request(&opts, "grok-4.6", true);
+        assert_eq!(request["model"], "grok-4.6");
         assert_eq!(request["stream"], true);
         assert_eq!(
             request["input"][0]["content"],
@@ -405,10 +409,10 @@ mod tests {
             rate_limits: None,
         };
 
-        let parsed = parse_x_search_response(&opts, "grok-4.3", &upstream).unwrap();
+        let parsed = parse_x_search_response(&opts, "grok-4.6", &upstream).unwrap();
         assert_eq!(parsed.credential_source, "xai-oauth");
         assert_eq!(parsed.tool, "x_search");
-        assert_eq!(parsed.model, "grok-4.3");
+        assert_eq!(parsed.model, "grok-4.6");
         assert_eq!(parsed.citations, vec!["https://x.com/a".to_string()]);
         assert_eq!(parsed.inline_citations, vec!["https://x.com/a".to_string()]);
         assert!(parsed.answer.contains("Answer body"));
@@ -429,7 +433,7 @@ mod tests {
             rate_limits: None,
         };
 
-        let error = parse_x_search_response(&opts, "grok-4.3", &upstream).unwrap_err();
+        let error = parse_x_search_response(&opts, "grok-4.6", &upstream).unwrap_err();
         assert_eq!(error.code.as_str(), "request_failed");
         assert!(error.message.contains("did not include a message answer"));
     }

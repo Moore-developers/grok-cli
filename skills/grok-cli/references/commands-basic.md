@@ -76,14 +76,14 @@ grok-cli model --json
 Set shared default text model for chat and search:
 
 ```bash
-grok-cli model --json --model grok-4.3
+grok-cli model --json --model grok-4.6
 ```
 
 Public flags:
 
 - `--json`: machine-readable output.
 - `--auth-file <PATH>`: use an alternate local OAuth state file.
-- `--model <MODEL>`: save the shared default model for `chat` and `search`.
+- `--model <MODEL>`: save `grok-4.5` or `grok-4.6` as the shared default model for `chat` and `search`.
 
 Media model overrides are passed directly to media commands with `--model`.
 

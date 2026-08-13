@@ -12,7 +12,7 @@ use crate::upstream;
 use crate::usage::model::UsageDelta;
 use crate::usage::{pricing, tracker};
 
-const DEFAULT_CHAT_MODEL: &str = "grok-4.3";
+const DEFAULT_CHAT_MODEL: &str = "grok-4.6";
 
 #[derive(Debug, Clone, Serialize)]
 struct ChatData {
@@ -150,6 +150,10 @@ fn validate_options(opts: &ChatOptions) -> Result<(), AppError> {
             ErrorCode::InvalidArgs,
             "prompt must not be empty",
         ));
+    }
+
+    if let Some(selected_model) = opts.model.as_deref() {
+        model::normalize_model(selected_model)?;
     }
 
     if opts.allowed_domains.len() > 10 {
@@ -374,7 +378,7 @@ mod tests {
             prompt: Some("Say hello".to_string()),
             prompt_flag: None,
             system: Some("You are helpful".to_string()),
-            model: Some("grok-4.3".to_string()),
+            model: Some("grok-4.6".to_string()),
             no_web_search: false,
             with_x_search: false,
             allowed_domains: Vec::new(),
@@ -403,8 +407,8 @@ mod tests {
     #[test]
     fn build_request_includes_instructions_stream_and_default_web_search() {
         let opts = sample_opts();
-        let request = build_request(&opts, "grok-4.3", true);
-        assert_eq!(request["model"], "grok-4.3");
+        let request = build_request(&opts, "grok-4.6", true);
+        assert_eq!(request["model"], "grok-4.6");
         assert_eq!(request["stream"], true);
         assert_eq!(request["store"], false);
         assert_eq!(request["instructions"], "You are helpful");
@@ -418,7 +422,7 @@ mod tests {
     fn build_request_omits_tools_when_web_search_is_disabled() {
         let mut opts = sample_opts();
         opts.no_web_search = true;
-        let request = build_request(&opts, "grok-4.3", false);
+        let request = build_request(&opts, "grok-4.6", false);
         assert!(request.get("tools").is_none());
     }
 
@@ -426,7 +430,7 @@ mod tests {
     fn build_request_supports_combined_web_and_x_search_tools() {
         let mut opts = sample_opts();
         opts.with_x_search = true;
-        let request = build_request(&opts, "grok-4.3", false);
+        let request = build_request(&opts, "grok-4.6", false);
         assert_eq!(request["tools"][0]["type"], "web_search");
         assert_eq!(request["tools"][1]["type"], "x_search");
     }
@@ -437,7 +441,7 @@ mod tests {
         opts.allowed_domains = vec!["nature.com".to_string()];
         opts.excluded_domains = vec!["example.com".to_string()];
         opts.enable_image_understanding = true;
-        let request = build_request(&opts, "grok-4.3", false);
+        let request = build_request(&opts, "grok-4.6", false);
         assert_eq!(
             request["tools"][0]["filters"]["allowed_domains"][0],
             "nature.com"
@@ -457,7 +461,7 @@ mod tests {
         opts.from_date = Some("2026-05-19".to_string());
         opts.to_date = Some("2026-05-20".to_string());
         opts.enable_video_understanding = true;
-        let request = build_request(&opts, "grok-4.3", false);
+        let request = build_request(&opts, "grok-4.6", false);
         assert_eq!(request["tools"][1]["allowed_x_handles"][0], "xai");
         assert_eq!(request["tools"][1]["from_date"], "2026-05-19");
         assert_eq!(request["tools"][1]["to_date"], "2026-05-20");
@@ -467,7 +471,7 @@ mod tests {
     #[test]
     fn parse_chat_response_extracts_output_text() {
         let parsed = parse_chat_response(
-            "grok-4.3",
+            "grok-4.6",
             &json!({
                 "output": [{
                     "type": "message",
@@ -486,7 +490,7 @@ mod tests {
     #[test]
     fn parse_chat_response_normalizes_tool_calls() {
         let parsed = parse_chat_response(
-            "grok-4.3",
+            "grok-4.6",
             &json!({
                 "output": [{
                     "type": "function_call",

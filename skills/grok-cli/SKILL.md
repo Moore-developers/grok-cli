@@ -298,7 +298,7 @@ Use this page for the usual knobs and a few representative values. If the user a
 
 - `login`: use `--no-browser`, `--manual-paste`, `--timeout 300`, and `--port 8787` when the machine cannot complete a normal browser callback.
 - `status`, `refresh`, `logout`, `state`: use `--auth-file <PATH>` when the user wants an alternate local OAuth state file.
-- `model`: use `--model grok-4.3` to set the shared default text model for `chat` and `search`.
+- `model`: use `--model grok-4.5` or `--model grok-4.6` to set the shared default text model for `chat` and `search`; no other text models are supported.
 - `usage`: use `--session-db <PATH>` and `--session-id <ID>` for a specific local usage record.
 - `chat`: use `--prompt` or a positional prompt, `--system`, `--model`, `--no-web-search`, `--with-x-search`, `--allowed-domain example.com`, `--stream`, `--no-stream`, `--raw-stream`, and `--timeout 3600`.
 - `search`: use `--query` or a positional query, `--model`, `--allowed-x-handle xAI`, `--from-date 2026-05-01`, `--to-date 2026-05-21`, `--stream`, `--no-stream`, `--raw-stream`, and `--timeout 3600`.

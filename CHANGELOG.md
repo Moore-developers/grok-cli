@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Replaced the shared text model catalog with `grok-4.5` and `grok-4.6` only.
+- Changed the default `chat` and `search` text model to `grok-4.6`.
+
 All notable changes to `grok-cli` will be documented in this file.
 
 The project follows semantic versioning once public releases begin.

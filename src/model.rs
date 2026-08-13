@@ -13,12 +13,8 @@ use crate::state::model::AuthState;
 
 const SHARED_TEXT_MODEL_KEY: &str = "text";
 const SWITCHABLE_TASK_KEYS: &[&str] = &["chat", "search"];
-const MODEL_CATALOG: &[&str] = &[
-    "grok-4.3",
-    "grok-4.20-0309-reasoning",
-    "grok-4.20-0309-non-reasoning",
-    "grok-4.20-multi-agent-0309",
-];
+const MODEL_CATALOG: &[&str] = &["grok-4.5", "grok-4.6"];
+const DEFAULT_TEXT_MODEL: &str = "grok-4.6";
 
 #[derive(Debug, Clone, Serialize)]
 struct ModelCommandData {
@@ -114,7 +110,7 @@ pub fn default_model_for_task(state: Option<&AuthState>, task: &str, fallback: &
 fn default_text_model(state: Option<&AuthState>) -> String {
     state
         .and_then(|state| model_from_state(state, "chat"))
-        .unwrap_or_else(|| MODEL_CATALOG[0].to_string())
+        .unwrap_or_else(|| DEFAULT_TEXT_MODEL.to_string())
 }
 
 fn model_from_state(state: &AuthState, task: &str) -> Option<String> {
@@ -177,7 +173,7 @@ fn legacy_model_key(task: &str) -> Option<&'static str> {
     }
 }
 
-fn normalize_model(model: &str) -> Result<&str, AppError> {
+pub fn normalize_model(model: &str) -> Result<&str, AppError> {
     let model = model.trim();
     if model.is_empty() {
         return Err(AppError::new(
@@ -301,19 +297,19 @@ mod tests {
         state.metadata.insert(
             "default_models".to_string(),
             json!({
-                "text": "grok-4.3",
-                "chat": "grok-4.20-0309-reasoning",
-                "search": "grok-4.20-0309-reasoning"
+                "text": "grok-4.5",
+                "chat": "grok-4.6",
+                "search": "grok-4.6"
             }),
         );
 
         assert_eq!(
-            default_model_for_task(Some(&state), "chat", "grok-4.3"),
-            "grok-4.3"
+            default_model_for_task(Some(&state), "chat", "grok-4.6"),
+            "grok-4.5"
         );
         assert_eq!(
-            default_model_for_task(Some(&state), "search", "grok-4.3"),
-            "grok-4.3"
+            default_model_for_task(Some(&state), "search", "grok-4.6"),
+            "grok-4.5"
         );
     }
 
@@ -323,7 +319,7 @@ mod tests {
         state.metadata.insert(
             "default_models".to_string(),
             json!({
-                "text": "grok-4.3",
+                "text": "grok-4.5",
                 "tts": "grok-tts"
             }),
         );
@@ -340,13 +336,13 @@ mod tests {
         state.metadata.insert(
             "default_models".to_string(),
             json!({
-                "x-search": "grok-4.3"
+                "x-search": "grok-4.5"
             }),
         );
 
         assert_eq!(
-            default_model_for_task(Some(&state), "search", "grok-4.3"),
-            "grok-4.3"
+            default_model_for_task(Some(&state), "search", "grok-4.6"),
+            "grok-4.5"
         );
     }
 }

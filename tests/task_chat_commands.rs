@@ -21,6 +21,18 @@ fn task_chat_rejects_empty_prompt() {
 }
 
 #[test]
+fn task_chat_rejects_removed_text_model() {
+    Command::cargo_bin("grok-cli")
+        .unwrap()
+        .args(["chat", "--json", "--prompt", "hello", "--model", "grok-4.3"])
+        .assert()
+        .code(2)
+        .stdout(predicate::str::contains(
+            "--model must be one of: grok-4.5, grok-4.6",
+        ));
+}
+
+#[test]
 fn task_chat_returns_non_stream_text_response() {
     let temp = tempdir().unwrap();
     let auth_file = temp.path().join("auth.json");
@@ -32,7 +44,7 @@ fn task_chat_returns_non_stream_text_response() {
         let (mut stream, _) = listener.accept().unwrap();
         let request = read_request(&mut stream);
         assert!(request.contains("POST /v1/responses"));
-        assert!(request.contains("\"model\":\"grok-4.3\""));
+        assert!(request.contains("\"model\":\"grok-4.6\""));
         assert!(request.contains("\"stream\":false"));
         assert!(request.contains("\"store\":false"));
         assert!(request.contains("\"tool_choice\":\"auto\""));

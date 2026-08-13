@@ -18,13 +18,13 @@ fn model_persists_default_model_and_json_reads_it() {
             "--auth-file",
             auth_file.to_str().unwrap(),
             "--model",
-            "grok-4.3",
+            "grok-4.5",
         ])
         .assert()
         .success()
-        .stdout(predicate::str::contains("\"model\":\"grok-4.3\""))
-        .stdout(predicate::str::contains("\"chat\":\"grok-4.3\""))
-        .stdout(predicate::str::contains("\"search\":\"grok-4.3\""));
+        .stdout(predicate::str::contains("\"model\":\"grok-4.5\""))
+        .stdout(predicate::str::contains("\"chat\":\"grok-4.5\""))
+        .stdout(predicate::str::contains("\"search\":\"grok-4.5\""));
 
     Command::cargo_bin("grok-cli")
         .unwrap()
@@ -36,14 +36,39 @@ fn model_persists_default_model_and_json_reads_it() {
         ])
         .assert()
         .success()
-        .stdout(predicate::str::contains("\"selected_model\":\"grok-4.3\""))
-        .stdout(predicate::str::contains("\"text\":\"grok-4.3\""))
-        .stdout(predicate::str::contains("\"chat\":\"grok-4.3\""))
-        .stdout(predicate::str::contains("\"search\":\"grok-4.3\""));
+        .stdout(predicate::str::contains("\"selected_model\":\"grok-4.5\""))
+        .stdout(predicate::str::contains("\"text\":\"grok-4.5\""))
+        .stdout(predicate::str::contains("\"chat\":\"grok-4.5\""))
+        .stdout(predicate::str::contains("\"search\":\"grok-4.5\""));
 }
 
 #[test]
 fn model_accepts_all_supported_text_models() {
+    for model in ["grok-4.5", "grok-4.6"] {
+        let temp = tempdir().unwrap();
+        let auth_file = temp.path().join("auth.json");
+        write_auth_state(&auth_file);
+
+        Command::cargo_bin("grok-cli")
+            .unwrap()
+            .args([
+                "model",
+                "--json",
+                "--auth-file",
+                auth_file.to_str().unwrap(),
+                "--model",
+                model,
+            ])
+            .assert()
+            .success()
+            .stdout(predicate::str::contains(format!("\"model\":\"{model}\"")))
+            .stdout(predicate::str::contains(format!("\"chat\":\"{model}\"")))
+            .stdout(predicate::str::contains(format!("\"search\":\"{model}\"")));
+    }
+}
+
+#[test]
+fn model_rejects_removed_text_models() {
     for model in [
         "grok-4.3",
         "grok-4.20-0309-reasoning",
@@ -65,10 +90,8 @@ fn model_accepts_all_supported_text_models() {
                 model,
             ])
             .assert()
-            .success()
-            .stdout(predicate::str::contains(format!("\"model\":\"{model}\"")))
-            .stdout(predicate::str::contains(format!("\"chat\":\"{model}\"")))
-            .stdout(predicate::str::contains(format!("\"search\":\"{model}\"")));
+            .code(2)
+            .stdout(predicate::str::contains("\"code\":\"invalid_args\""));
     }
 }
 
@@ -111,11 +134,10 @@ fn model_human_output_lists_shared_model_catalog() {
         .success()
         .stdout(predicate::str::contains("Grok Models"))
         .stdout(predicate::str::contains("Selected"))
-        .stdout(predicate::str::contains("grok-4.3"))
-        .stdout(predicate::str::contains("grok-4.20-0309-reasoning"))
-        .stdout(predicate::str::contains("grok-4.20-0309-non-reasoning"))
-        .stdout(predicate::str::contains("grok-4.20-multi-agent-0309"))
-        .stdout(predicate::str::contains("grok-4.20-reasoning").not())
+        .stdout(predicate::str::contains("grok-4.5"))
+        .stdout(predicate::str::contains("grok-4.6"))
+        .stdout(predicate::str::contains("grok-4.3").not())
+        .stdout(predicate::str::contains("grok-4.20").not())
         .stdout(predicate::str::contains("exit"))
         .stdout(predicate::str::contains("show").not())
         .stdout(predicate::str::contains("set").not());
@@ -133,7 +155,9 @@ fn mode_alias_matches_model_command() {
         .assert()
         .success()
         .stdout(predicate::str::contains("\"command\":\"model\""))
-        .stdout(predicate::str::contains("\"catalog\":[\"grok-4.3\""));
+        .stdout(predicate::str::contains(
+            "\"catalog\":[\"grok-4.5\",\"grok-4.6\"]",
+        ));
 }
 
 fn write_auth_state(path: &std::path::Path) {

@@ -18,10 +18,8 @@ grok-cli mode
 In an interactive terminal, the command shows the following list and supports arrow-key navigation:
 
 ```text
-grok-4.3
-grok-4.20-0309-reasoning
-grok-4.20-0309-non-reasoning
-grok-4.20-multi-agent-0309
+grok-4.5
+grok-4.6
 exit
 ```
 
@@ -40,7 +38,7 @@ grok-cli model --json
 Script or skill direct selection:
 
 ```bash
-grok-cli model --json --model grok-4.3
+grok-cli model --json --model grok-4.6
 ```
 
 ## Parameters
